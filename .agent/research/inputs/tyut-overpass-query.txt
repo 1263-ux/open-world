@@ -1,0 +1,1 @@
+[out:json][timeout:25];(nwr["amenity"="university"]["name"~"太原理工"](37.849,112.511,37.866,112.524);way["building"](37.850,112.512,37.865,112.522);way["highway"](37.850,112.512,37.865,112.522);way["leisure"](37.850,112.512,37.865,112.522););out tags geom;

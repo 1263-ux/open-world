@@ -1,0 +1,911 @@
+{
+  "snapshot_osm_base": "2026-10-29T15:04:51Z",
+  "crs": "WGS84 (longitude,latitude); ENU distances on WGS84 ellipsoid, height=0",
+  "origins": {
+    "huyu": [
+      112.5165934,
+      37.8526095
+    ],
+    "yingxi": [
+      112.5162083,
+      37.86119865
+    ]
+  },
+  "license": "ODbL-1.0; © OpenStreetMap contributors",
+  "campuses": {
+    "huyu": {
+      "osm_boundary_id": 427605255,
+      "buildings": 6,
+      "features": [
+        {
+          "osm_id": 427605255,
+          "name": "太原理工大学（虎峪校区）",
+          "kind": "campus",
+          "bbox_east_north_m": [
+            671.5,
+            426.04
+          ],
+          "area_m2": 243170.86,
+          "centroid_lonlat": [
+            112.5163787,
+            37.8527742
+          ],
+          "centroid_enu_m": [
+            -18.89,
+            18.29
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 543095320,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            95.31,
+            188.59
+          ],
+          "area_m2": 17423.74,
+          "centroid_lonlat": [
+            112.5146465,
+            37.8517922
+          ],
+          "centroid_enu_m": [
+            -171.34,
+            -90.72
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 689323083,
+          "name": "中区主楼",
+          "kind": "building",
+          "bbox_east_north_m": [
+            92.49,
+            21.53
+          ],
+          "area_m2": 1938.58,
+          "centroid_lonlat": [
+            112.5167729,
+            37.8538019
+          ],
+          "centroid_enu_m": [
+            15.79,
+            132.35
+          ],
+          "height_source": null,
+          "levels_source": "13"
+        },
+        {
+          "osm_id": 689323084,
+          "name": "太原理工大学矿机楼",
+          "kind": "building",
+          "bbox_east_north_m": [
+            84.51,
+            18.34
+          ],
+          "area_m2": 1505.55,
+          "centroid_lonlat": [
+            112.5158978,
+            37.8524749
+          ],
+          "centroid_enu_m": [
+            -61.22,
+            -14.94
+          ],
+          "height_source": null,
+          "levels_source": "6"
+        },
+        {
+          "osm_id": 689323085,
+          "name": "中区8号楼",
+          "kind": "building",
+          "bbox_east_north_m": [
+            91.65,
+            21.69
+          ],
+          "area_m2": 1749.22,
+          "centroid_lonlat": [
+            112.5178504,
+            37.851552
+          ],
+          "centroid_enu_m": [
+            110.62,
+            -117.37
+          ],
+          "height_source": null,
+          "levels_source": "6"
+        },
+        {
+          "osm_id": 689323086,
+          "name": "中区9号楼",
+          "kind": "building",
+          "bbox_east_north_m": [
+            55.07,
+            21.28
+          ],
+          "area_m2": 1085.61,
+          "centroid_lonlat": [
+            112.5169507,
+            37.8515252
+          ],
+          "centroid_enu_m": [
+            31.45,
+            -120.35
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 689323087,
+          "name": "中区训练馆",
+          "kind": "building",
+          "bbox_east_north_m": [
+            54.03,
+            54.88
+          ],
+          "area_m2": 2467.24,
+          "centroid_lonlat": [
+            112.5169857,
+            37.8519955
+          ],
+          "centroid_enu_m": [
+            34.52,
+            -68.15
+          ],
+          "height_source": "18",
+          "levels_source": null
+        },
+        {
+          "osm_id": 689323088,
+          "name": "中区图书馆",
+          "kind": "building",
+          "bbox_east_north_m": [
+            60.47,
+            59.86
+          ],
+          "area_m2": 2962.2,
+          "centroid_lonlat": [
+            112.5167964,
+            37.8530333
+          ],
+          "centroid_enu_m": [
+            17.87,
+            47.04
+          ],
+          "height_source": null,
+          "levels_source": null
+        }
+      ]
+    },
+    "yingxi": {
+      "osm_boundary_id": 182055471,
+      "buildings": 9,
+      "features": [
+        {
+          "osm_id": 182055471,
+          "name": "太原理工大学（迎西校区）",
+          "kind": "campus",
+          "bbox_east_north_m": [
+            665.11,
+            806.47
+          ],
+          "area_m2": 398119.47,
+          "centroid_lonlat": [
+            112.5161541,
+            37.8608125
+          ],
+          "centroid_enu_m": [
+            -4.77,
+            -42.86
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 182055472,
+          "name": "太原理工大学主楼",
+          "kind": "building",
+          "bbox_east_north_m": [
+            250.43,
+            57.67
+          ],
+          "area_m2": 5729.23,
+          "centroid_lonlat": [
+            112.5166207,
+            37.8581536
+          ],
+          "centroid_enu_m": [
+            36.29,
+            -337.98
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 182055473,
+          "name": "体育馆",
+          "kind": "building",
+          "bbox_east_north_m": [
+            110.93,
+            77.96
+          ],
+          "area_m2": 6796.26,
+          "centroid_lonlat": [
+            112.5140006,
+            37.8618697
+          ],
+          "centroid_enu_m": [
+            -194.27,
+            74.48
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 182055474,
+          "name": "机械馆",
+          "kind": "building",
+          "bbox_east_north_m": [
+            38.42,
+            123.95
+          ],
+          "area_m2": 2927.49,
+          "centroid_lonlat": [
+            112.5153783,
+            37.8596387
+          ],
+          "centroid_enu_m": [
+            -73.04,
+            -173.15
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 182055475,
+          "name": "图书馆",
+          "kind": "building",
+          "bbox_east_north_m": [
+            85.1,
+            71.81
+          ],
+          "area_m2": 3522.01,
+          "centroid_lonlat": [
+            112.5165218,
+            37.8609556
+          ],
+          "centroid_enu_m": [
+            27.59,
+            -26.98
+          ],
+          "height_source": null,
+          "levels_source": "5"
+        },
+        {
+          "osm_id": 195741288,
+          "name": "电机馆",
+          "kind": "building",
+          "bbox_east_north_m": [
+            39.06,
+            132.92
+          ],
+          "area_m2": 2928.91,
+          "centroid_lonlat": [
+            112.5176265,
+            37.8596635
+          ],
+          "centroid_enu_m": [
+            124.8,
+            -170.39
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 343238097,
+          "name": "清泽园",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            109.16,
+            157.3
+          ],
+          "area_m2": 16151.72,
+          "centroid_lonlat": [
+            112.5165676,
+            37.8596404
+          ],
+          "centroid_enu_m": [
+            31.62,
+            -172.96
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1177290618,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            70.83,
+            106.22
+          ],
+          "area_m2": 7088.49,
+          "centroid_lonlat": [
+            112.5152229,
+            37.8619081
+          ],
+          "centroid_enu_m": [
+            -86.71,
+            78.75
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1177290619,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            32.61,
+            50.8
+          ],
+          "area_m2": 1614.45,
+          "centroid_lonlat": [
+            112.5151793,
+            37.863261
+          ],
+          "centroid_enu_m": [
+            -90.55,
+            228.91
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1206618205,
+          "name": "清泽苑3号楼",
+          "kind": "building",
+          "bbox_east_north_m": [
+            82.7,
+            52.09
+          ],
+          "area_m2": 2921.37,
+          "centroid_lonlat": [
+            112.5180131,
+            37.8626557
+          ],
+          "centroid_enu_m": [
+            158.81,
+            161.73
+          ],
+          "height_source": null,
+          "levels_source": "6"
+        },
+        {
+          "osm_id": 1206620646,
+          "name": "清泽篮球场",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            100.0,
+            62.16
+          ],
+          "area_m2": 5920.24,
+          "centroid_lonlat": [
+            112.5165185,
+            37.8616542
+          ],
+          "centroid_enu_m": [
+            27.3,
+            50.56
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1206621368,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            52.02,
+            50.9
+          ],
+          "area_m2": 2522.83,
+          "centroid_lonlat": [
+            112.5151058,
+            37.8608642
+          ],
+          "centroid_enu_m": [
+            -97.01,
+            -37.12
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048510,
+          "name": "清泽苑2号楼",
+          "kind": "building",
+          "bbox_east_north_m": [
+            80.09,
+            17.15
+          ],
+          "area_m2": 1180.0,
+          "centroid_lonlat": [
+            112.5180279,
+            37.8622602
+          ],
+          "centroid_enu_m": [
+            160.12,
+            117.82
+          ],
+          "height_source": null,
+          "levels_source": "5"
+        },
+        {
+          "osm_id": 1423048511,
+          "name": "清泽苑1号楼",
+          "kind": "building",
+          "bbox_east_north_m": [
+            92.87,
+            71.16
+          ],
+          "area_m2": 3797.88,
+          "centroid_lonlat": [
+            112.5180706,
+            37.8617472
+          ],
+          "centroid_enu_m": [
+            163.88,
+            60.89
+          ],
+          "height_source": null,
+          "levels_source": "6"
+        },
+        {
+          "osm_id": 1423048512,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            9.65,
+            18.11
+          ],
+          "area_m2": 156.59,
+          "centroid_lonlat": [
+            112.515652,
+            37.8630024
+          ],
+          "centroid_enu_m": [
+            -48.95,
+            200.21
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048513,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            9.66,
+            18.11
+          ],
+          "area_m2": 156.75,
+          "centroid_lonlat": [
+            112.5156319,
+            37.8632703
+          ],
+          "centroid_enu_m": [
+            -50.72,
+            229.94
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048514,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            9.65,
+            18.11
+          ],
+          "area_m2": 156.59,
+          "centroid_lonlat": [
+            112.5156198,
+            37.8635379
+          ],
+          "centroid_enu_m": [
+            -51.78,
+            259.64
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048515,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            17.32,
+            29.99
+          ],
+          "area_m2": 493.72,
+          "centroid_lonlat": [
+            112.5169883,
+            37.8615256
+          ],
+          "centroid_enu_m": [
+            68.64,
+            36.29
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048516,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            16.6,
+            29.97
+          ],
+          "area_m2": 472.24,
+          "centroid_lonlat": [
+            112.5168031,
+            37.8615224
+          ],
+          "centroid_enu_m": [
+            52.34,
+            35.93
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048517,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            17.18,
+            29.98
+          ],
+          "area_m2": 489.37,
+          "centroid_lonlat": [
+            112.5166187,
+            37.8615191
+          ],
+          "centroid_enu_m": [
+            36.11,
+            35.57
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048518,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            17.5,
+            29.99
+          ],
+          "area_m2": 499.1,
+          "centroid_lonlat": [
+            112.5164291,
+            37.8615158
+          ],
+          "centroid_enu_m": [
+            19.43,
+            35.2
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048519,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            17.38,
+            29.99
+          ],
+          "area_m2": 495.46,
+          "centroid_lonlat": [
+            112.5162385,
+            37.8615125
+          ],
+          "centroid_enu_m": [
+            2.65,
+            34.83
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048520,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            16.65,
+            29.97
+          ],
+          "area_m2": 473.81,
+          "centroid_lonlat": [
+            112.5160526,
+            37.8615092
+          ],
+          "centroid_enu_m": [
+            -13.7,
+            34.47
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048521,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            17.34,
+            30.72
+          ],
+          "area_m2": 505.93,
+          "centroid_lonlat": [
+            112.5169807,
+            37.8617958
+          ],
+          "centroid_enu_m": [
+            67.97,
+            66.28
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048522,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            16.61,
+            30.71
+          ],
+          "area_m2": 484.02,
+          "centroid_lonlat": [
+            112.5167955,
+            37.8617925
+          ],
+          "centroid_enu_m": [
+            51.67,
+            65.92
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048523,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            17.19,
+            30.72
+          ],
+          "area_m2": 501.65,
+          "centroid_lonlat": [
+            112.5166111,
+            37.8617893
+          ],
+          "centroid_enu_m": [
+            35.45,
+            65.56
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048524,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            17.52,
+            30.72
+          ],
+          "area_m2": 511.54,
+          "centroid_lonlat": [
+            112.5164216,
+            37.861786
+          ],
+          "centroid_enu_m": [
+            18.77,
+            65.19
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048525,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            17.4,
+            30.73
+          ],
+          "area_m2": 507.8,
+          "centroid_lonlat": [
+            112.5162308,
+            37.8617827
+          ],
+          "centroid_enu_m": [
+            1.98,
+            64.82
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1423048526,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            16.67,
+            30.7
+          ],
+          "area_m2": 485.61,
+          "centroid_lonlat": [
+            112.516045,
+            37.8617794
+          ],
+          "centroid_enu_m": [
+            -14.37,
+            64.46
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1524369614,
+          "name": "清泽田径场",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            117.2,
+            202.35
+          ],
+          "area_m2": 21592.51,
+          "centroid_lonlat": [
+            112.5151703,
+            37.8619683
+          ],
+          "centroid_enu_m": [
+            -91.34,
+            85.42
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1524369619,
+          "name": "思韵楼",
+          "kind": "building",
+          "bbox_east_north_m": [
+            64.71,
+            68.46
+          ],
+          "area_m2": 1801.06,
+          "centroid_lonlat": [
+            112.5153327,
+            37.8607025
+          ],
+          "centroid_enu_m": [
+            -77.05,
+            -55.07
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1524369620,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            11.03,
+            5.79
+          ],
+          "area_m2": 59.3,
+          "centroid_lonlat": [
+            112.5152463,
+            37.8606975
+          ],
+          "centroid_enu_m": [
+            -84.65,
+            -55.62
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1524369621,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            11.03,
+            5.79
+          ],
+          "area_m2": 59.33,
+          "centroid_lonlat": [
+            112.5150093,
+            37.8606918
+          ],
+          "centroid_enu_m": [
+            -105.51,
+            -56.26
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1524369622,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            11.79,
+            24.06
+          ],
+          "area_m2": 264.14,
+          "centroid_lonlat": [
+            112.515302,
+            37.8609002
+          ],
+          "centroid_enu_m": [
+            -79.75,
+            -33.12
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1524369623,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            11.79,
+            24.06
+          ],
+          "area_m2": 264.1,
+          "centroid_lonlat": [
+            112.5151263,
+            37.8608964
+          ],
+          "centroid_enu_m": [
+            -95.21,
+            -33.55
+          ],
+          "height_source": null,
+          "levels_source": null
+        },
+        {
+          "osm_id": 1524369624,
+          "name": "unnamed",
+          "kind": "leisure",
+          "bbox_east_north_m": [
+            11.79,
+            24.06
+          ],
+          "area_m2": 264.04,
+          "centroid_lonlat": [
+            112.5149398,
+            37.8608923
+          ],
+          "centroid_enu_m": [
+            -111.62,
+            -34.0
+          ],
+          "height_source": null,
+          "levels_source": null
+        }
+      ]
+    }
+  },
+  "retrieval_window_utc": "2026-10-29T15:05:47Z/2026-10-29T15:06:50Z",
+  "license_url": "https://opendatacommons.org/licenses/odbl/1-0/"
+}

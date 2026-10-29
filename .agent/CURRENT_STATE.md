@@ -1,12 +1,26 @@
 # Current state
 
-Updated 2026-10-29 14:35 UTC. Read this before the historical progress entries.
+Updated 2026-10-29 15:41 UTC. This overrides old progress snapshots.
 
-- Round 00: original plans + execution rules + official campus-source research are published on main at c9d164cdf089440bc6139407dba38abbfa09182d.
-- Round 01: local runnable Vue/Three prototype implemented. Both campuses use explicitly schematic original geometry; no claim of accurate landmark exteriors. Complete quest and optional versioned local progress implemented.
-- Direct API route is working: gpt-6.1-sol planned; two gpt-6.1-terra calls generated scene and UI/state files concurrently. Parent integrated and tested in existing sandbox. Nested Codex CLI cannot initialize its filesystem sandbox; do not disable safeguards to work around it.
-- User authorized direct main pushes after checks and wants only major milestones for approval. Before browser tests are verified, publish on a temporary development branch for CI, then advance main only after actual results.
-- Local typecheck/lint/unit(20)/build passed. GitHub Actions run40892347891 passed all checks including5 browser tests for69334abb9dcb7d7f31933a2956d54bc8a858a59b; the same code was advanced to main and remote head verified. Local browser startup remains host-blocked, but CI provides actual browser evidence.
-- Default overhead view and initial Huyu focus are reversible. Final MVP still both campuses. Bulk building refinement waits for major visual baseline review; backend/multiplayer deferred, not rejected.
-- API cap $90 total; grant expires Nov26. Three completed requests have exact token records in round-01-local-checks.md, but invoice/remaining promotional balance not verified. Initial pilot has conservative $5 request-reserve ceiling; no auto-recharge or extra purchases.
-- Desktop and mobile CI screenshots inspected. Mobile clipping/scene placement and runtime context loss were fixed and retested. Pending: user major visual baseline feedback, campus geometry fidelity, and explicit approval to transmit necessary private repo code to official OpenAI API for further review/debugging (asked after review attempt was blocked). No public deployment authorized.
+## User goal and authority
+
+The first toy-diorama visual baseline was REJECTED. User requires a complete playable release, evidence-based real proportions, aesthetics and coherent gameplay. Before every new plan reread plans/current state and do bounded relevant source/reuse research. Main pushes after validation are authorized; user handles large outcome validation, not every edit. No public deployment or extra spending authorization.
+
+Selective transmission to official OpenAI API is now explicitly permitted: only necessary snippets/interfaces/plans/errors for the current subtask. No whole repository, credentials/auth, or unrelated information. Source manifests are recorded per call. Old blocked wholesale review is not resumed.
+
+## Active round03
+
+- Read official photos/maps and OSM evidence before visual plan. Plan in plans/round-03-visual-rework.md.
+- Genuine OSM geographic polygons for2 campus boundaries,15 buildings,27 parks/sports areas projected WGS84->local meters;1unit=1m. Complete polygon shapes preserved. Only partial campus coverage; NOT survey/BIM. Heights largely estimates/unverified, explicitly tagged.
+- Offline preprocessing reuses Shapely and NetworkX A*. Game paths stay inside boundary and outside building buffers; they are NOT verified real walking routes. Yingxi south gate has a mapped node; Huyu north-gate geographic position and Meihua footprint remain unknown, not invented.
+- Terra API independently generated new scene and full-viewport UI. Parent integrating/testing. Continuous avatar travel->arrival->observation->checkin->nextstop->completion/replay/exit replaces remote card clicking. No backend/multiplayer yet; still future roadmap.
+- Local typecheck/lint/unit23/build passed for current integration before final browser validation. New browser tests updated for movement and observation; not yet verified in CI. Previous round01 CI must not be treated as evidence for newcode.
+- Prior main checkpoint edb369c418fbd8a7a8b4472da88bf0c93eb4a20a remains working history. New rework will be checked on development branch before main.
+
+## Budget/runtime
+
+API cap$90; current account balance/invoice not readable here. Actual model/token usage retained, never substitute estimates for invoice. Initial pilot conservative reserve ceiling$5;no auto-recharge. gpt-6.1-terra implementation, gpt-6.1-sol planning/review;6.1luna absent, simple work staysTerra. Nested Codex CLI cannot initialize host sandbox, so direct Responses generation + parent sandbox tests; no sandbox weakening. GitHub connector publication and CI work;localCLI git auth absent.
+
+## Remaining acceptance gaps
+
+Final browser/visual review, source coverage, unknown heights and facades, Huyu entrance coordinates and Meihua footprint, actual device performance and complete user-facing delivery. Do not call the campus fully real-scale/complete when these are unresolved. No school images or Hks assets redistributed.

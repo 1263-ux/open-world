@@ -1,0 +1,2475 @@
+{
+  "type": "FeatureCollection",
+  "name": "TYUT public campus footprint research snapshot",
+  "license": "ODbL-1.0",
+  "attribution": "© OpenStreetMap contributors; https://www.openstreetmap.org/copyright",
+  "source_query": "tyut-overpass-query.txt",
+  "osm_base_timestamp": "2026-10-29T15:04:51Z",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "way/427605255",
+      "properties": {
+        "campus": "huyu",
+        "name": "太原理工大学（虎峪校区）",
+        "kind": "campus",
+        "source": "https://www.openstreetmap.org/way/427605255",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.512935,
+              37.8506903
+            ],
+            [
+              112.5159172,
+              37.8507802
+            ],
+            [
+              112.5160881,
+              37.8513647
+            ],
+            [
+              112.5204084,
+              37.851449
+            ],
+            [
+              112.5202803,
+              37.8543713
+            ],
+            [
+              112.5127784,
+              37.8545287
+            ],
+            [
+              112.512935,
+              37.8506903
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/543095320",
+      "properties": {
+        "campus": "huyu",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/543095320",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5141001,
+              37.8526283
+            ],
+            [
+              112.5141355,
+              37.8509292
+            ],
+            [
+              112.5151831,
+              37.8509683
+            ],
+            [
+              112.515176,
+              37.8526283
+            ],
+            [
+              112.5141001,
+              37.8526283
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/689323083",
+      "properties": {
+        "campus": "huyu",
+        "name": "中区主楼",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/689323083",
+        "height_m": null,
+        "building_levels": "13",
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5162433,
+              37.8538945
+            ],
+            [
+              112.5172925,
+              37.8538983
+            ],
+            [
+              112.517294,
+              37.8537043
+            ],
+            [
+              112.5162431,
+              37.8537105
+            ],
+            [
+              112.5162433,
+              37.8538945
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/689323084",
+      "properties": {
+        "campus": "huyu",
+        "name": "太原理工大学矿机楼",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/689323084",
+        "height_m": null,
+        "building_levels": "6",
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5154259,
+              37.8525576
+            ],
+            [
+              112.5163808,
+              37.8525533
+            ],
+            [
+              112.5163808,
+              37.8523966
+            ],
+            [
+              112.5154205,
+              37.8523924
+            ],
+            [
+              112.5154259,
+              37.8525576
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/689323085",
+      "properties": {
+        "campus": "huyu",
+        "name": "中区8号楼",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/689323085",
+        "height_m": null,
+        "building_levels": "6",
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.517337,
+              37.8516315
+            ],
+            [
+              112.5183691,
+              37.8516462
+            ],
+            [
+              112.5183784,
+              37.8514803
+            ],
+            [
+              112.5173463,
+              37.8514508
+            ],
+            [
+              112.517337,
+              37.8516315
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/689323086",
+      "properties": {
+        "campus": "huyu",
+        "name": "中区9号楼",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/689323086",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5166412,
+              37.8516094
+            ],
+            [
+              112.5172576,
+              37.8516204
+            ],
+            [
+              112.5172669,
+              37.8514434
+            ],
+            [
+              112.5166412,
+              37.8514287
+            ],
+            [
+              112.5166412,
+              37.8516094
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/689323087",
+      "properties": {
+        "campus": "huyu",
+        "name": "中区训练馆",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/689323087",
+        "height_m": 18.0,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": "18"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5168505,
+              37.8522382
+            ],
+            [
+              112.5171189,
+              37.8522414
+            ],
+            [
+              112.5172896,
+              37.8521194
+            ],
+            [
+              112.5172937,
+              37.8518979
+            ],
+            [
+              112.5171229,
+              37.8517567
+            ],
+            [
+              112.5168668,
+              37.851747
+            ],
+            [
+              112.5166798,
+              37.8518626
+            ],
+            [
+              112.5166839,
+              37.8520969
+            ],
+            [
+              112.5168505,
+              37.8522382
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/689323088",
+      "properties": {
+        "campus": "huyu",
+        "name": "中区图书馆",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/689323088",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5164901,
+              37.8532948
+            ],
+            [
+              112.5170633,
+              37.8532851
+            ],
+            [
+              112.5170674,
+              37.8529641
+            ],
+            [
+              112.5171162,
+              37.8529673
+            ],
+            [
+              112.5171609,
+              37.8529577
+            ],
+            [
+              112.5171446,
+              37.8527555
+            ],
+            [
+              112.5169576,
+              37.8527651
+            ],
+            [
+              112.5169576,
+              37.8528133
+            ],
+            [
+              112.5164738,
+              37.8528068
+            ],
+            [
+              112.5164901,
+              37.8532948
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/182055471",
+      "properties": {
+        "campus": "yingxi",
+        "name": "太原理工大学（迎西校区）",
+        "kind": "campus",
+        "source": "https://www.openstreetmap.org/way/182055471",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5187639,
+              37.857696
+            ],
+            [
+              112.5187497,
+              37.8579662
+            ],
+            [
+              112.5190006,
+              37.857971
+            ],
+            [
+              112.5191601,
+              37.8584321
+            ],
+            [
+              112.5192474,
+              37.8584327
+            ],
+            [
+              112.5192716,
+              37.8608934
+            ],
+            [
+              112.5188972,
+              37.8614222
+            ],
+            [
+              112.5188436,
+              37.8619663
+            ],
+            [
+              112.5187899,
+              37.863034
+            ],
+            [
+              112.5199875,
+              37.8630563
+            ],
+            [
+              112.5199722,
+              37.8640518
+            ],
+            [
+              112.517142,
+              37.8648316
+            ],
+            [
+              112.516717,
+              37.8645199
+            ],
+            [
+              112.516309,
+              37.8644986
+            ],
+            [
+              112.5163086,
+              37.8644593
+            ],
+            [
+              112.5156316,
+              37.8644613
+            ],
+            [
+              112.5155579,
+              37.8638023
+            ],
+            [
+              112.5153165,
+              37.8637981
+            ],
+            [
+              112.5153165,
+              37.8637472
+            ],
+            [
+              112.5152025,
+              37.8636736
+            ],
+            [
+              112.5147197,
+              37.8636736
+            ],
+            [
+              112.5147438,
+              37.8629038
+            ],
+            [
+              112.5146046,
+              37.8628711
+            ],
+            [
+              112.5145762,
+              37.8628219
+            ],
+            [
+              112.5145065,
+              37.8624524
+            ],
+            [
+              112.514477,
+              37.8622776
+            ],
+            [
+              112.5136095,
+              37.8623693
+            ],
+            [
+              112.5124291,
+              37.862259
+            ],
+            [
+              112.5124755,
+              37.8612005
+            ],
+            [
+              112.5126314,
+              37.8576482
+            ],
+            [
+              112.51282,
+              37.8575657
+            ],
+            [
+              112.5166178,
+              37.8576493
+            ],
+            [
+              112.5187639,
+              37.857696
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/182055472",
+      "properties": {
+        "campus": "yingxi",
+        "name": "太原理工大学主楼",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/182055472",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5160513,
+              37.8583749
+            ],
+            [
+              112.5171537,
+              37.8583996
+            ],
+            [
+              112.5171557,
+              37.8583439
+            ],
+            [
+              112.5175445,
+              37.8583526
+            ],
+            [
+              112.5175528,
+              37.8581219
+            ],
+            [
+              112.5180353,
+              37.8581328
+            ],
+            [
+              112.518042,
+              37.8579489
+            ],
+            [
+              112.5173214,
+              37.8579327
+            ],
+            [
+              112.5173105,
+              37.8582369
+            ],
+            [
+              112.515901,
+              37.8582052
+            ],
+            [
+              112.5159122,
+              37.857896
+            ],
+            [
+              112.5152027,
+              37.85788
+            ],
+            [
+              112.5151963,
+              37.8580591
+            ],
+            [
+              112.5156811,
+              37.85807
+            ],
+            [
+              112.5156723,
+              37.858312
+            ],
+            [
+              112.5160533,
+              37.8583206
+            ],
+            [
+              112.5160513,
+              37.8583749
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/182055473",
+      "properties": {
+        "campus": "yingxi",
+        "name": "体育馆",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/182055473",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5134606,
+              37.8616092
+            ],
+            [
+              112.5140171,
+              37.8615191
+            ],
+            [
+              112.5145455,
+              37.8616272
+            ],
+            [
+              112.5145419,
+              37.861761
+            ],
+            [
+              112.514634,
+              37.8617616
+            ],
+            [
+              112.5146258,
+              37.8620119
+            ],
+            [
+              112.5145352,
+              37.8620115
+            ],
+            [
+              112.5145319,
+              37.8621326
+            ],
+            [
+              112.5139835,
+              37.8622215
+            ],
+            [
+              112.5134525,
+              37.8621079
+            ],
+            [
+              112.5134545,
+              37.861983
+            ],
+            [
+              112.5133734,
+              37.8619822
+            ],
+            [
+              112.5133746,
+              37.8617308
+            ],
+            [
+              112.5134586,
+              37.8617311
+            ],
+            [
+              112.5134606,
+              37.8616092
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/182055474",
+      "properties": {
+        "campus": "yingxi",
+        "name": "机械馆",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/182055474",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5151782,
+              37.8601733
+            ],
+            [
+              112.5155853,
+              37.8601836
+            ],
+            [
+              112.5155928,
+              37.8599987
+            ],
+            [
+              112.5153668,
+              37.859993
+            ],
+            [
+              112.5153692,
+              37.8599343
+            ],
+            [
+              112.515441,
+              37.8599361
+            ],
+            [
+              112.5154518,
+              37.8596695
+            ],
+            [
+              112.515602,
+              37.8596733
+            ],
+            [
+              112.5156065,
+              37.8595623
+            ],
+            [
+              112.5154426,
+              37.8595582
+            ],
+            [
+              112.5154533,
+              37.8592954
+            ],
+            [
+              112.5153728,
+              37.8592934
+            ],
+            [
+              112.5153754,
+              37.8592296
+            ],
+            [
+              112.5156083,
+              37.8592355
+            ],
+            [
+              112.5156148,
+              37.8590767
+            ],
+            [
+              112.5152271,
+              37.8590669
+            ],
+            [
+              112.5152206,
+              37.8592257
+            ],
+            [
+              112.5153086,
+              37.859228
+            ],
+            [
+              112.5153064,
+              37.8592817
+            ],
+            [
+              112.5152481,
+              37.8592803
+            ],
+            [
+              112.5152277,
+              37.8597792
+            ],
+            [
+              112.5152215,
+              37.8599318
+            ],
+            [
+              112.5152993,
+              37.8599338
+            ],
+            [
+              112.5152969,
+              37.8599913
+            ],
+            [
+              112.5151857,
+              37.8599885
+            ],
+            [
+              112.5151782,
+              37.8601733
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/182055475",
+      "properties": {
+        "campus": "yingxi",
+        "name": "图书馆",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/182055475",
+        "height_m": null,
+        "building_levels": "5",
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5160433,
+              37.8608797
+            ],
+            [
+              112.5162093,
+              37.8608836
+            ],
+            [
+              112.5162118,
+              37.8608177
+            ],
+            [
+              112.5164007,
+              37.8608221
+            ],
+            [
+              112.5163963,
+              37.8609404
+            ],
+            [
+              112.5164252,
+              37.8609411
+            ],
+            [
+              112.5164168,
+              37.8611669
+            ],
+            [
+              112.5160603,
+              37.8611586
+            ],
+            [
+              112.5160556,
+              37.8612837
+            ],
+            [
+              112.5169579,
+              37.8613047
+            ],
+            [
+              112.5169626,
+              37.8611787
+            ],
+            [
+              112.5166115,
+              37.8611705
+            ],
+            [
+              112.5166197,
+              37.8609513
+            ],
+            [
+              112.5166473,
+              37.8609519
+            ],
+            [
+              112.5166517,
+              37.8608327
+            ],
+            [
+              112.5168248,
+              37.8608367
+            ],
+            [
+              112.5168225,
+              37.8608978
+            ],
+            [
+              112.5170021,
+              37.860902
+            ],
+            [
+              112.5170104,
+              37.8606801
+            ],
+            [
+              112.5160516,
+              37.8606577
+            ],
+            [
+              112.5160433,
+              37.8608797
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/195741288",
+      "properties": {
+        "campus": "yingxi",
+        "name": "电机馆",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/195741288",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5174669,
+              37.8601277
+            ],
+            [
+              112.5174781,
+              37.8597855
+            ],
+            [
+              112.5174701,
+              37.8597853
+            ],
+            [
+              112.5174778,
+              37.8595481
+            ],
+            [
+              112.5174907,
+              37.8595484
+            ],
+            [
+              112.5175023,
+              37.8591927
+            ],
+            [
+              112.5175066,
+              37.8590621
+            ],
+            [
+              112.5177154,
+              37.8590663
+            ],
+            [
+              112.5177111,
+              37.8591974
+            ],
+            [
+              112.5179067,
+              37.8592014
+            ],
+            [
+              112.5179016,
+              37.8593571
+            ],
+            [
+              112.5176384,
+              37.8593517
+            ],
+            [
+              112.5176365,
+              37.8594102
+            ],
+            [
+              112.5176899,
+              37.8594113
+            ],
+            [
+              112.5176731,
+              37.8599261
+            ],
+            [
+              112.5176168,
+              37.8599249
+            ],
+            [
+              112.5176151,
+              37.8599786
+            ],
+            [
+              112.5178865,
+              37.8599841
+            ],
+            [
+              112.5178815,
+              37.8601368
+            ],
+            [
+              112.5176731,
+              37.8601325
+            ],
+            [
+              112.517669,
+              37.8602596
+            ],
+            [
+              112.5174628,
+              37.8602554
+            ],
+            [
+              112.5174669,
+              37.8601277
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/343238097",
+      "properties": {
+        "campus": "yingxi",
+        "name": "清泽园",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/343238097",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5159474,
+              37.8603215
+            ],
+            [
+              112.515999,
+              37.8589318
+            ],
+            [
+              112.5171879,
+              37.8589593
+            ],
+            [
+              112.5171363,
+              37.860349
+            ],
+            [
+              112.5159474,
+              37.8603215
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1177290618",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1177290618",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5148204,
+              37.8623695
+            ],
+            [
+              112.5148538,
+              37.8614296
+            ],
+            [
+              112.5156253,
+              37.8614467
+            ],
+            [
+              112.515592,
+              37.8623866
+            ],
+            [
+              112.5148204,
+              37.8623695
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1177290619",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1177290619",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.514994,
+              37.8634865
+            ],
+            [
+              112.5150008,
+              37.8630322
+            ],
+            [
+              112.5153646,
+              37.8630356
+            ],
+            [
+              112.5153578,
+              37.8634899
+            ],
+            [
+              112.514994,
+              37.8634865
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1206618205",
+      "properties": {
+        "campus": "yingxi",
+        "name": "清泽苑3号楼",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/1206618205",
+        "height_m": null,
+        "building_levels": "6",
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5175426,
+              37.8629009
+            ],
+            [
+              112.5177722,
+              37.8629043
+            ],
+            [
+              112.5177743,
+              37.8626756
+            ],
+            [
+              112.5182528,
+              37.8626874
+            ],
+            [
+              112.5182421,
+              37.8629212
+            ],
+            [
+              112.5184674,
+              37.8629331
+            ],
+            [
+              112.5184824,
+              37.8624842
+            ],
+            [
+              112.517549,
+              37.8624638
+            ],
+            [
+              112.5175426,
+              37.8629009
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1206620646",
+      "properties": {
+        "campus": "yingxi",
+        "name": "清泽篮球场",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1206620646",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5159503,
+              37.8619146
+            ],
+            [
+              112.516132,
+              37.8619177
+            ],
+            [
+              112.516322,
+              37.8619211
+            ],
+            [
+              112.5165134,
+              37.8619244
+            ],
+            [
+              112.5167011,
+              37.8619277
+            ],
+            [
+              112.5168822,
+              37.8619309
+            ],
+            [
+              112.5170715,
+              37.8619342
+            ],
+            [
+              112.5170792,
+              37.8616607
+            ],
+            [
+              112.5170867,
+              37.8613938
+            ],
+            [
+              112.5168974,
+              37.8613905
+            ],
+            [
+              112.5167163,
+              37.8613874
+            ],
+            [
+              112.5165286,
+              37.8613841
+            ],
+            [
+              112.5163372,
+              37.8613807
+            ],
+            [
+              112.5161472,
+              37.8613774
+            ],
+            [
+              112.5159655,
+              37.8613742
+            ],
+            [
+              112.515958,
+              37.8616411
+            ],
+            [
+              112.5159503,
+              37.8619146
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1206621368",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1206621368",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5148103,
+              37.8610822
+            ],
+            [
+              112.5153874,
+              37.8610935
+            ],
+            [
+              112.5154014,
+              37.8606462
+            ],
+            [
+              112.5148243,
+              37.8606349
+            ],
+            [
+              112.5148103,
+              37.8610822
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048510",
+      "properties": {
+        "campus": "yingxi",
+        "name": "清泽苑2号楼",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/1423048510",
+        "height_m": null,
+        "building_levels": "5",
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5175779,
+              37.8621829
+            ],
+            [
+              112.5175729,
+              37.8623163
+            ],
+            [
+              112.5184781,
+              37.8623374
+            ],
+            [
+              112.5184831,
+              37.8622041
+            ],
+            [
+              112.5175779,
+              37.8621829
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048511",
+      "properties": {
+        "campus": "yingxi",
+        "name": "清泽苑1号楼",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/1423048511",
+        "height_m": null,
+        "building_levels": "6",
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5175551,
+              37.8620304
+            ],
+            [
+              112.5175591,
+              37.86141
+            ],
+            [
+              112.5177954,
+              37.8614182
+            ],
+            [
+              112.5177951,
+              37.8616853
+            ],
+            [
+              112.5183798,
+              37.861698
+            ],
+            [
+              112.5183798,
+              37.8614385
+            ],
+            [
+              112.5186105,
+              37.8614465
+            ],
+            [
+              112.518583,
+              37.8620511
+            ],
+            [
+              112.5183578,
+              37.8620466
+            ],
+            [
+              112.5183624,
+              37.8618827
+            ],
+            [
+              112.5177918,
+              37.8618684
+            ],
+            [
+              112.5177857,
+              37.8620351
+            ],
+            [
+              112.5175551,
+              37.8620304
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048512",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048512",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5155972,
+              37.8630803
+            ],
+            [
+              112.5156975,
+              37.863084
+            ],
+            [
+              112.5157069,
+              37.8629245
+            ],
+            [
+              112.5156066,
+              37.8629208
+            ],
+            [
+              112.5155972,
+              37.8630803
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048513",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048513",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.515577,
+              37.8633482
+            ],
+            [
+              112.5156774,
+              37.8633519
+            ],
+            [
+              112.5156868,
+              37.8631924
+            ],
+            [
+              112.5155864,
+              37.8631887
+            ],
+            [
+              112.515577,
+              37.8633482
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048514",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048514",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.515565,
+              37.8636158
+            ],
+            [
+              112.5156653,
+              37.8636195
+            ],
+            [
+              112.5156747,
+              37.86346
+            ],
+            [
+              112.5155744,
+              37.8634563
+            ],
+            [
+              112.515565,
+              37.8636158
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048515",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048515",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5168974,
+              37.8613905
+            ],
+            [
+              112.5170867,
+              37.8613938
+            ],
+            [
+              112.5170792,
+              37.8616607
+            ],
+            [
+              112.5168899,
+              37.8616574
+            ],
+            [
+              112.5168974,
+              37.8613905
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048516",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048516",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5167163,
+              37.8613874
+            ],
+            [
+              112.5168974,
+              37.8613905
+            ],
+            [
+              112.5168899,
+              37.8616574
+            ],
+            [
+              112.5167088,
+              37.8616542
+            ],
+            [
+              112.5167163,
+              37.8613874
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048517",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048517",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5165286,
+              37.8613841
+            ],
+            [
+              112.5167163,
+              37.8613874
+            ],
+            [
+              112.5167088,
+              37.8616542
+            ],
+            [
+              112.5165211,
+              37.8616509
+            ],
+            [
+              112.5165286,
+              37.8613841
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048518",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048518",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5163372,
+              37.8613807
+            ],
+            [
+              112.5165286,
+              37.8613841
+            ],
+            [
+              112.5165211,
+              37.8616509
+            ],
+            [
+              112.5163297,
+              37.8616476
+            ],
+            [
+              112.5163372,
+              37.8613807
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048519",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048519",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5161472,
+              37.8613774
+            ],
+            [
+              112.5163372,
+              37.8613807
+            ],
+            [
+              112.5163297,
+              37.8616476
+            ],
+            [
+              112.5161397,
+              37.8616442
+            ],
+            [
+              112.5161472,
+              37.8613774
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048520",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048520",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5161397,
+              37.8616442
+            ],
+            [
+              112.515958,
+              37.8616411
+            ],
+            [
+              112.5159655,
+              37.8613742
+            ],
+            [
+              112.5161472,
+              37.8613774
+            ],
+            [
+              112.5161397,
+              37.8616442
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048521",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048521",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5168899,
+              37.8616574
+            ],
+            [
+              112.5170792,
+              37.8616607
+            ],
+            [
+              112.5170715,
+              37.8619342
+            ],
+            [
+              112.5168822,
+              37.8619309
+            ],
+            [
+              112.5168899,
+              37.8616574
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048522",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048522",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5167088,
+              37.8616542
+            ],
+            [
+              112.5168899,
+              37.8616574
+            ],
+            [
+              112.5168822,
+              37.8619309
+            ],
+            [
+              112.5167011,
+              37.8619277
+            ],
+            [
+              112.5167088,
+              37.8616542
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048523",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048523",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5165211,
+              37.8616509
+            ],
+            [
+              112.5167088,
+              37.8616542
+            ],
+            [
+              112.5167011,
+              37.8619277
+            ],
+            [
+              112.5165134,
+              37.8619244
+            ],
+            [
+              112.5165211,
+              37.8616509
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048524",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048524",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5163297,
+              37.8616476
+            ],
+            [
+              112.5165211,
+              37.8616509
+            ],
+            [
+              112.5165134,
+              37.8619244
+            ],
+            [
+              112.516322,
+              37.8619211
+            ],
+            [
+              112.5163297,
+              37.8616476
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048525",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048525",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5161397,
+              37.8616442
+            ],
+            [
+              112.5163297,
+              37.8616476
+            ],
+            [
+              112.516322,
+              37.8619211
+            ],
+            [
+              112.516132,
+              37.8619177
+            ],
+            [
+              112.5161397,
+              37.8616442
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1423048526",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1423048526",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.516132,
+              37.8619177
+            ],
+            [
+              112.5161397,
+              37.8616442
+            ],
+            [
+              112.515958,
+              37.8616411
+            ],
+            [
+              112.5159503,
+              37.8619146
+            ],
+            [
+              112.516132,
+              37.8619177
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1524369614",
+      "properties": {
+        "campus": "yingxi",
+        "name": "清泽田径场",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1524369614",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5147438,
+              37.8629038
+            ],
+            [
+              112.5147508,
+              37.862833
+            ],
+            [
+              112.515762,
+              37.8628616
+            ],
+            [
+              112.5158384,
+              37.8611072
+            ],
+            [
+              112.5146019,
+              37.8610807
+            ],
+            [
+              112.5146006,
+              37.861158
+            ],
+            [
+              112.514547,
+              37.8613263
+            ],
+            [
+              112.5145455,
+              37.8616272
+            ],
+            [
+              112.5145419,
+              37.861761
+            ],
+            [
+              112.5145352,
+              37.8620115
+            ],
+            [
+              112.5145319,
+              37.8621326
+            ],
+            [
+              112.5145065,
+              37.8624524
+            ],
+            [
+              112.5145762,
+              37.8628219
+            ],
+            [
+              112.5146046,
+              37.8628711
+            ],
+            [
+              112.5147438,
+              37.8629038
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1524369619",
+      "properties": {
+        "campus": "yingxi",
+        "name": "思韵楼",
+        "kind": "building",
+        "source": "https://www.openstreetmap.org/way/1524369619",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.514861,
+              37.8604836
+            ],
+            [
+              112.5148564,
+              37.8606317
+            ],
+            [
+              112.5154089,
+              37.8606422
+            ],
+            [
+              112.515395,
+              37.861097
+            ],
+            [
+              112.5155761,
+              37.8611004
+            ],
+            [
+              112.5155917,
+              37.8605909
+            ],
+            [
+              112.5155198,
+              37.8605896
+            ],
+            [
+              112.5155227,
+              37.8604962
+            ],
+            [
+              112.514861,
+              37.8604836
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1524369620",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1524369620",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5151837,
+              37.8607206
+            ],
+            [
+              112.5153071,
+              37.8607236
+            ],
+            [
+              112.515309,
+              37.8606745
+            ],
+            [
+              112.5151856,
+              37.8606714
+            ],
+            [
+              112.5151837,
+              37.8607206
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1524369621",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1524369621",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5149467,
+              37.8607149
+            ],
+            [
+              112.51507,
+              37.8607179
+            ],
+            [
+              112.515072,
+              37.8606687
+            ],
+            [
+              112.5149486,
+              37.8606657
+            ],
+            [
+              112.5149467,
+              37.8607149
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1524369622",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1524369622",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5153613,
+              37.8610086
+            ],
+            [
+              112.515369,
+              37.8607947
+            ],
+            [
+              112.5152427,
+              37.8607918
+            ],
+            [
+              112.515235,
+              37.8610058
+            ],
+            [
+              112.5153613,
+              37.8610086
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1524369623",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1524369623",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5151856,
+              37.8610048
+            ],
+            [
+              112.5151933,
+              37.8607908
+            ],
+            [
+              112.5150671,
+              37.860788
+            ],
+            [
+              112.5150593,
+              37.861002
+            ],
+            [
+              112.5151856,
+              37.8610048
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "way/1524369624",
+      "properties": {
+        "campus": "yingxi",
+        "name": "unnamed",
+        "kind": "leisure",
+        "source": "https://www.openstreetmap.org/way/1524369624",
+        "height_m": null,
+        "building_levels": null,
+        "horizontal_status": "osm-derived-not-surveyed",
+        "vertical_status": "unverified",
+        "height_source_tag": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              112.5149991,
+              37.8610007
+            ],
+            [
+              112.5150068,
+              37.8607868
+            ],
+            [
+              112.5148806,
+              37.8607839
+            ],
+            [
+              112.5148728,
+              37.8609979
+            ],
+            [
+              112.5149991,
+              37.8610007
+            ]
+          ]
+        ]
+      }
+    }
+  ],
+  "license_url": "https://opendatacommons.org/licenses/odbl/1-0/"
+}

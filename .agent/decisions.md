@@ -72,3 +72,11 @@
 3. 原稿“首版不设后端/多人”是阶段边界，不是永不加入。
 4. 原稿 4+1 周调整为额度窗口内的条件性压缩提案。
 5. `.env.local` 不会自动使前端 API Key 安全；任何秘密不能进客户端构建。
+
+## 2026-10-29 15:12 selective API authorization
+
+User explicitly permits selective sharing for this project. Only subtask-required snippets, interface contracts and redacted errors go to official OpenAI API; no whole repo or credential/auth/unrelated files. Requirements-only API generation is also possible and is billed independently of whether private source is included. See per-call manifest. This supersedes earlier 'awaiting selective sharing' status, not broader privacy boundaries.
+
+## 2026-10-29 15:04 quality correction
+
+The first visual was rejected. Full campus geographic meter coordinates and faithful feature footprints replace arbitrary toy sizes. Aesthetic/gameplay plan is round03;complete release remains target, not another placeholder screenshot. Actual heights/unknown footprints are explicitly unverified;source gaps cannot be hidden behind generic models.

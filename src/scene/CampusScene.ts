@@ -1,483 +1,628 @@
-import {
-  ACESFilmicToneMapping,
-  AmbientLight,
-  BoxGeometry,
-  CircleGeometry,
-  Color,
-  ConeGeometry,
-  CylinderGeometry,
-  DirectionalLight,
-  ExtrudeGeometry,
-  Group,
-  HemisphereLight,
-  MathUtils,
-  Mesh,
-  MeshStandardMaterial,
-  OrthographicCamera,
-  PCFSoftShadowMap,
-  Raycaster,
-  RingGeometry,
-  Scene,
-  Shape,
-  SRGBColorSpace,
-  Vector2,
-  Vector3,
-  WebGLRenderer,
-} from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type {
-  CampusData,
-  CampusSceneHandle,
-  Landmark,
-  SceneEvent,
-  SceneState,
-} from '../shared/contracts';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-const DEFAULT_POSITION = new Vector3(48, 52, 58);
-const VIEW_SPAN = 86;
+import type { CampusData, CampusRoad, CampusSceneHandle, Landmark, Point2, SceneEvent, SceneState } from '../shared/contracts';
 
-function disposeGroup(group: Group): void {
-  const geometries = new Set<{ dispose(): void }>();
-  const materials = new Set<{ dispose(): void }>();
-  group.traverse((object) => {
-    if (object instanceof Mesh) {
-      geometries.add(object.geometry);
-      const entries = Array.isArray(object.material) ? object.material : [object.material];
-      entries.forEach((material) => materials.add(material));
-    }
+const noopHandle = (): CampusSceneHandle => ({
+  setCampus() {}, setState() {}, navigateTo: () => false, resetJourney() {},
+  focusLandmark() {}, overview() {}, resetView() {}, dispose() {},
+});
+
+function validPoint(p: Point2 | undefined): p is Point2 {
+  return !!p && Number.isFinite(p[0]) && Number.isFinite(p[1]);
+}
+function cleanPolygon(points: Point2[]): Point2[] {
+  const result: Point2[] = [];
+  for (const p of points || []) {
+    if (!validPoint(p)) continue;
+    const previous = result[result.length - 1];
+    if (!previous || Math.hypot(p[0] - previous[0], p[1] - previous[1]) > 0.001) result.push(p);
+  }
+  if (result.length > 2 && Math.hypot(result[0][0] - result[result.length - 1][0], result[0][1] - result[result.length - 1][1]) < 0.001) result.pop();
+  return result;
+}
+function makeShape(points: Point2[]): THREE.Shape | null {
+  const p = cleanPolygon(points);
+  if (p.length < 3) return null;
+  const shape = new THREE.Shape();
+  shape.moveTo(p[0][0], -p[0][1]);
+  for (let i = 1; i < p.length; i++) shape.lineTo(p[i][0], -p[i][1]);
+  shape.closePath();
+  return shape;
+}
+function inside(x: number, z: number, polygon: Point2[]): boolean {
+  let hit = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[i], b = polygon[j];
+    if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) hit = !hit;
+  }
+  return hit;
+}
+function boundsOf(points: Point2[]): [number, number, number, number] {
+  const p = points.filter(validPoint);
+  if (!p.length) return [-250, -250, 250, 250];
+  let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
+  for (const [x, z] of p) { minX = Math.min(minX, x); minZ = Math.min(minZ, z); maxX = Math.max(maxX, x); maxZ = Math.max(maxZ, z); }
+  return [minX, minZ, maxX, maxZ];
+}
+function disposeObject(root: THREE.Object3D): void {
+  const geometries = new Set<THREE.BufferGeometry>();
+  const materials = new Set<THREE.Material>();
+  const textures = new Set<THREE.Texture>();
+  root.traverse((object) => {
+    const item = object as THREE.Mesh;
+    if (item.geometry) geometries.add(item.geometry);
+    const list = item.material ? (Array.isArray(item.material) ? item.material : [item.material]) : [];
+    for (const material of list) materials.add(material);
   });
-  geometries.forEach((geometry) => geometry.dispose());
-  materials.forEach((material) => material.dispose());
-  group.clear();
+  for (const material of materials) {
+    for (const value of Object.values(material)) if (value instanceof THREE.Texture) textures.add(value);
+    material.dispose();
+  }
+  for (const texture of textures) texture.dispose();
+  for (const geometry of geometries) geometry.dispose();
+  root.removeFromParent();
 }
-
-function material(color: string): MeshStandardMaterial {
-  return new MeshStandardMaterial({ color, roughness: 0.88 });
-}
-
-function box(
-  parent: Group,
-  width: number,
-  height: number,
-  depth: number,
-  x: number,
-  y: number,
-  z: number,
-  surface: MeshStandardMaterial,
-): Mesh {
-  const mesh = new Mesh(new BoxGeometry(width, height, depth), surface);
-  mesh.position.set(x, y, z);
-  mesh.castShadow = true;
+function addSurface(group: THREE.Group, points: Point2[], y: number, material: THREE.Material): THREE.Mesh | null {
+  const shape = makeShape(points);
+  if (!shape) return null;
+  const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), material);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.y = y;
   mesh.receiveShadow = true;
-  parent.add(mesh);
+  group.add(mesh);
   return mesh;
 }
-
-function roundedIsland(): ExtrudeGeometry {
-  const half = 36;
-  const radius = 5;
-  const shape = new Shape();
-  shape.moveTo(-half + radius, -half);
-  shape.lineTo(half - radius, -half);
-  shape.quadraticCurveTo(half, -half, half, -half + radius);
-  shape.lineTo(half, half - radius);
-  shape.quadraticCurveTo(half, half, half - radius, half);
-  shape.lineTo(-half + radius, half);
-  shape.quadraticCurveTo(-half, half, -half, half - radius);
-  shape.lineTo(-half, -half + radius);
-  shape.quadraticCurveTo(-half, -half, -half + radius, -half);
-  return new ExtrudeGeometry(shape, {
-    depth: 1,
-    bevelEnabled: true,
-    bevelThickness: 0.3,
-    bevelSize: 0.3,
-    bevelSegments: 3,
-    curveSegments: 8,
-  });
+function perimeter(points: Point2[], y: number, material: THREE.Material): THREE.LineLoop | null {
+  const polygon = cleanPolygon(points);
+  if (polygon.length < 3) return null;
+  const geometry = new THREE.BufferGeometry().setFromPoints(polygon.map(([x, z]) => new THREE.Vector3(x, y, z)));
+  return new THREE.LineLoop(geometry, material);
 }
-
-function addTree(parent: Group, x: number, z: number, scale: number, trunk: MeshStandardMaterial, foliage: MeshStandardMaterial): void {
-  const tree = new Group();
-  tree.position.set(x, 0, z);
-  tree.scale.setScalar(scale);
-  const stem = new Mesh(new CylinderGeometry(0.18, 0.24, 1.5, 7), trunk);
-  stem.position.y = 0.75;
-  stem.castShadow = true;
-  tree.add(stem);
-  const crown = new Mesh(new ConeGeometry(1.15, 2.4, 8), foliage);
-  crown.position.y = 2.35;
-  crown.castShadow = true;
-  tree.add(crown);
-  parent.add(tree);
-}
-
-function addRoof(parent: Group, width: number, depth: number, height: number, roof: MeshStandardMaterial): void {
-  const halfDepth = depth / 2 + 0.45;
-  const rise = 0.8;
-  const length = Math.hypot(halfDepth, rise);
-  const angle = Math.atan2(rise, halfDepth);
-  for (const side of [-1, 1]) {
-    const slab = box(parent, width + 0.9, 0.22, length, 0, height + 0.22 + rise / 2, side * halfDepth / 2, roof);
-    slab.rotation.x = side * angle;
-  }
-  box(parent, width + 0.95, 0.22, 0.3, 0, height + rise + 0.23, 0, roof);
-}
-
-function addWindows(parent: Group, width: number, height: number, depth: number, rows: number, glass: MeshStandardMaterial, trim: MeshStandardMaterial): void {
-  const columns = Math.max(3, Math.floor(width / 1.8));
-  const spacing = width / (columns + 1);
-  for (let row = 0; row < rows; row += 1) {
-    const y = 1.25 + (height - 2) * (row + 0.5) / rows;
-    for (let column = 1; column <= columns; column += 1) {
-      const x = -width / 2 + spacing * column;
-      for (const side of [-1, 1]) {
-        box(parent, 0.72, 0.95, 0.08, x, y, side * (depth / 2 + 0.035), glass);
-        box(parent, 0.82, 0.09, 0.13, x, y - 0.52, side * (depth / 2 + 0.06), trim);
-      }
+function strips(roads: CampusRoad[], extra: number): THREE.BufferGeometry {
+  const vertices: number[] = [];
+  for (const road of roads || []) {
+    const width = Number.isFinite(road.width) && road.width > 0 ? road.width : 4;
+    for (let i = 1; i < road.points.length; i++) {
+      const a = road.points[i - 1], b = road.points[i];
+      if (!validPoint(a) || !validPoint(b)) continue;
+      const dx = b[0] - a[0], dz = b[1] - a[1], length = Math.hypot(dx, dz);
+      if (length < 0.01) continue;
+      const nx = -dz / length * (width / 2 + extra), nz = dx / length * (width / 2 + extra);
+      const y = extra ? 0.075 : 0.09;
+      vertices.push(a[0] + nx, y, a[1] + nz, a[0] - nx, y, a[1] - nz, b[0] + nx, y, b[1] + nz,
+        b[0] + nx, y, b[1] + nz, a[0] - nx, y, a[1] - nz, b[0] - nx, y, b[1] - nz);
     }
   }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
-function makeLandmark(landmark: Landmark, roof: MeshStandardMaterial, glass: MeshStandardMaterial, trim: MeshStandardMaterial, trunk: MeshStandardMaterial, foliage: MeshStandardMaterial): Group {
-  const group = new Group();
-  const [width, height, depth] = landmark.size;
-  group.position.set(landmark.position[0], 0, landmark.position[1]);
-  const wall = material(landmark.color);
-
-  if (landmark.shape === 'gate') {
-    const pierWidth = 1.5;
-    for (const side of [-1, 1]) {
-      box(group, pierWidth, height, depth, side * (width / 2 - pierWidth / 2), height / 2, 0, wall);
-      box(group, pierWidth + 0.3, 0.25, depth + 0.3, side * (width / 2 - pierWidth / 2), 0.13, 0, trim);
-    }
-    box(group, width, 1.1, depth, 0, height - 0.55, 0, wall);
-    box(group, width * 0.48, 0.4, 0.1, 0, height - 0.55, depth / 2 + 0.06, trim);
-    addRoof(group, width, depth, height, roof);
-  } else if (landmark.shape === 'garden') {
-    box(group, width, 0.18, depth, 0, 0.09, 0, wall);
-    box(group, width - 0.8, 0.06, 1.15, 0, 0.22, 0, trim);
-    box(group, 1.15, 0.06, depth - 0.8, 0, 0.22, 0, trim);
-    for (const x of [-width * 0.3, width * 0.3]) {
-      for (const z of [-depth * 0.3, depth * 0.3]) {
-        addTree(group, x, z, 0.8, trunk, foliage);
-      }
-    }
-    const pond = new Mesh(new CircleGeometry(1.1, 24), glass);
-    pond.rotation.x = -Math.PI / 2;
-    pond.position.set(0, 0.26, 0);
-    pond.receiveShadow = true;
-    group.add(pond);
-  } else {
-    box(group, width + 0.4, 0.3, depth + 0.4, 0, 0.15, 0, trim);
-    box(group, width, height, depth, 0, height / 2 + 0.3, 0, wall);
-    addWindows(group, width, height, depth, landmark.shape === 'library' ? 3 : 2, glass, trim);
-    if (landmark.shape === 'library') {
-      box(group, width * 0.48, height * 0.62, 1.1, 0, height * 0.31 + 0.3, depth / 2 + 0.5, trim);
-      for (const x of [-width * 0.16, 0, width * 0.16]) {
-        box(group, 0.3, height * 0.48, 0.3, x, height * 0.24 + 0.3, depth / 2 + 1.1, wall);
-      }
-      box(group, width * 0.52, 0.25, 1.5, 0, height * 0.62 + 0.3, depth / 2 + 0.5, roof);
-    } else if (landmark.shape === 'office') {
-      box(group, width * 0.4, 0.35, 1.5, 0, 2.8, depth / 2 + 0.6, roof);
-      for (const x of [-width * 0.15, width * 0.15]) {
-        box(group, 0.3, 2.5, 0.3, x, 1.55, depth / 2 + 1.15, trim);
-      }
-    } else {
-      box(group, width * 0.3, 0.35, 1.2, 0, 2.5, depth / 2 + 0.45, roof);
-    }
-    addRoof(group, width, depth, height + 0.3, roof);
-  }
-  group.traverse((object) => {
-    if (object instanceof Mesh) object.userData.landmarkId = landmark.id;
-  });
-  return group;
-}
-
-function addPath(parent: Group, start: [number, number], end: [number, number], surface: MeshStandardMaterial): void {
-  const dx = end[0] - start[0];
-  const dz = end[1] - start[1];
-  const path = box(parent, 1.5, 0.05, Math.hypot(dx, dz), (start[0] + end[0]) / 2, 0.035, (start[1] + end[1]) / 2, surface);
-  path.rotation.y = Math.atan2(dx, dz);
-  path.castShadow = false;
-}
-
-function distanceToSegment(x: number, z: number, a: [number, number], b: [number, number]): number {
-  const dx = b[0] - a[0];
-  const dz = b[1] - a[1];
-  const lengthSquared = dx * dx + dz * dz;
-  const t = lengthSquared === 0 ? 0 : MathUtils.clamp(((x - a[0]) * dx + (z - a[1]) * dz) / lengthSquared, 0, 1);
-  return Math.hypot(x - (a[0] + t * dx), z - (a[1] + t * dz));
-}
-
-function noOpHandle(): CampusSceneHandle {
-  return { setCampus: () => {}, setState: () => {}, resetView: () => {}, dispose: () => {} };
-}
-
-export function createCampusScene(container: HTMLElement, data: CampusData, onEvent: (event: SceneEvent) => void): CampusSceneHandle {
-  let renderer: WebGLRenderer | undefined;
+export function createCampusScene(container: HTMLElement, initialData: CampusData, onEvent: (event: SceneEvent) => void): CampusSceneHandle {
+  let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new WebGLRenderer({ antialias: true, alpha: false });
-  } catch {
-    onEvent({ type: 'error', reason: '无法初始化 WebGL，仍可使用地标列表探索。' });
-    return noOpHandle();
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+  } catch (error) {
+    onEvent({ type: 'error', reason: `Unable to initialize the 3D scene: ${error instanceof Error ? error.message : 'WebGL unavailable'}` });
+    return noopHandle();
   }
 
-  const activeRenderer = renderer;
-  let controls: OrbitControls | undefined;
-  let observer: ResizeObserver | undefined;
-  let frame = 0;
-  let disposed = false;
-  let campusGroup: Group | undefined;
-  let scene: Scene | undefined;
-  let sun: DirectionalLight | undefined;
-  let removeListeners: (() => void) | undefined;
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xbac7bc);
+  const camera = new THREE.OrthographicCamera(-250, 250, 250, -250, 0.1, 6000);
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.09;
+  controls.screenSpacePanning = true;
+  controls.minPolarAngle = 0.12;
+  controls.maxPolarAngle = Math.PI / 2 - 0.08;
+  controls.minZoom = 0.3;
+  controls.maxZoom = 5;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const canvas = renderer.domElement;
+  canvas.setAttribute('data-testid', 'campus-canvas');
+  canvas.setAttribute('aria-label', '米制校园三维场景，可拖拽旋转、滚轮缩放或使用地点目录。建筑占地有数据依据，楼高待核。');
+  canvas.setAttribute('role', 'img');
+  canvas.tabIndex = 0;
+  canvas.style.display = 'block';
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+  canvas.style.touchAction = 'none';
+  container.appendChild(canvas);
 
-  const cleanup = (): void => {
+  const credit = document.createElement('div');
+  credit.style.cssText = 'position:absolute;left:14px;bottom:14px;max-width:min(55%,520px);padding:7px 10px;border-radius:6px;background:rgba(22,39,32,.82);color:#f3f0e5;font:11px/1.4 system-ui,sans-serif;pointer-events:none;z-index:2';
+  const previousPosition = container.style.position;
+  if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
+  credit.style.display = 'none';
+  container.appendChild(credit);
+
+  const hemisphere = new THREE.HemisphereLight(0xe2e9df, 0x707969, 1.65);
+  scene.add(hemisphere);
+  const sun = new THREE.DirectionalLight(0xffd6a5, 2.15);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.bias = -0.00025;
+  sun.shadow.normalBias = 0.08;
+  scene.add(sun, sun.target);
+
+  let data = initialData;
+  let state: SceneState = { selectedId: null, targetId: null };
+  let world = new THREE.Group();
+  let routeLayer = new THREE.Group();
+  let highlightLayer = new THREE.Group();
+  scene.add(world, routeLayer, highlightLayer);
+  let pawn = new THREE.Group();
+  let markerMeshes = new Map<string, THREE.Mesh>();
+  let buildingMeshes = new Map<string, THREE.Mesh>();
+  let pickables: THREE.Object3D[] = [];
+  let markerNormal: THREE.MeshStandardMaterial;
+  let markerSelected: THREE.MeshStandardMaterial;
+  let markerTarget: THREE.MeshStandardMaterial;
+  let lastId = 'start';
+  let travel: { id: string; points: Point2[]; cumulative: number[]; length: number; distance: number } | null = null;
+  let frameSpan = 500;
+  let tween: { fromPosition: THREE.Vector3; toPosition: THREE.Vector3; fromTarget: THREE.Vector3; toTarget: THREE.Vector3; fromSpan: number; toSpan: number; elapsed: number; duration: number } | null = null;
+  let disposed = false;
+  let raf = 0;
+  let previousTime = 0;
+  let pointer: { x: number; y: number; id: number; moved: boolean } | null = null;
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const raycaster = new THREE.Raycaster();
+  const pointerNdc = new THREE.Vector2();
+
+  function refreshFrustum(): void {
+    const width = Math.max(1, container.clientWidth), height = Math.max(1, container.clientHeight);
+    const aspect = width / height;
+    const viewHeight = frameSpan / Math.min(1, aspect);
+    camera.left = -viewHeight * aspect / 2;
+    camera.right = viewHeight * aspect / 2;
+    camera.top = viewHeight / 2;
+    camera.bottom = -viewHeight / 2;
+    camera.updateProjectionMatrix();
+  }
+  function resize(): void {
+    if (disposed) return;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight), false);
+    refreshFrustum();
+  }
+  const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
+  resizeObserver?.observe(container);
+  window.addEventListener('resize', resize);
+
+  function material(color: THREE.ColorRepresentation, roughness = 0.9): THREE.MeshStandardMaterial {
+    return new THREE.MeshStandardMaterial({ color, roughness });
+  }
+  function setPawnPosition(point: Point2): void { pawn.position.set(point[0], 0.14, point[1]); }
+  function clearRoute(): void {
+    disposeObject(routeLayer);
+    routeLayer = new THREE.Group();
+    scene.add(routeLayer);
+  }
+  function clearHighlights(): void {
+    disposeObject(highlightLayer);
+    highlightLayer = new THREE.Group();
+    scene.add(highlightLayer);
+  }
+
+  function updateHighlights(): void {
+    if (disposed) return;
+    clearHighlights();
+    for (const [id, marker] of markerMeshes) marker.material = id === state.selectedId ? markerSelected : id === state.targetId ? markerTarget : markerNormal;
+    const ids = [state.targetId, state.selectedId].filter((id, index, all): id is string => !!id && all.indexOf(id) === index);
+    for (const id of ids) {
+      const landmark = data.landmarks.find((item) => item.id === id);
+      const feature = landmark && data.features.find((item) => item.id === landmark.featureId);
+      if (!feature || feature.kind !== 'building') continue;
+      const mesh = buildingMeshes.get(feature.id);
+      if (!mesh) continue;
+      const line = perimeter(feature.polygon, Number(mesh.userData.height) + 0.28, new THREE.LineBasicMaterial({ color: id === state.selectedId ? 0x69e1db : 0xf4c36f, depthTest: true }));
+      if (line) highlightLayer.add(line);
+    }
+  }
+
+  function buildCampus(): void {
+    travel = null;
+    lastId = 'start';
+    tween = null;
+    clearRoute();
+    clearHighlights();
+    disposeObject(world);
+    world = new THREE.Group();
+    scene.add(world);
+    markerMeshes = new Map();
+    buildingMeshes = new Map();
+    pickables = [];
+    credit.textContent = `${data.attribution} · Building heights are tagged, estimated or unverified; road widths are approximate.`;
+
+    const boundary = cleanPolygon(data.boundary || []);
+    const allPoints = boundary.length ? boundary : data.features.flatMap((f) => cleanPolygon(f.polygon));
+    const [minX, minZ, maxX, maxZ] = boundsOf(allPoints);
+    const centerX = (minX + maxX) / 2, centerZ = (minZ + maxZ) / 2;
+    const extent = Math.max(maxX - minX, maxZ - minZ, 500);
+    const landscape = new THREE.Mesh(new THREE.PlaneGeometry(maxX - minX + 800, maxZ - minZ + 800), material(0x9aa995));
+    landscape.rotation.x = -Math.PI / 2;
+    landscape.position.set(centerX, -0.12, centerZ);
+    landscape.receiveShadow = true;
+    world.add(landscape);
+    addSurface(world, boundary, -0.025, material(0xb5c0aa));
+    const curb = perimeter(boundary, 0.015, new THREE.LineBasicMaterial({ color: 0x8b9684 }));
+    if (curb) world.add(curb);
+    sun.position.set(centerX - extent * 0.7, extent * 1.15, centerZ + extent * 0.55);
+    sun.target.position.set(centerX, 0, centerZ);
+    const shadowCamera = sun.shadow.camera;
+    const shadowExtent = extent * 0.95 + 100;
+    shadowCamera.left = -shadowExtent; shadowCamera.right = shadowExtent;
+    shadowCamera.top = shadowExtent; shadowCamera.bottom = -shadowExtent;
+    shadowCamera.near = 1; shadowCamera.far = extent * 3.5 + 500;
+    shadowCamera.updateProjectionMatrix();
+
+    const roadEdge = new THREE.Mesh(strips(data.roads, 1.15), material(0xc3c1b2));
+    const roads = new THREE.Mesh(strips(data.roads, 0), material(0x777e79));
+    roadEdge.receiveShadow = roads.receiveShadow = true;
+    world.add(roadEdge, roads);
+
+    const parkMat = material(0x879f82);
+    const trackMat = material(0xb5795f);
+    const fieldMat = material(0x829d77);
+    const facadeMats = [material(0xd4cbb8), material(0xb6b8aa), material(0xb59580), material(0xc3bba9)];
+    const roofMat = material(0xa5a89d);
+    const windowMat = new THREE.MeshStandardMaterial({ color: 0x647f82, roughness: 0.38, metalness: 0.12 });
+    const buildings = data.features.filter((f) => f.kind === 'building' && cleanPolygon(f.polygon).length >= 3);
+    const windowTransforms: THREE.Matrix4[] = [];
+    const dummy = new THREE.Object3D();
+
+    for (const feature of data.features) {
+      const polygon = cleanPolygon(feature.polygon || []);
+      if (polygon.length < 3) continue;
+      if (feature.kind === 'park') {
+        addSurface(world, polygon, 0.025, parkMat);
+      } else if (feature.kind === 'sports') {
+        addSurface(world, polygon, 0.035, trackMat);
+        const [x0, z0, x1, z1] = boundsOf(polygon);
+        const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+        const inner = polygon.map(([x, z]): Point2 => [cx + (x - cx) * 0.73, cz + (z - cz) * 0.73]);
+        const fits = inner.every((p, i) => {
+          const q = inner[(i + 1) % inner.length];
+          return inside(p[0], p[1], polygon) && inside((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, polygon);
+        });
+        if (fits) {
+          addSurface(world, inner, 0.047, fieldMat);
+          const marking = perimeter(inner, 0.055, new THREE.LineBasicMaterial({ color: 0xd3c3a4 }));
+          if (marking) world.add(marking);
+        }
+      } else {
+        const shape = makeShape(polygon);
+        if (!shape) continue;
+        const height = Number.isFinite(feature.height) && feature.height > 0 ? feature.height : Math.max  (3, (feature.levels || 2) * 3.3);
+        const geometry = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false, curveSegments: 1 });
+        geometry.rotateX(-Math.PI / 2);
+        let hash = 0;
+        for (const ch of feature.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+        const building = new THREE.Mesh(geometry, [roofMat, facadeMats[hash % facadeMats.length]]);
+        building.castShadow = true;
+        building.receiveShadow = true;
+        building.userData.height = height;
+        const linked = data.landmarks.find((item) => item.featureId === feature.id);
+        if (linked) { building.userData.landmarkId = linked.id; pickables.push(building); }
+        world.add(building);
+        buildingMeshes.set(feature.id, building);
+        const parapet = perimeter(polygon, height + 0.12, new THREE.LineBasicMaterial({ color: 0x777e77 }));
+        if (parapet) world.add(parapet);
+        let area = 0;
+        for (let i = 0; i < polygon.length; i++) {
+          const a = polygon[i], b = polygon[(i + 1) % polygon.length];
+          area += a[0] * b[1] - b[0] * a[1];
+        }
+        const floors = Math.min(30, Math.max(1, feature.levels && feature.levels > 0 ? Math.round(feature.levels) : Math.floor(height / 3.4)));
+        const floorHeight = height / floors;
+        for (let i = 0; i < polygon.length; i++) {
+          const a = polygon[i], b = polygon[(i + 1) % polygon.length];
+          const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
+          if (len < 3 || height < 2.5) continue;
+          const count = Math.min(100, Math.floor(len / 4.5));
+          const sign = area >= 0 ? 1 : -1;
+          const nx = sign * dz / len, nz = -sign * dx / len;
+          for (let floor = 0; floor < floors; floor++) for (let j = 0; j < count; j++) {
+            const t = (j + 0.5) / count;
+            dummy.position.set(a[0] + dx * t + nx * 0.04, (floor + 0.5) * floorHeight, a[1] + dz * t + nz * 0.04);
+            dummy.rotation.set(0, Math.atan2(-dz, dx), 0);
+            dummy.scale.set(Math.min(2.6, len / count * 0.67), Math.min(2.0, floorHeight * 0.55), 0.12);
+            dummy.updateMatrix();
+            windowTransforms.push(dummy.matrix.clone());
+          }
+        }
+      }
+    }
+    if (windowTransforms.length) {
+      const windows = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), windowMat, windowTransforms.length);
+      windowTransforms.forEach((matrix, i) => windows.setMatrixAt(i, matrix));
+      windows.instanceMatrix.needsUpdate = true;
+      windows.receiveShadow = true;
+      world.add(windows);
+    } else windowMat.dispose();
+
+    // A deterministic clustered planting pattern, always checked against the park and buildings.
+    const treePositions: Point2[] = [];
+    const isClear = (x: number, z: number, park: Point2[], radius: number): boolean => {
+      const samples: Point2[] = [[x, z], [x + radius, z], [x - radius, z], [x, z + radius], [x, z - radius]];
+      return samples.every(([sx, sz]) => inside(sx, sz, park) && !buildings.some((f) => inside(sx, sz, f.polygon)));
+    };
+    for (const feature of data.features.filter((f) => f.kind === 'park')) {
+      const polygon = cleanPolygon(feature.polygon || []);
+      if (polygon.length < 3) continue;
+      const [x0, z0, x1, z1] = boundsOf(polygon);
+      const pathVertices: number[] = [];
+      const midZ = (z0 + z1) / 2;
+      for (let x = x0; x + 5 <= x1; x += 5) {
+        if (isClear(x, midZ, polygon, 0.7) && isClear(x + 2.5, midZ, polygon, 0.7) && isClear(x + 5, midZ, polygon, 0.7)) pathVertices.push(x, 0.065, midZ, x + 5, 0.065, midZ);
+      }
+      if (pathVertices.length) {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(pathVertices, 3));
+        world.add(new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0xc4c3a9 })));
+      }
+      for (let z = z0 + 12; z < z1 && treePositions.length < 240; z += 30) {
+        for (let x = x0 + 12; x < x1 && treePositions.length < 240; x += 30) {
+          const offsets: Point2[] = [[0, 0], [5, 3], [-4, 6], [3, -5]];
+          for (const [ox, oz] of offsets) {
+            const tx = x + ox, tz = z + oz;
+            if (Math.abs(tz - midZ) > 3 && isClear(tx, tz, polygon, 2.6)) treePositions.push([tx, tz]);
+          }
+        }
+      }
+    }
+    if (treePositions.length) {
+      const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.3, 0.45, 3.8, 6), material(0x79765e), treePositions.length);
+      const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), material(0x718d70), treePositions.length);
+      treePositions.forEach(([x, z], i) => {
+        dummy.position.set(x, 1.9, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); trunks.setMatrixAt(i, dummy.matrix);
+        dummy.position.set(x, 4.6 + (i % 3) * 0.22, z); dummy.scale.set(2.1 + (i % 3) * 0.15, 2.4, 2.0 + (i % 2) * 0.25); dummy.updateMatrix(); crowns.setMatrixAt(i, dummy.matrix);
+      });
+      trunks.instanceMatrix.needsUpdate = crowns.instanceMatrix.needsUpdate = true;
+      trunks.castShadow = crowns.castShadow = true;
+      world.add(trunks, crowns);
+    }
+
+    markerNormal = material(0xe7e0c9, 0.45);
+    markerSelected = material(0x66d9d3, 0.4);
+    markerTarget = material(0xe9b766, 0.4);
+    const markerGeometry = new THREE.OctahedronGeometry(2.2, 0);
+    for (const landmark of data.landmarks) {
+      if (!validPoint(landmark.position)) continue;
+      const marker = new THREE.Mesh(markerGeometry, markerNormal);
+      const feature = data.features.find((f) => f.id === landmark.featureId && f.kind === 'building');
+      const building = feature ? buildingMeshes.get(feature.id) : undefined;
+      marker.position.set(landmark.position[0], building ? Number(building.userData.height) + 4 : 4, landmark.position[1]);
+      marker.userData.landmarkId = landmark.id;
+      marker.castShadow = true;
+      markerMeshes.set(landmark.id, marker);
+      pickables.push(marker);
+      world.add(marker);
+    }
+    if (!markerMeshes.size) { markerGeometry.dispose(); markerNormal.dispose(); markerSelected.dispose(); markerTarget.dispose(); }
+    // Materials not currently assigned to a marker are still owned by the world.
+    else {
+      const owner = new THREE.Mesh(new THREE.BufferGeometry(), [markerNormal, markerSelected, markerTarget]);
+      owner.visible = false;
+      world.add(owner);
+    }
+
+    pawn = new THREE.Group();
+    const bodyMat = material(0x365f5b), headMat = material(0xe8c9a7), packMat = material(0xcb9963);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.6, 1.45, 8), bodyMat);
+    body.position.y = 1.15;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.43, 10, 8), headMat);
+    head.position.y = 2.2;
+    const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.85, 0.35), packMat);
+    backpack.position.set(0, 1.22, 0.48);
+    const halo = new THREE.Mesh(new THREE.RingGeometry(1.05, 1.25, 24), new THREE.MeshBasicMaterial({ color: 0x69dcd3, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.y = 0.06;
+    body.castShadow = head.castShadow = backpack.castShadow = true;
+    pawn.add(body, head, backpack, halo);
+    setPawnPosition(validPoint(data.start) ? data.start : [centerX, centerZ]);
+    world.add(pawn);
+    updateHighlights();
+  }
+
+  function animateView(target: THREE.Vector3, span: number, initial = false): void {
+    if (disposed) return;
+    const direction = initial ? new THREE.Vector3(0.7, 1, 1.1).normalize() : camera.position.clone().sub(controls.target).normalize();
+    if (direction.lengthSq() < 0.01) direction.set(0.7, 1, 1.1).normalize();
+    const distance = Math.max(span * 1.5, 200);
+    const position = target.clone().addScaledVector(direction, distance);
+    frameSpan /= camera.zoom;
+    camera.zoom = 1;
+    if (initial || reducedMotion) {
+      tween = null; frameSpan = span; camera.position.copy(position); controls.target.copy(target); refreshFrustum(); controls.update();
+    } else {
+      tween = { fromPosition: camera.position.clone(), toPosition: position, fromTarget: controls.target.clone(), toTarget: target.clone(), fromSpan: frameSpan, toSpan: span, elapsed: 0, duration: 0.8 };
+    }
+  }
+  function questView(initial = false): void {
+    const ordered = data.questOrder.map((id) => data.landmarks.find((l) => l.id === id)).filter((l): l is Landmark => !!l);
+    const landmarks = ordered.length ? ordered : data.landmarks;
+    const points = landmarks.flatMap((l) => [l.position, l.arrival]).filter(validPoint);
+    if (!points.length && validPoint(data.start)) points.push(data.start);
+    const [x0, z0, x1, z1] = boundsOf(points);
+    animateView(new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), Math.max(300, (x1 - x0) * 1.35, (z1 - z0) * 1.35), initial);
+  }
+  function overview(): void {
+    const points = cleanPolygon(data.boundary || []);
+    const [x0, z0, x1, z1] = boundsOf(points.length ? points : data.features.flatMap((f) => f.polygon));
+    animateView(new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), Math.max(500, (x1 - x0) * 1.2, (z1 - z0) * 1.2));
+  }
+  function focusLandmark(id: string): void {
+    const landmark = data.landmarks.find((item) => item.id === id);
+    if (!landmark || !validPoint(landmark.position)) return;
+    const feature = data.features.find((f) => f.id === landmark.featureId);
+    const [x0, z0, x1, z1] = feature ? boundsOf(feature.polygon) : [0, 0, 0, 0];
+    const span = Math.max(180, (x1 - x0) * 2.5, (z1 - z0) * 2.5);
+    animateView(new THREE.Vector3(landmark.position[0], 0, landmark.position[1]), span);
+  }
+  function drawRoute(points: Point2[]): void {
+    clearRoute();
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints(points.map(([x, z]) => new THREE.Vector3(x, 0.24, z)));
+    const line = new THREE.Line(lineGeometry, new THREE.LineDashedMaterial({ color: 0xeeb760, dashSize: 5, gapSize: 3, transparent: true, opacity: 0.95, depthWrite: false }));
+    line.computeLineDistances();
+    routeLayer.add(line);
+    const geometry = new THREE.SphereGeometry(0.85, 8, 6);
+    const beaconMaterial = new THREE.MeshBasicMaterial({ color: 0xf4cb7a });
+    const stride = Math.max(1, Math.ceil(points.length / 24));
+    for (let i = stride; i < points.length; i += stride) {
+      const beacon = new THREE.Mesh(geometry, beaconMaterial);
+      beacon.position.set(points[i][0], 0.8, points[i][1]);
+      routeLayer.add(beacon);
+    }
+    if (routeLayer.children.length === 1) { geometry.dispose(); beaconMaterial.dispose(); }
+  }
+  function navigateTo(id: string): boolean {
+    if (disposed || travel) return false;
+    const landmark = data.landmarks.find((item) => item.id === id);
+    const raw = data.routes[`${lastId}>${id}`];
+    if (!landmark || !validPoint(landmark.arrival) || !raw || raw.length < 2 || !raw.every(validPoint)) return false;
+    const points = raw.map((p): Point2 => [p[0], p[1]]);
+    // A route must begin at the current position; never silently jump to it.
+    if (Math.hypot(points[0][0] - pawn.position.x, points[0][1] - pawn.position.z) > 0.001) return false;
+    const end = points[points.length - 1];
+    if (Math.hypot(end[0] - landmark.arrival[0], end[1] - landmark.arrival[1]) > 0.001) return false;
+    const cumulative = [0];
+    for (let i = 1; i < points.length; i++) cumulative.push(cumulative[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
+    const length = cumulative[cumulative.length - 1];
+    if (length < 0.001) return false;
+    travel = { id, points, cumulative, length, distance: 0 };
+    drawRoute(points);
+    onEvent({ type: 'travel', progress: 0 });
+    return true;
+  }
+  function resetJourney(): void {
+    if (disposed) return;
+    travel = null; lastId = 'start'; clearRoute();
+    if (validPoint(data.start)) setPawnPosition(data.start);
+    pawn.rotation.y = 0;
+  }
+  function tick(time: number): void {
+    if (disposed) return;
+    const dt = previousTime ? Math.max(0, (time - previousTime) / 1000) : 0;
+    previousTime = time;
+    if (tween) {
+      tween.elapsed += dt;
+      const t = Math.min(1, tween.elapsed / tween.duration), eased = t * t * (3 - 2 * t);
+      camera.position.lerpVectors(tween.fromPosition, tween.toPosition, eased);
+      controls.target.lerpVectors(tween.fromTarget, tween.toTarget, eased);
+      frameSpan = THREE.MathUtils.lerp(tween.fromSpan, tween.toSpan, eased);
+      refreshFrustum();
+      if (t >= 1) tween = null;
+    }
+    if (travel) {
+      const current = travel;
+      current.distance = Math.min(current.length, current.distance + dt * 60);
+      let i = 1;
+      while (i < current.cumulative.length - 1 && current.cumulative[i] < current.distance) i++;
+      const a = current.points[i - 1], b = current.points[i];
+      const segmentLength = current.cumulative[i] - current.cumulative[i - 1];
+      const t = segmentLength > 0 ? (current.distance - current.cumulative[i - 1]) / segmentLength : 1;
+      pawn.position.set(THREE.MathUtils.lerp(a[0], b[0], t), 0.14 + (reducedMotion ? 0 : Math.abs(Math.sin(current.distance * 0.45)) * 0.15), THREE.MathUtils.lerp(a[1], b[1], t));
+      if (segmentLength > 0) pawn.rotation.y = Math.atan2(-(b[0] - a[0]), -(b[1] - a[1]));
+      onEvent({ type: 'travel', progress: current.distance / current.length });
+      if (disposed) return;
+      if (travel === current && current.distance >= current.length) {
+        setPawnPosition(current.points[current.points.length - 1]);
+        travel = null; lastId = current.id; clearRoute();
+        onEvent({ type: 'arrive', id: current.id });
+        if (disposed) return;
+      }
+    }
+    controls.update();
+    renderer.render(scene, camera);
+    raf = requestAnimationFrame(tick);
+  }
+  function interruptView(): void { tween = null; }
+  controls.addEventListener('start', interruptView);
+  function pointerDown(event: PointerEvent): void {
+    if (event.button !== 0 || pointer) return;
+    pointer = { x: event.clientX, y: event.clientY, id: event.pointerId, moved: false };
+  }
+  function pointerMove(event: PointerEvent): void {
+    if (pointer && pointer.id === event.pointerId && Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 6) pointer.moved = true;
+  }
+  function pointerCancel(event: PointerEvent): void { if (pointer?.id === event.pointerId) pointer = null; }
+  function pointerUp(event: PointerEvent): void {
+    if (!pointer || pointer.id !== event.pointerId) return;
+    const click = !pointer.moved && Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) <= 6;
+    pointer = null;
+    if (!click || disposed) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    pointerNdc.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
+    raycaster.setFromCamera(pointerNdc, camera);
+    const hit = raycaster.intersectObjects(pickables, false).find((item) => typeof item.object.userData.landmarkId === 'string');
+    if (hit) onEvent({ type: 'select', id: hit.object.userData.landmarkId as string });
+  }
+  canvas.addEventListener('pointerdown', pointerDown);
+  canvas.addEventListener('pointermove', pointerMove);
+  canvas.addEventListener('pointerup', pointerUp);
+  canvas.addEventListener('pointercancel', pointerCancel);
+
+  function dispose(): void {
     if (disposed) return;
     disposed = true;
-    cancelAnimationFrame(frame);
-    observer?.disconnect();
-    removeListeners?.();
-    controls?.dispose();
-    if (campusGroup) {
-      scene?.remove(campusGroup);
-      disposeGroup(campusGroup);
-      campusGroup = undefined;
-    }
-    sun?.shadow.dispose();
-    activeRenderer.dispose();
-    activeRenderer.domElement.remove();
-  };
+    cancelAnimationFrame(raf);
+    travel = null; tween = null; pointer = null;
+    resizeObserver?.disconnect();
+    window.removeEventListener('resize', resize);
+    controls.removeEventListener('start', interruptView);
+    controls.dispose();
+    canvas.removeEventListener('pointerdown', pointerDown);
+    canvas.removeEventListener('pointermove', pointerMove);
+    canvas.removeEventListener('pointerup', pointerUp);
+    canvas.removeEventListener('pointercancel', pointerCancel);
+    canvas.removeEventListener('webglcontextlost', contextLost);
+    disposeObject(routeLayer); disposeObject(highlightLayer); disposeObject(world);
+    sun.shadow.dispose();
+    renderer.dispose();
+    canvas.remove(); credit.remove();
+    if (container.style.position === 'relative' && previousPosition !== 'relative') container.style.position = previousPosition;
+  }
+  function contextLost(event: Event): void {
+    event.preventDefault();
+    dispose();
+    onEvent({ type: 'error', reason: 'The WebGL context was lost. The 3D scene is unavailable.' });
+  }
+  canvas.addEventListener('webglcontextlost', contextLost);
 
   try {
-    activeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-    activeRenderer.shadowMap.enabled = true;
-    activeRenderer.shadowMap.type = PCFSoftShadowMap;
-    activeRenderer.outputColorSpace = SRGBColorSpace;
-    activeRenderer.toneMapping = ACESFilmicToneMapping;
-    activeRenderer.toneMappingExposure = 1.08;
-    const canvas = activeRenderer.domElement;
-    canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', '校园印象示意模型，可拖动旋转、缩放并点击地标；非精确建模或导航。');
-    canvas.dataset.testid = 'campus-canvas';
-    canvas.style.display = 'block';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    container.appendChild(canvas);
-
-    scene = new Scene();
-    scene.background = new Color('#f5efe4');
-    const camera = new OrthographicCamera(-43, 43, 43, -43, 0.1, 250);
-    camera.position.copy(DEFAULT_POSITION);
-    camera.lookAt(0, 0, 0);
-    controls = new OrbitControls(camera, canvas);
-    controls.target.set(0, 0, 0);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.minZoom = 0.65;
-    controls.maxZoom = 3;
-    controls.minPolarAngle = 0.01;
-    controls.maxPolarAngle = Math.PI / 2 - 0.06;
-    controls.screenSpacePanning = true;
-    controls.update();
-
-    scene.add(new AmbientLight('#fff3e3', 0.75));
-    scene.add(new HemisphereLight('#fff8ec', '#9aab89', 1.25));
-    sun = new DirectionalLight('#fff2dd', 2.1);
-    sun.position.set(-28, 55, 35);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
-    sun.shadow.camera.left = -48;
-    sun.shadow.camera.right = 48;
-    sun.shadow.camera.top = 48;
-    sun.shadow.camera.bottom = -48;
-    sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 150;
-    sun.shadow.normalBias = 0.04;
-    scene.add(sun);
-
-    const activeScene = scene;
-    const activeControls = controls;
-    const raycaster = new Raycaster();
-    const pointer = new Vector2();
-    const landmarks = new Map<string, Group>();
-    const markers = new Map<string, { selected: Mesh; target: Mesh }>();
-    let currentState: SceneState = { selectedId: null, targetId: null };
-
-    const applyState = (): void => {
-      markers.forEach((marker, id) => {
-        marker.selected.visible = currentState.selectedId === id;
-        marker.target.visible = currentState.targetId === id;
-      });
-    };
-
-    const buildCampus = (campus: CampusData): void => {
-      if (campusGroup) {
-        activeScene.remove(campusGroup);
-        disposeGroup(campusGroup);
-      }
-      landmarks.clear();
-      markers.clear();
-      const root = new Group();
-      campusGroup = root;
-      activeScene.add(root);
-      const island = new Mesh(roundedIsland(), material('#e7dbbe'));
-      island.rotation.x = -Math.PI / 2;
-      island.position.y = -1.3;
-      island.receiveShadow = true;
-      root.add(island);
-      const pathMaterial = material('#d0bea0');
-      const roof = material('#ad624e');
-      const trim = material('#f0dfc4');
-      const glass = material('#78939a');
-      const trunk = material('#81634c');
-      const foliage = material('#79916a');
-      const selectedMaterial = material('#b85c43');
-      const targetMaterial = material('#e0aa48');
-      const points = campus.questOrder
-        .map((id) => campus.landmarks.find((item) => item.id === id))
-        .filter((item): item is Landmark => item !== undefined)
-        .map((item) => item.position);
-      for (let index = 1; index < points.length; index += 1) {
-        addPath(root, points[index - 1], points[index], pathMaterial);
-      }
-      campus.landmarks.forEach((item) => {
-        const building = makeLandmark(item, roof, glass, trim, trunk, foliage);
-        landmarks.set(item.id, building);
-        root.add(building);
-        const radius = Math.hypot(item.size[0], item.size[2]) / 2 + 0.8;
-        const selected = new Mesh(new RingGeometry(radius, radius + 0.28, 64), selectedMaterial);
-        const target = new Mesh(new RingGeometry(radius + 0.38, radius + 0.57, 64), targetMaterial);
-        for (const marker of [selected, target]) {
-          marker.rotation.x = -Math.PI / 2;
-          marker.position.set(item.position[0], 0.08, item.position[1]);
-          marker.visible = false;
-          root.add(marker);
-        }
-        markers.set(item.id, { selected, target });
-      });
-      let seed = campus.id === 'huyu' ? 413 : 719;
-      const random = (): number => {
-        seed = (seed * 1664525 + 1013904223) >>> 0;
-        return seed / 4294967296;
-      };
-      const treePositions: Array<[number, number]> = [];
-      for (let attempt = 0; attempt < 250 && treePositions.length < 36; attempt += 1) {
-        const x = (random() - 0.5) * 65;
-        const z = (random() - 0.5) * 65;
-        const nearBuilding = campus.landmarks.some((item) =>
-          Math.abs(x - item.position[0]) < item.size[0] / 2 + 3 &&
-          Math.abs(z - item.position[1]) < item.size[2] / 2 + 3,
-        );
-        const nearPath = points.slice(1).some((point, index) => distanceToSegment(x, z, points[index], point) < 2.3);
-        const nearTree = treePositions.some(([tx, tz]) => Math.hypot(x - tx, z - tz) < 2.5);
-        if (nearBuilding || nearPath || nearTree) continue;
-        treePositions.push([x, z]);
-        addTree(root, x, z, 0.7 + random() * 0.45, trunk, foliage);
-      }
-      applyState();
-    };
-
-    const resize = (): void => {
-      if (disposed) return;
-      const width = Math.max(1, container.clientWidth);
-      const height = Math.max(1, container.clientHeight);
-      const aspect = width / height;
-      const span = aspect < 1 ? 110 : VIEW_SPAN;
-      const halfWidth = span * Math.max(1, aspect) / 2;
-      const halfHeight = span * Math.max(1, 1 / aspect) / 2;
-      camera.left = -halfWidth;
-      camera.right = halfWidth;
-      camera.top = halfHeight;
-      camera.bottom = -halfHeight;
-      camera.updateProjectionMatrix();
-      activeRenderer.setSize(width, height, false);
-    };
-
-    let gesture: { id: number; x: number; y: number; moved: boolean } | null = null;
-    const onPointerDown = (event: PointerEvent): void => {
-      if (gesture) {
-        gesture.moved = true;
-        return;
-      }
-      if (event.button === 0 && event.isPrimary) {
-        gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
-      }
-    };
-    const onPointerMove = (event: PointerEvent): void => {
-      if (gesture && gesture.id === event.pointerId && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 6) {
-        gesture.moved = true;
-      }
-    };
-    const onPointerUp = (event: PointerEvent): void => {
-      if (!gesture || gesture.id !== event.pointerId) return;
-      const select = !gesture.moved && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) <= 6;
-      gesture = null;
-      if (!select || disposed) return;
-      const rect = canvas.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
-      raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects(Array.from(landmarks.values()), true)[0];
-      const id: unknown = hit?.object.userData.landmarkId;
-      if (typeof id === 'string' && landmarks.has(id)) onEvent({ type: 'select', id });
-    };
-    const onPointerCancel = (): void => { gesture = null; };
-    const onContextLost = (event: Event): void => {
-      event.preventDefault();
-      cleanup();
-      onEvent({ type: 'error', reason: '图形上下文中断，请刷新恢复三维场景；地标列表仍可使用。' });
-    };
-    canvas.addEventListener('webglcontextlost', onContextLost);
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('pointercancel', onPointerCancel);
-    window.addEventListener('resize', resize);
-    removeListeners = () => {
-      canvas.removeEventListener('webglcontextlost', onContextLost);
-      canvas.removeEventListener('pointerdown', onPointerDown);
-      canvas.removeEventListener('pointermove', onPointerMove);
-      canvas.removeEventListener('pointerup', onPointerUp);
-      canvas.removeEventListener('pointercancel', onPointerCancel);
-      window.removeEventListener('resize', resize);
-    };
-    if (typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(resize);
-      observer.observe(container);
-    }
-    buildCampus(data);
+    buildCampus();
     resize();
-    const animate = (): void => {
-      if (disposed) return;
-      activeControls.update();
-      activeRenderer.render(activeScene, camera);
-      frame = requestAnimationFrame(animate);
-    };
-    frame = requestAnimationFrame(animate);
-
-    return {
-      setCampus(campus: CampusData): void {
-        if (!disposed) buildCampus(campus);
-      },
-      setState(state: SceneState): void {
-        if (disposed) return;
-        currentState = { selectedId: state.selectedId, targetId: state.targetId };
-        applyState();
-      },
-      resetView(): void {
-        if (disposed) return;
-        camera.position.copy(DEFAULT_POSITION);
-        camera.zoom = 1;
-        camera.updateProjectionMatrix();
-        activeControls.target.set(0, 0, 0);
-        activeControls.update();
-      },
-      dispose: cleanup,
-    };
-  } catch {
-    cleanup();
-    onEvent({ type: 'error', reason: '校园场景初始化失败，仍可使用地标列表探索。' });
-    return noOpHandle();
+    questView(true);
+    raf = requestAnimationFrame(tick);
+  } catch (error) {
+    dispose();
+    onEvent({ type: 'error', reason: `Unable to build the 3D scene: ${error instanceof Error ? error.message : 'unknown error'}` });
+    return noopHandle();
   }
+
+  return {
+    setCampus(next) {
+      if (disposed) return;
+      try { data = next; state = { selectedId: null, targetId: null }; buildCampus(); questView(true); }
+      catch (error) { dispose(); onEvent({ type: 'error', reason: `Unable to build the 3D scene: ${error instanceof Error ? error.message : 'unknown error'}` }); }
+    },
+    setState(next) { if (!disposed) { state = { selectedId: next.selectedId, targetId: next.targetId }; updateHighlights(); } },
+    navigateTo,
+    resetJourney,
+    focusLandmark,
+    overview,
+    resetView() { if (!disposed) questView(); },
+    dispose,
+  };
 }

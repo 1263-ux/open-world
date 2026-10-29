@@ -8,22 +8,22 @@ describe('quest state machine', () => {
   it('starts, enforces order, ignores duplicates and completes without mutation', () => {
     const initial = startQuest(campus);
     expect(visitQuest(campus, initial, 'hy-library').state).toBe(initial);
-    const first = visitQuest(campus, initial, 'hy-north-gate').state;
+    const first = visitQuest(campus, initial, 'hy-main').state;
     expect(initial.visited).toEqual([]);
-    expect(first.visited).toEqual(['hy-north-gate']);
-    expect(visitQuest(campus, first, 'hy-north-gate').state).toBe(first);
+    expect(first.visited).toEqual(['hy-main']);
+    expect(visitQuest(campus, first, 'hy-main').state).toBe(first);
     const second = visitQuest(campus, first, 'hy-library').state;
-    const complete = visitQuest(campus, second, 'hy-meihua').state;
+    const complete = visitQuest(campus, second, 'hy-training').state;
     expect(complete.status).toBe('completed');
-    expect(visitQuest(campus, complete, 'hy-meihua').state).toBe(complete);
+    expect(visitQuest(campus, complete, 'hy-training').state).toBe(complete);
     expect(startQuest(campus)).toEqual({status:'active',visited:[]});
     expect(emptyQuest()).toEqual({status:'idle',visited:[]});
   });
   it('does not advance an idle task', () => {
     const state = emptyQuest();
-    expect(visitQuest(campus,state,'hy-north-gate').state).toBe(state);
+    expect(visitQuest(campus,state,'hy-main').state).toBe(state);
   });
-  it.each([null,[],{status:'broken',visited:[]},{status:'idle',visited:['hy-north-gate']},{status:'completed',visited:[]},{status:'active',visited:['hy-library']},{status:'active',visited:['hy-north-gate','hy-north-gate']},{status:'active',visited:[0]},{status:'active',visited:campus.questOrder}])('rejects inconsistent save %j', value => {
+  it.each([null,[],{status:'broken',visited:[]},{status:'idle',visited:['hy-main']},{status:'completed',visited:[]},{status:'active',visited:['hy-library']},{status:'active',visited:['hy-main','hy-main']},{status:'active',visited:[0]},{status:'active',visited:campus.questOrder}])('rejects inconsistent save %j', value => {
     expect(validateQuest(campus,value)).toBeNull();
   });
   it('accepts safe copies of valid progress', () => {
@@ -35,7 +35,7 @@ describe('optional versioned storage', () => {
   it('round-trips separate campus states', () => {
     const values = new Map<string,string>();
     vi.stubGlobal('window',{localStorage:{getItem:(k:string)=>values.get(k) ?? null,setItem:(k:string,v:string)=>values.set(k,v)}});
-    const progress={huyu:visitQuest(campus,startQuest(campus),'hy-north-gate').state,yingxi:emptyQuest()};
+    const progress={huyu:visitQuest(campus,startQuest(campus),'hy-main').state,yingxi:emptyQuest()};
     expect(saveProgress(progress)).toBe(true);
     expect(loadProgress(campuses)).toEqual(progress);
   });

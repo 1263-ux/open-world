@@ -1,253 +1,325 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import { createCampusScene } from '../scene/CampusScene';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { campuses } from '../campus-data/campuses';
-import type { CampusId, CampusSceneHandle, Landmark, SceneEvent } from '../shared/contracts';
-import { emptyQuest, startQuest, visitQuest, type QuestState } from '../games/quest';
-import { loadProgress, saveProgress, type QuestProgress } from '../games/storage';
+import { emptyQuest, startQuest, visitQuest } from '../games/quest';
+import { loadProgress, saveProgress } from '../games/storage';
+import { createCampusScene } from '../scene/CampusScene';
+import type { CampusData, CampusId, CampusSceneHandle, Landmark, SceneEvent } from '../shared/contracts';
 
+type QuestState = ReturnType<typeof emptyQuest>;
+type Panel = 'quest' | 'directory' | 'detail';
+
+const campusList = Object.values(campuses) as CampusData[];
 const campusId = ref<CampusId>('huyu');
-const progress = ref<QuestProgress>({ huyu: emptyQuest(), yingxi: emptyQuest() });
+const campus = computed(() => campusList.find(item => item.id === campusId.value) ?? campusList[0]!);
+const progress = ref<Record<CampusId, QuestState>>({ huyu: emptyQuest(), yingxi: emptyQuest() });
+try {
+  progress.value = loadProgress(campuses);
+} catch {
+  // Storage is optional; a journey can always be played in memory.
+}
+const quest = computed(() => progress.value[campusId.value] ?? emptyQuest());
+const orderedLandmarks = computed(() => campus.value.questOrder
+  .map(id => campus.value.landmarks.find(item => item.id === id))
+  .filter((item): item is Landmark => Boolean(item)));
+const target = computed(() => quest.value.status === 'active'
+  ? orderedLandmarks.value.find(item => !quest.value.visited.includes(item.id)) ?? null
+  : null);
 const selectedId = ref<string | null>(null);
-const sceneElement = ref<HTMLElement | null>(null);
-const closeButton = ref<HTMLButtonElement | null>(null);
+const selected = computed(() => campus.value.landmarks.find(item => item.id === selectedId.value) ?? null);
+const displayed = computed(() => panel.value === 'detail' ? selected.value : target.value);
+const displayedFeature = computed(() => campus.value.features.find(item => item.id === displayed.value?.featureId) ?? null);
+const visitedNames = computed(() => quest.value.visited.map(id => campus.value.landmarks.find(item => item.id === id)?.name).filter(Boolean));
+
+const panel = ref<Panel>('quest');
+const panelOpen = ref(typeof window === 'undefined' || window.innerWidth > 700);
+const arrivedId = ref<string | null>(null);
+const answer = ref<number | null>(null);
+const travelling = ref(false);
+const travelProgress = ref(0);
+const notice = ref('');
 const sceneError = ref('');
-const announcement = ref('');
-const storageNotice = ref('');
-let scene: CampusSceneHandle | null = null;
+const sceneElement = ref<HTMLElement | null>(null);
+const questButton = ref<HTMLButtonElement | null>(null);
 let returnFocus: HTMLElement | null = null;
-let mounted = false;
+let scene: CampusSceneHandle | null = null;
 
-const campus = computed(() => campuses[campusId.value]);
-const quest = computed(() => progress.value[campusId.value]);
-const selected = computed(() => campus.value.landmarks.find((item) => item.id === selectedId.value) ?? null);
-const targetId = computed(() => quest.value.status === 'active' ? campus.value.questOrder[quest.value.visited.length] ?? null : null);
-const target = computed(() => campus.value.landmarks.find((item) => item.id === targetId.value) ?? null);
-const questLabel = computed(() => {
-  if (quest.value.status === 'completed') return '探索完成';
-  if (quest.value.status === 'active') return '探索进行中';
-  return '尚未开始';
-});
-
-function announce(message: string) {
-  announcement.value = '';
-  void nextTick(() => { announcement.value = message; });
+function persist() {
+  try { saveProgress(progress.value); } catch { /* Continue without storage. */ }
 }
-
-function syncScene() {
-  try {
-    scene?.setState({ selectedId: selectedId.value, targetId: targetId.value });
-  } catch {
-    handleSceneFailure('场景更新失败');
-  }
-}
-
-function handleSceneFailure(reason: string) {
-  sceneError.value = reason || '无法初始化三维场景';
-  announce('三维场景不可用，仍可通过地标列表探索和完成任务。');
-}
-
-function sceneEvent(event: SceneEvent) {
-  if (event.type === 'error') {
-    handleSceneFailure(event.reason);
-    return;
-  }
-  const landmark = campus.value.landmarks.find((item) => item.id === event.id);
-  if (landmark) selectLandmark(landmark, null);
-}
-
-function landmarkButton(id: string): HTMLElement | null {
-  return document.getElementById(`landmark-${id}`);
-}
-
-function selectLandmark(landmark: Landmark, origin: EventTarget | null) {
-  returnFocus = origin instanceof HTMLElement ? origin : landmarkButton(landmark.id);
-  selectedId.value = landmark.id;
-  syncScene();
-  announce(`已选择${landmark.name}。`);
-  void nextTick(() => closeButton.value?.focus());
-}
-
-function closeCard(restoreFocus = true) {
-  selectedId.value = null;
-  syncScene();
-  const focus = returnFocus;
-  returnFocus = null;
-  if (restoreFocus) void nextTick(() => focus?.isConnected && focus.focus());
-}
-
 function updateQuest(state: QuestState) {
   progress.value = { ...progress.value, [campusId.value]: state };
-  if (mounted && !saveProgress(progress.value)) storageNotice.value = '无法保存进度；本次浏览仍可继续。';
-  else storageNotice.value = '';
-  syncScene();
+  persist();
 }
-
+function syncScene() {
+  scene?.setState({ selectedId: selectedId.value, targetId: target.value?.id ?? null });
+}
+watch([selectedId, target], syncScene);
+function clearJourneyView() {
+  arrivedId.value = null;
+  answer.value = null;
+  travelling.value = false;
+  travelProgress.value = 0;
+}
+function showPanel(view: Panel, trigger?: EventTarget | null) {
+  if (trigger instanceof HTMLElement) returnFocus = trigger;
+  panel.value = view;
+  panelOpen.value = true;
+}
+function closePanel() {
+  panelOpen.value = false;
+  nextTick(() => (returnFocus ?? questButton.value)?.focus());
+}
 function switchCampus(id: CampusId) {
   if (id === campusId.value) return;
   const cancelled = quest.value.status === 'active';
   if (cancelled) updateQuest(emptyQuest());
-  closeCard(false);
+  scene?.resetJourney();
+  clearJourneyView();
+  selectedId.value = null;
   campusId.value = id;
+  // A restored active journey never implies an arrival after switching campuses.
+  if (quest.value.status === 'active') {
+    updateQuest(emptyQuest());
+  }
+  panel.value = 'quest';
+  panelOpen.value = true;
+  notice.value = cancelled ? '已结束上一校区的进行中旅程；已完成的章节会保留。' : '已切换校区。';
   try {
     scene?.setCampus(campus.value);
     syncScene();
   } catch {
-    handleSceneFailure('切换三维场景失败');
+    sceneError.value = '场景未能载入，可使用无障碍列表模式继续。';
   }
-  announce(`已切换至${campus.value.name}。${cancelled ? '原校区的进行中任务已取消。' : ''}`);
 }
-
-function beginQuest() {
+function start() {
+  scene?.resetJourney();
+  clearJourneyView();
   updateQuest(startQuest(campus.value));
-  announce('探索任务已开始，请按顺序记录地标。');
+  selectedId.value = target.value?.id ?? null;
+  panel.value = 'quest';
+  panelOpen.value = true;
+  notice.value = '旅程开始。请前往当前站点，观察后回答问题。';
+  syncScene();
 }
-
-function checkIn() {
-  if (!selected.value) return;
-  const result = visitQuest(campus.value, quest.value, selected.value.id);
-  if (result.state !== quest.value) updateQuest(result.state);
-  announce(result.message);
-}
-
-function replayQuest() {
-  updateQuest(startQuest(campus.value));
-  announce('已清空本校区的任务记录，重新开始探索。');
-}
-
+function replay() { start(); }
 function exitQuest() {
+  scene?.resetJourney();
+  clearJourneyView();
   updateQuest(emptyQuest());
-  announce('已退出任务，本次任务记录已清空。');
+  selectedId.value = null;
+  panel.value = 'quest';
+  notice.value = '已退出漫游，可以自由浏览或重新开始。';
+  syncScene();
 }
-
-function resetView() {
-  if (!scene) {
-    announce('三维场景不可用，无法重置视角。');
-    return;
-  }
+function selectLandmark(item: Landmark) {
+  selectedId.value = item.id;
+  panel.value = quest.value.status === 'active' && target.value?.id === item.id ? 'quest' : 'detail';
+  panelOpen.value = true;
+  if (!sceneError.value) scene?.focusLandmark(item.id);
+}
+function travel() {
+  if (!target.value || travelling.value || sceneError.value) return;
+  arrivedId.value = null;
+  answer.value = null;
+  travelProgress.value = 0;
+  travelling.value = true;
   try {
-    scene.resetView();
-    announce('视角已重置。');
+    if (!scene?.navigateTo(target.value.id)) {
+      travelling.value = false;
+      notice.value = '暂时无法规划前往此站的路线，请重试。';
+    } else {
+      panelOpen.value = false;
+    }
   } catch {
-    handleSceneFailure('重置视角失败');
+    travelling.value = false;
+    sceneError.value = '场景导航不可用，可使用无障碍列表模式继续。';
   }
 }
-
-onMounted(() => {
-  progress.value = loadProgress(campuses);
-  mounted = true;
-  if (!sceneElement.value) {
-    handleSceneFailure('找不到场景容器');
-    return;
+function accessibleArrival() {
+  if (!sceneError.value || !target.value || travelling.value) return;
+  arrivedId.value = target.value.id;
+  answer.value = null;
+  notice.value = '已在无障碍列表模式中打开本站观察题；这不是三维场景到达。';
+}
+function checkIn() {
+  const current = target.value;
+  if (!current || arrivedId.value !== current.id || answer.value !== current.answer || travelling.value) return;
+  const result = visitQuest(campus.value, quest.value, current.id);
+  updateQuest(result.state);
+  notice.value = result.message;
+  clearJourneyView();
+  selectedId.value = target.value?.id ?? null;
+  panel.value = 'quest';
+  panelOpen.value = true;
+  syncScene();
+}
+function onSceneEvent(event: SceneEvent) {
+  if (event.type === 'error') {
+    travelling.value = false;
+    sceneError.value = event.reason || '三维场景不可用，可使用无障碍列表模式继续。';
+    panelOpen.value = true;
+  } else if (event.type === 'select') {
+    const item = campus.value.landmarks.find(landmark => landmark.id === event.id || landmark.featureId === event.id);
+    if (item) selectLandmark(item);
+  } else if (event.type === 'travel') {
+    if (travelling.value && Number.isFinite(event.progress)) travelProgress.value = Math.max(0, Math.min(1, event.progress));
+  } else if (event.type === 'arrive') {
+    if (travelling.value && target.value?.id === event.id) {
+      travelling.value = false;
+      travelProgress.value = 1;
+      arrivedId.value = event.id;
+      answer.value = null;
+      selectedId.value = event.id;
+      panel.value = 'quest';
+      panelOpen.value = true;
+      notice.value = '已到达本站，看看观察题吧。';
+    }
   }
+}
+function safeUrl(source: string | undefined): string | null {
+  if (!source) return null;
   try {
-    scene = createCampusScene(sceneElement.value, campus.value, sceneEvent);
+    const url = new URL(source);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+  } catch { return null; }
+}
+function heightLabel(status: string) {
+  return status === 'osm-tag' ? 'OSM 标注' : status === 'level-estimate' ? '按层数估算' : '待核实的估算';
+}
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && panelOpen.value) closePanel();
+}
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown);
+  if (!sceneElement.value) return;
+  try {
+    scene = createCampusScene(sceneElement.value, campus.value, onSceneEvent);
+    if (quest.value.status === 'active') {
+      selectedId.value = target.value?.id ?? null;
+      notice.value = '已恢复旅程进度。请重新前往当前站点。';
+    }
     syncScene();
   } catch {
-    handleSceneFailure('无法初始化三维场景');
+    sceneError.value = '三维场景未能启动，可使用无障碍列表模式继续。';
   }
 });
-
 onBeforeUnmount(() => {
-  mounted = false;
-  try { scene?.dispose(); } catch { /* Best-effort cleanup during unmount. */ }
+  window.removeEventListener('keydown', onKeydown);
+  scene?.dispose();
   scene = null;
 });
 </script>
 
 <template>
-  <div class="app-shell" @keydown.esc="closeCard()">
-    <a class="skip-link" href="#landmark-list">跳到地标列表</a>
+  <div class="app-shell">
     <header class="masthead">
-      <div class="brand" aria-label="太理校园漫游">
-        <span class="brand-mark" aria-hidden="true">T<span>·</span></span>
-        <div><strong>太理 · 校园漫游</strong><small>CAMPUS ATLAS</small></div>
-      </div>
-      <div class="masthead-right">
-        <span class="masthead-note">一份关于校园的空间手记</span>
-        <div class="campus-switch" role="group" aria-label="选择校区">
-          <button type="button" data-testid="campus-huyu" :aria-pressed="campusId === 'huyu'" @click="switchCampus('huyu')">虎峪</button>
-          <button type="button" data-testid="campus-yingxi" :aria-pressed="campusId === 'yingxi'" @click="switchCampus('yingxi')">迎西</button>
-        </div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">太</span><span>太理 <i>·</i> 时光漫游</span></div>
+      <nav class="campus-switch" aria-label="选择校区">
+        <button v-for="item in campusList" :key="item.id" type="button" :data-testid="`campus-${item.id}`" :aria-pressed="campusId === item.id" @click="switchCampus(item.id)">{{ item.name }}</button>
+      </nav>
+      <div class="header-progress" :aria-label="`本章已记录 ${quest.visited.length} 站，共 ${orderedLandmarks.length} 站`">
+        <span>本章印记</span><span class="header-count">{{ String(quest.visited.length).padStart(2, '0') }} <em>/</em> {{ String(orderedLandmarks.length).padStart(2, '0') }}</span>
+        <span class="stamp-dots" aria-hidden="true"><b v-for="item in orderedLandmarks" :key="item.id" :class="{ filled: quest.visited.includes(item.id) }"></b></span>
       </div>
     </header>
 
-    <main class="main-content">
-      <div class="page-heading">
-        <div><span class="eyebrow">CAMPUS EXPLORER <span class="eyebrow-line"></span> 01 / 02</span><h1>从这里，<em>认识校园。</em></h1></div>
-        <p>用自己的步调，走近校园里的每一个坐标。</p>
+    <main class="scene-area" aria-label="校园漫游场景">
+      <div ref="sceneElement" class="scene-canvas" aria-label="校园三维场景"></div>
+      <div class="scene-shade" aria-hidden="true"></div>
+      <div class="chapter-title">
+        <span class="eyebrow">CAMPUS CHAPTER <span class="eyebrow-line"></span> {{ campus.id === 'huyu' ? '01' : '02' }}</span>
+        <h1>沿着校园，<br>找回一段时光</h1>
+        <p>{{ campus.name }} <span> / </span> {{ campus.englishName }}</p>
       </div>
 
-      <div class="explorer">
-        <aside class="intro-panel" aria-labelledby="campus-heading">
-          <div class="section-kicker"><span>THE CAMPUS</span><span>↗</span></div>
-          <div class="campus-intro">
-            <span class="campus-index">{{ campusId === 'huyu' ? '01' : '02' }} / CAMPUS</span>
-            <h2 id="campus-heading">{{ campus.name }}</h2>
-            <p class="english-name">{{ campus.englishName }}</p>
-            <p class="intro-copy">{{ campus.description }}</p>
-          </div>
-          <div class="list-heading" id="landmark-list" tabindex="-1"><span>地标目录</span><span>{{ String(campus.landmarks.length).padStart(2, '0') }} PLACES</span></div>
-          <nav class="landmark-list" aria-label="地标列表">
-            <button v-for="(landmark, index) in campus.landmarks" :id="`landmark-${landmark.id}`" :key="landmark.id" type="button" class="landmark-row" :class="{ 'is-selected': selectedId === landmark.id }" :data-testid="`landmark-${landmark.id}`" :aria-label="`查看${landmark.name}`" :aria-pressed="selectedId === landmark.id" @click="selectLandmark(landmark, $event.currentTarget)">
-              <span class="row-index">{{ String(index + 1).padStart(2, '0') }}</span>
-              <span class="row-copy"><strong>{{ landmark.name }}</strong><small>{{ landmark.subtitle }}</small></span>
-              <span class="row-arrow" aria-hidden="true">↗</span>
-            </button>
-          </nav>
-          <p class="panel-footnote">选择地标，展开它的校园故事。</p>
-        </aside>
+      <div v-if="sceneError" class="error-banner" data-testid="scene-error" role="status">
+        <strong>无障碍列表模式</strong><span>{{ sceneError }}</span>
+        <button type="button" @click="showPanel('quest', $event.currentTarget)">打开旅程</button>
+      </div>
 
-        <section class="scene-panel" aria-label="校园三维示意场景">
-          <div class="scene-topline"><span>AN IMPRESSION OF CAMPUS</span><span class="scene-coordinate">{{ campus.englishName }} / SCHEMATIC</span></div>
-          <div class="scene-wrap">
-            <div ref="sceneElement" class="scene-host" aria-label="校园三维场景，可通过地标列表访问相同内容"></div>
-            <div class="schematic-badge"><span aria-hidden="true">✳</span> 空间与建筑为示意，非精确导航</div>
-            <div v-if="sceneError" class="scene-error" data-testid="scene-error" role="status">
-              <strong>三维场景暂不可用</strong><span>{{ sceneError }}。请使用地标列表继续探索和记录任务。</span>
+      <div class="scene-actions" aria-label="场景工具">
+        <button type="button" aria-label="查看校园全景" title="校园全景" :disabled="!!sceneError" @click="scene?.overview()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V4h4M17 4h4v4M21 16v4h-4M7 20H3v-4M8 12h8M12 8v8"/></svg></button>
+        <button type="button" aria-label="聚焦当前站点" title="聚焦当前站点" :disabled="!!sceneError || !(target || selected)" @click="(target || selected) && scene?.focusLandmark((target || selected)!.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+        <button type="button" data-testid="reset-view" aria-label="重置视角" title="重置视角" :disabled="!!sceneError" @click="scene?.resetView()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2 6M4 4v7h7"/></svg></button>
+      </div>
+      <div class="panel-launchers">
+        <button ref="questButton" type="button" data-testid="open-quest" :aria-expanded="panelOpen && panel === 'quest'" @click="showPanel('quest', $event.currentTarget)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16l-7-4-7 4z"/></svg> 漫游</button>
+        <button type="button" data-testid="open-directory" :aria-expanded="panelOpen && panel === 'directory'" @click="showPanel('directory', $event.currentTarget)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg> 地点</button>
+      </div>
+
+      <aside v-if="panelOpen" class="floating-panel" :aria-label="panel === 'directory' ? '校园地点目录' : panel === 'detail' ? '地点详情' : '漫游旅程'">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="panel-top">
+          <span class="panel-kicker">{{ panel === 'directory' ? 'THE DIRECTORY' : panel === 'detail' ? 'PLACE NOTES' : 'YOUR JOURNEY' }}</span>
+          <button type="button" class="icon-button" data-testid="landmark-close" aria-label="关闭面板" @click="closePanel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+        <div class="panel-scroll">
+          <template v-if="panel === 'directory'">
+            <h2>校园地点</h2><p class="muted">从列表中选择地点，查看它的故事与数据来源。</p>
+            <div class="directory-list">
+              <button v-for="(item, index) in campus.landmarks" :key="item.id" type="button" :data-testid="`landmark-${item.id}`" :aria-label="`查看 ${item.name} 详情`" @click="selectLandmark(item)">
+                <span class="list-index">{{ String(index + 1).padStart(2, '0') }}</span><span class="list-copy"><strong>{{ item.name }}</strong><small>{{ item.subtitle }}</small></span><span class="arrow" aria-hidden="true">↗</span>
+              </button>
             </div>
-            <article v-if="selected" class="landmark-card" aria-labelledby="card-title">
-              <div class="card-top"><span>PLACE / 校园地标</span><button ref="closeButton" type="button" class="icon-button" data-testid="landmark-close" aria-label="关闭地标详情" @click="closeCard()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button></div>
-              <h3 id="card-title">{{ selected.name }}</h3>
-              <p class="card-subtitle">{{ selected.subtitle }}</p>
-              <p class="card-facts">{{ selected.facts }}</p>
-              <p class="card-disclaimer">示意模型 · 外观与尺寸待核验</p>
-              <a class="source-link" :href="selected.source" target="_blank" rel="noopener noreferrer">查看资料来源 <span aria-hidden="true">↗</span><span class="sr-only">（在新窗口打开）</span></a>
-              <button v-if="quest.status === 'active'" type="button" class="primary-button card-action" data-testid="quest-check-in" @click="checkIn">记录这一站 <span aria-hidden="true">↗</span></button>
-            </article>
-          </div>
-          <div class="scene-toolbar">
-            <div class="toolbar-scale" aria-label="场景为示意，不提供比例尺"><span class="scale-mark" aria-hidden="true"></span><span>示意场景 · 非比例尺</span></div>
-            <div class="toolbar-actions"><span class="north-mark">斜俯视</span><button type="button" data-testid="reset-view" :disabled="!!sceneError" aria-label="重置场景视角" @click="resetView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2 6M4 5v6h6" /></svg>重置视角</button></div>
-          </div>
-        </section>
+          </template>
+          <template v-else-if="panel === 'quest' && quest.status === 'completed'">
+            <div data-testid="completion" class="completion">
+              <div class="completion-seal" aria-hidden="true">✳</div><span class="eyebrow">CHAPTER COMPLETE</span>
+              <h2>这一章，<br>已收入时光</h2><p class="muted">{{ campus.name }}的漫游已完成，{{ quest.visited.length }} 枚印记已收集。</p>
+              <ul class="visited-list"><li v-for="name in visitedNames" :key="name">✳ <span>{{ name }}</span></li></ul>
+              <button type="button" class="primary" data-testid="quest-replay" @click="replay">再走一次 <span>↗</span></button>
+              <button type="button" class="secondary" @click="switchCampus(campusId === 'huyu' ? 'yingxi' : 'huyu')">探索另一校区</button>
+              <button type="button" class="text-button" data-testid="quest-exit" @click="exitQuest">退出漫游</button>
+            </div>
+          </template>
+          <template v-else-if="panel === 'quest' && quest.status === 'idle'">
+            <span class="section-number">{{ campus.id === 'huyu' ? '01' : '02' }} / CHAPTER</span><h2>从这里，<br>慢慢认识校园</h2>
+            <p class="muted">{{ campus.description }}</p><div class="fine-rule"></div>
+            <p class="intro-note">跟随线索走访 {{ orderedLandmarks.length }} 个地点，观察、回答，再收集属于这一章的印记。</p>
+            <div class="help-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 6v4"/></svg><span>拖动旋转视角 · 滚轮缩放<br><small>触屏可拖动与双指缩放</small></span></div>
+            <button type="button" class="primary" data-testid="quest-start" @click="start">开始漫游 <span>↗</span></button>
+          </template>
+          <template v-else-if="displayed">
+            <div class="detail-heading"><span class="section-number">{{ panel === 'quest' ? `STOP ${String(quest.visited.length + 1).padStart(2, '0')} / ${String(orderedLandmarks.length).padStart(2, '0')}` : 'CAMPUS PLACE' }}</span><span v-if="quest.visited.includes(displayed.id)" class="recorded">已记录 ✳</span></div>
+            <h2>{{ displayed.name }}</h2><p class="subtitle">{{ displayed.subtitle }}</p>
+            <p class="facts">{{ displayed.facts }}</p>
+            <div v-if="displayedFeature" class="metric-note">轮廓：米制坐标 · 高 {{ displayedFeature.height }} m（{{ heightLabel(displayedFeature.heightStatus) }}）<template v-if="displayedFeature.levels !== null"> · {{ displayedFeature.levels }} 层</template></div>
+            <div class="source-note">地点来源：<a v-if="safeUrl(displayed.source)" :href="safeUrl(displayed.source)!" target="_blank" rel="noopener noreferrer">{{ displayed.source }}</a><span v-else>{{ displayed.source }}</span><template v-if="displayedFeature"><br>轮廓来源：<a v-if="safeUrl(displayedFeature.source)" :href="safeUrl(displayedFeature.source)!" target="_blank" rel="noopener noreferrer">{{ displayedFeature.source }}</a><span v-else>{{ displayedFeature.source }}</span></template></div>
+            <template v-if="panel === 'quest' && target?.id === displayed.id">
+              <div class="clue"><span>观察线索</span><p>{{ displayed.clue }}</p></div>
+              <div data-testid="arrival-status" class="arrival-status" aria-live="polite">{{ arrivedId === displayed.id ? (sceneError ? '无障碍列表模式 · 已打开观察题' : '已到达 · 可以开始观察') : travelling ? `正在前往 · ${Math.round(travelProgress * 100)}%` : '尚未到达本站' }}</div>
+              <template v-if="arrivedId !== displayed.id">
+                <button v-if="!sceneError" type="button" class="primary" data-testid="quest-travel" :disabled="travelling" @click="travel">{{ travelling ? '正在前往…' : '前往这一站' }} <span>↗</span></button>
+                <button v-else type="button" class="primary" data-testid="quest-travel" @click="accessibleArrival">列表模式：打开观察题 <span>↗</span></button>
+              </template>
+              <div v-else class="question">
+                <p class="question-title">{{ displayed.question }}</p>
+                <div class="choices" role="group" :aria-label="displayed.question">
+                  <button v-for="(choice, index) in displayed.choices" :key="index" type="button" :data-testid="`answer-${index}`" :aria-pressed="answer === index" :class="{ chosen: answer === index, correct: answer === index && answer === displayed.answer, wrong: answer === index && answer !== displayed.answer }" @click="answer = index"><span>{{ String.fromCharCode(65 + index) }}</span>{{ choice }}</button>
+                </div>
+                <p v-if="answer !== null" class="answer-feedback" aria-live="polite">{{ answer === displayed.answer ? '答对了，可以记录这一站。' : '再观察一下，换个答案试试。' }}</p>
+                <button type="button" class="primary" data-testid="quest-check-in" :disabled="answer !== displayed.answer" @click="checkIn">记录这一站 <span>✳</span></button>
+              </div>
+              <button type="button" class="text-button" data-testid="quest-exit" @click="exitQuest">退出漫游</button>
+            </template>
+            <template v-else>
+              <p v-if="quest.status === 'active'" class="order-note">当前旅程请先完成「{{ target?.name }}」。</p>
+              <button type="button" class="secondary" @click="showPanel('quest', $event.currentTarget)">返回旅程</button>
+              <button type="button" class="text-button" @click="showPanel('directory', $event.currentTarget)">查看全部地点</button>
+            </template>
+          </template>
+        </div>
+      </aside>
 
-        <aside class="quest-panel" aria-labelledby="quest-heading">
-          <div class="section-kicker"><span>THE JOURNEY</span><span>✳</span></div>
-          <div class="quest-intro"><span class="quest-number">FIELD NOTES / 01</span><h2 id="quest-heading">校园探索<br><em>小任务</em></h2><p>沿着地标线索，收集一段属于你的校园印象。</p></div>
-          <div class="quest-progress">
-            <div class="progress-heading"><span data-testid="quest-status">{{ questLabel }}</span><span>{{ String(quest.visited.length).padStart(2, '0') }} / {{ String(campus.questOrder.length).padStart(2, '0') }}</span></div>
-            <div class="progress-track" aria-hidden="true"><span :style="{ width: `${campus.questOrder.length ? quest.visited.length / campus.questOrder.length * 100 : 0}%` }"></span></div>
-            <ol class="quest-steps">
-              <li v-for="(id, index) in campus.questOrder" :key="id" :class="{ done: quest.visited.includes(id), current: targetId === id }">
-                <span class="step-dot" aria-hidden="true">{{ quest.visited.includes(id) ? '✓' : String(index + 1).padStart(2, '0') }}</span>
-                <span>{{ campus.landmarks.find((item) => item.id === id)?.name ?? id }}</span>
-                <small>{{ quest.visited.includes(id) ? '已记录' : targetId === id ? '下一站' : '待探索' }}</small>
-              </li>
-            </ol>
-          </div>
-          <p v-if="quest.status === 'active'" class="quest-hint">打开{{ target?.name ?? '下一站' }}的详情，选择“记录这一站”。</p>
-          <p v-else-if="quest.status === 'completed'" class="quest-hint">这一程已完成。你可以重新出发。</p>
-          <div class="quest-actions">
-            <button v-if="quest.status === 'idle'" type="button" class="primary-button" data-testid="quest-start" @click="beginQuest">开始探索 <span aria-hidden="true">↗</span></button>
-            <button v-if="quest.status === 'completed'" type="button" class="primary-button" data-testid="quest-replay" @click="replayQuest">重新探索 <span aria-hidden="true">↗</span></button>
-            <button v-if="quest.status === 'active'" type="button" class="text-button" data-testid="quest-exit" @click="exitQuest">退出任务</button>
-          </div>
-          <p v-if="storageNotice" class="storage-notice">{{ storageNotice }}</p>
-        </aside>
-      </div>
-      <footer class="page-footer"><span>TAIYUAN UNIVERSITY OF TECHNOLOGY</span><span>一段校园，一种印象。 / CAMPUS ATLAS</span></footer>
+      <div class="attribution">{{ campus.attribution }} <span>·</span> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a> <span>·</span> 米制轮廓 · 楼高待核</div>
     </main>
-    <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ announcement }}</div>
+
+    <footer class="journey-bar" data-testid="quest-status">
+      <div class="bar-label"><span class="bar-icon" aria-hidden="true">✳</span><div><small>YOUR JOURNEY</small><strong>{{ travelling ? `正在漫游 ${Math.round(travelProgress * 100)}%` : quest.status === 'completed' ? '本章已完成' : quest.status === 'active' ? (target?.name ?? '旅程进行中') : '准备出发' }}</strong></div></div>
+      <div class="bar-route" :aria-label="`已记录 ${quest.visited.length} / ${orderedLandmarks.length} 站`"><template v-for="(item, index) in orderedLandmarks" :key="item.id"><span v-if="index > 0" class="route-line"></span><span class="route-stop" :class="{ done: quest.visited.includes(item.id), current: target?.id === item.id }" :title="item.name">{{ quest.visited.includes(item.id) ? '✳' : String(index + 1).padStart(2, '0') }}</span></template></div>
+      <div class="bar-end"><span>{{ quest.status === 'active' ? '下一站' : '漫游进度' }}</span><strong>{{ quest.visited.length }} <i>/</i> {{ orderedLandmarks.length }}</strong></div>
+    </footer>
+    <div class="sr-only" aria-live="polite">{{ notice }}</div>
   </div>
 </template>
