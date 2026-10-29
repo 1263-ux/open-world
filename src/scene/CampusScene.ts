@@ -79,7 +79,7 @@ function perimeter(points: Point2[], y: number, material: THREE.Material): THREE
   const geometry = new THREE.BufferGeometry().setFromPoints(polygon.map(([x, z]) => new THREE.Vector3(x, y, z)));
   return new THREE.LineLoop(geometry, material);
 }
-function strips(roads: CampusRoad[], extra: number): THREE.BufferGeometry {
+export function strips(roads: CampusRoad[], extra: number): THREE.BufferGeometry {
   const vertices: number[] = [];
   for (const road of roads || []) {
     const width = Number.isFinite(road.width) && road.width > 0 ? road.width : 4;
@@ -90,8 +90,9 @@ function strips(roads: CampusRoad[], extra: number): THREE.BufferGeometry {
       if (length < 0.01) continue;
       const nx = -dz / length * (width / 2 + extra), nz = dx / length * (width / 2 + extra);
       const y = extra ? 0.075 : 0.09;
-      vertices.push(a[0] + nx, y, a[1] + nz, a[0] - nx, y, a[1] - nz, b[0] + nx, y, b[1] + nz,
-        b[0] + nx, y, b[1] + nz, a[0] - nx, y, a[1] - nz, b[0] - nx, y, b[1] - nz);
+      // Counter-clockwise from above, so single-sided roads face the camera.
+      vertices.push(a[0] + nx, y, a[1] + nz, b[0] + nx, y, b[1] + nz, a[0] - nx, y, a[1] - nz,
+        b[0] + nx, y, b[1] + nz, b[0] - nx, y, b[1] - nz, a[0] - nx, y, a[1] - nz);
     }
   }
   const geometry = new THREE.BufferGeometry();
