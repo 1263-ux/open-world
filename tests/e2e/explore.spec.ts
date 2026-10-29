@@ -62,3 +62,10 @@ test('WebGL failure and corrupt progress still allow keyboard exploration',async
  await page.getByTestId('quest-start').click();for(const id of stops)await visit(page,id);
  await expect(page.getByTestId('quest-status')).toHaveText('探索完成');
 });
+
+test('runtime WebGL context loss has recoverable UI fallback',async({page})=>{
+ await page.goto('/');await expect(page.getByTestId('campus-canvas')).toBeVisible();
+ const lost=await page.evaluate(()=>{const canvas=document.querySelector('canvas');const gl=canvas?.getContext('webgl2');const ext=gl?.getExtension('WEBGL_lose_context');if(!ext)return false;ext.loseContext();return true;});
+ expect(lost).toBe(true);await expect(page.getByTestId('scene-error')).toBeVisible();
+ await page.getByTestId('landmark-hy-library').click();await expect(page.locator('#card-title')).toHaveText('图书馆');
+});

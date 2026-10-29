@@ -383,8 +383,9 @@ export function createCampusScene(container: HTMLElement, data: CampusData, onEv
       const width = Math.max(1, container.clientWidth);
       const height = Math.max(1, container.clientHeight);
       const aspect = width / height;
-      const halfWidth = VIEW_SPAN * Math.max(1, aspect) / 2;
-      const halfHeight = VIEW_SPAN * Math.max(1, 1 / aspect) / 2;
+      const span = aspect < 1 ? 110 : VIEW_SPAN;
+      const halfWidth = span * Math.max(1, aspect) / 2;
+      const halfHeight = span * Math.max(1, 1 / aspect) / 2;
       camera.left = -halfWidth;
       camera.right = halfWidth;
       camera.top = halfHeight;
@@ -422,12 +423,19 @@ export function createCampusScene(container: HTMLElement, data: CampusData, onEv
       if (typeof id === 'string' && landmarks.has(id)) onEvent({ type: 'select', id });
     };
     const onPointerCancel = (): void => { gesture = null; };
+    const onContextLost = (event: Event): void => {
+      event.preventDefault();
+      cleanup();
+      onEvent({ type: 'error', reason: '图形上下文中断，请刷新恢复三维场景；地标列表仍可使用。' });
+    };
+    canvas.addEventListener('webglcontextlost', onContextLost);
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerCancel);
     window.addEventListener('resize', resize);
     removeListeners = () => {
+      canvas.removeEventListener('webglcontextlost', onContextLost);
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', onPointerUp);

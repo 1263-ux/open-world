@@ -156,7 +156,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" @keydown.esc="closeCard()">
     <a class="skip-link" href="#landmark-list">跳到地标列表</a>
     <header class="masthead">
       <div class="brand" aria-label="太理校园漫游">
@@ -218,7 +218,7 @@ onBeforeUnmount(() => {
           </div>
           <div class="scene-toolbar">
             <div class="toolbar-scale" aria-label="场景为示意，不提供比例尺"><span class="scale-mark" aria-hidden="true"></span><span>示意场景 · 非比例尺</span></div>
-            <div class="toolbar-actions"><span class="north-mark" aria-label="北方标记">N <span aria-hidden="true">↑</span></span><button type="button" data-testid="reset-view" :disabled="!!sceneError" aria-label="重置场景视角" @click="resetView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2 6M4 5v6h6" /></svg>重置视角</button></div>
+            <div class="toolbar-actions"><span class="north-mark">斜俯视</span><button type="button" data-testid="reset-view" :disabled="!!sceneError" aria-label="重置场景视角" @click="resetView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2 6M4 5v6h6" /></svg>重置视角</button></div>
           </div>
         </section>
 
