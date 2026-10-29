@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 import type { CampusData, CampusRoad, CampusSceneHandle, Landmark, Point2, SceneEvent, SceneState } from '../shared/contracts';
 
@@ -50,6 +51,7 @@ function disposeObject(root: THREE.Object3D): void {
   const materials = new Set<THREE.Material>();
   const textures = new Set<THREE.Texture>();
   root.traverse((object) => {
+    if (object instanceof CSS2DObject) object.element.remove();
     const item = object as THREE.Mesh;
     if (item.geometry) geometries.add(item.geometry);
     const list = item.material ? (Array.isArray(item.material) ? item.material : [item.material]) : [];
@@ -137,6 +139,10 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   canvas.style.height = '100%';
   canvas.style.touchAction = 'none';
   container.appendChild(canvas);
+  const labels = new CSS2DRenderer();
+  labels.domElement.className = 'landmark-label-layer';
+  labels.domElement.setAttribute('aria-hidden', 'true');
+  container.appendChild(labels.domElement);
 
   const credit = document.createElement('div');
   credit.style.cssText = 'position:absolute;left:14px;bottom:14px;max-width:min(55%,520px);padding:7px 10px;border-radius:6px;background:rgba(22,39,32,.82);color:#f3f0e5;font:11px/1.4 system-ui,sans-serif;pointer-events:none;z-index:2';
@@ -193,6 +199,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (disposed) return;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight), false);
+    labels.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight));
     refreshFrustum();
   }
   const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
@@ -419,6 +426,13 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       markerMeshes.set(landmark.id, marker);
       pickables.push(marker);
       world.add(marker);
+      const name = document.createElement('div');
+      name.className = 'landmark-label';
+      name.textContent = `${String(data.questOrder.indexOf(landmark.id) + 1).padStart(2, '0')}  ${landmark.name}`;
+      const label = new CSS2DObject(name);
+      label.position.set(0, 5, 0);
+      label.center.set(0.5, 1);
+      marker.add(label);
     }
     if (!markerMeshes.size) { markerGeometry.dispose(); markerNormal.dispose(); markerSelected.dispose(); markerTarget.dispose(); }
     // Materials not currently assigned to a marker are still owned by the world.
@@ -559,6 +573,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     }
     controls.update();
     renderer.render(scene, camera);
+    labels.render(scene, camera);
     raf = requestAnimationFrame(tick);
   }
   function interruptView(): void { tween = null; }
@@ -606,6 +621,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     disposeObject(routeLayer); disposeObject(highlightLayer); disposeObject(world);
     sun.shadow.dispose();
     renderer.dispose();
+    labels.domElement.remove();
     canvas.remove(); credit.remove();
     if (container.style.position === 'relative' && previousPosition !== 'relative') container.style.position = previousPosition;
   }
