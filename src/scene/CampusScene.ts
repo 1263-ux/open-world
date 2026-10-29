@@ -575,8 +575,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       }
     }
     controls.update();
-    renderer.render(scene, camera);
     labels.render(scene, camera);
+    renderer.render(scene, camera);
     raf = requestAnimationFrame(tick);
   }
   function interruptView(): void { tween = null; }
@@ -642,6 +642,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     buildCampus();
     resize();
     questView(true);
+    labels.render(scene, camera);
     raf = requestAnimationFrame(tick);
   } catch (error) {
     dispose();
@@ -652,7 +653,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   return {
     setCampus(next) {
       if (disposed) return;
-      try { data = next; state = { selectedId: null, targetId: null }; buildCampus(); questView(true); }
+      try { data = next; state = { selectedId: null, targetId: null }; buildCampus(); questView(true); labels.render(scene, camera); }
       catch (error) { dispose(); onEvent({ type: 'error', reason: `Unable to build the 3D scene: ${error instanceof Error ? error.message : 'unknown error'}` }); }
     },
     setState(next) { if (!disposed) { state = { selectedId: next.selectedId, targetId: next.targetId }; updateHighlights(); } },
