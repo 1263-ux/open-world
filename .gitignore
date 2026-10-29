@@ -1,0 +1,30 @@
+# Never store API credentials, even in a private repository.
+.env*
+**/.env*
+*.pem
+*.key
+auth.json
+credentials.json
+credentials.*.json
+service-account*.json
+.codex/
+.secrets/
+
+# Dependencies and local generated output.
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.log
+.DS_Store
+
+# Keep raw/private references outside published asset directories.
+/raw-assets/
+/private-assets/
+/assets/raw/
+/assets/private/
+/public/assets/raw/
+/public/assets/private/
+
+# .agent/ is intentionally versioned: plans contain no credentials.
