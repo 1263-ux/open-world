@@ -29,7 +29,7 @@ svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width:
 .stamp-dots b { width: 6px; height: 6px; border: 1px solid #a8b5a8; border-radius: 50%; }
 .stamp-dots b.filled { background: #ba7955; border-color: #ba7955; }
 .scene-area { flex: 1; min-height: 0; position: relative; overflow: hidden; background: #d2d9ce; }
-.scene-canvas { position: absolute; inset: 0; }
+.scene-canvas { position: absolute; inset: 0; z-index: 0; isolation: isolate; }
 .scene-canvas canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .scene-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, rgba(239,241,226,.74), transparent 36%), linear-gradient(0deg, rgba(36,57,42,.13), transparent 18%); }
 .chapter-title { position: absolute; top: 30px; left: 32px; pointer-events: none; max-width: 270px; text-shadow: 0 1px 12px rgba(247,248,238,.9); }

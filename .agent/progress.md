@@ -57,3 +57,7 @@ The initial status above is historical. See CURRENT_STATE.md and reports/round-0
 ## Round 01 verified checkpoint — 2026-10-29 14:35 UTC
 
 API-authored plan/scene/UI integrated;20 unit tests and5 real browser tests passed in GitHub Actions run40892347891 for69334abb9dcb7d7f31933a2956d54bc8a858a59b. The code is now on main. Original procedural meshes are still placeholders, not precise campus assets. Visual baseline images prepared for user review. No public deployment. Further external-API private-source review awaits the explicit sharing confirmation requested after a tool rejection.
+
+##2026-10-29 18:40 checkpoint
+
+Round03 geometry/gameplay and round04 readable-label work implemented. Source/research precedes each plan. c7ac0e5b4ce79610cf1d02b4de315cad56e079d2 passed24unit+5browser in CI40931642266; screenshots inspected, then one CSS stacking isolation correction made to stop names drawing over completion panel. Final exact-commit CI pending. Main advancement is a technical checkpoint only, not full real-proportion/aesthetic acceptance. User asked for scaled site/dimension/photo inputs; pending. See CURRENT_STATE.md for authoritative gaps and runtime/budget.
