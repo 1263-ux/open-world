@@ -72,19 +72,13 @@ function closePanel() {
 }
 function switchCampus(id: CampusId) {
   if (id === campusId.value) return;
-  const cancelled = quest.value.status === 'active';
-  if (cancelled) updateQuest(emptyQuest());
   scene?.resetJourney();
   clearJourneyView();
   selectedId.value = null;
   campusId.value = id;
-  // A restored active journey never implies an arrival after switching campuses.
-  if (quest.value.status === 'active') {
-    updateQuest(emptyQuest());
-  }
   panel.value = 'quest';
   panelOpen.value = true;
-  notice.value = cancelled ? '已结束上一校区的进行中旅程；已完成的章节会保留。' : '已切换校区。';
+  notice.value = '已切换校区，两个章节的印记分别保留。返回后可继续前往下一站。';
   try {
     scene?.setCampus(campus.value);
     syncScene();

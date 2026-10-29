@@ -271,6 +271,17 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     roadEdge.receiveShadow = roads.receiveShadow = true;
     world.add(roadEdge, roads);
 
+    // Designed game paths, not actual mapped roads.
+    const gamePaths = data.questOrder.flatMap((id, i) => {
+      const points = data.routes[`${i ? data.questOrder[i - 1] : 'start'}>${id}`];
+      return points && points.length >= 2 && points.every(validPoint)
+        ? [{ id: `game-${i}-${id}`, points, width: 2.4, source: 'Designed game path, not a mapped road' }] : [];
+    });
+    const paths = new THREE.Mesh(strips(gamePaths, 0), material(0xd5d0bf));
+    paths.position.y = 0.02; // Keep the paths above existing road surfaces.
+    paths.receiveShadow = true;
+    world.add(paths);
+
     const parkMat = material(0x879f82);
     const trackMat = material(0xb5795f);
     const fieldMat = material(0x829d77);
@@ -437,7 +448,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
 
   function animateView(target: THREE.Vector3, span: number, initial = false): void {
     if (disposed) return;
-    const direction = initial ? new THREE.Vector3(0.7, 1, 1.1).normalize() : camera.position.clone().sub(controls.target).normalize();
+    const direction = initial ? new THREE.Vector3(0.7, 1, data.id === 'huyu' ? -1.1 : 1.1).normalize() : camera.position.clone().sub(controls.target).normalize();
     if (direction.lengthSq() < 0.01) direction.set(0.7, 1, 1.1).normalize();
     const distance = Math.max(span * 1.5, 200);
     const position = target.clone().addScaledVector(direction, distance);
@@ -502,6 +513,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (length < 0.001) return false;
     travel = { id, points, cumulative, length, distance: 0 };
     drawRoute(points);
+    const viewPoints = [...points, landmark.position, landmark.arrival].filter(validPoint);
+    const [x0, z0, x1, z1] = boundsOf(viewPoints);
+    animateView(new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), Math.max(120, (x1 - x0) * 1.35, (z1 - z0) * 1.35));
     onEvent({ type: 'travel', progress: 0 });
     return true;
   }
@@ -513,7 +527,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
   function tick(time: number): void {
     if (disposed) return;
-    const dt = previousTime ? Math.max(0, (time - previousTime) / 1000) : 0;
+    const dt = previousTime ? Math.min(0.1, Math.max(0, (time - previousTime) / 1000)) : 0;
     previousTime = time;
     if (tween) {
       tween.elapsed += dt;
@@ -526,7 +540,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     }
     if (travel) {
       const current = travel;
-      current.distance = Math.min(current.length, current.distance + dt * 60);
+      current.distance = Math.min(current.length, current.distance + dt * Math.min(12, current.length / 3));
       let i = 1;
       while (i < current.cumulative.length - 1 && current.cumulative[i] < current.distance) i++;
       const a = current.points[i - 1], b = current.points[i];
@@ -550,6 +564,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   function interruptView(): void { tween = null; }
   controls.addEventListener('start', interruptView);
   function pointerDown(event: PointerEvent): void {
+    if (pointer && event.pointerId !== pointer.id) { pointer.moved = true; return; }
     if (event.button !== 0 || pointer) return;
     pointer = { x: event.clientX, y: event.clientY, id: event.pointerId, moved: false };
   }
