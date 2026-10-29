@@ -125,6 +125,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   controls.maxZoom = 5;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.shadowMap.enabled = true;
+  // Campus geometry/light are static; do not redraw a 2048px shadow map each frame.
+  renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
@@ -453,10 +455,11 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const halo = new THREE.Mesh(new THREE.RingGeometry(1.05, 1.25, 24), new THREE.MeshBasicMaterial({ color: 0x69dcd3, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
     halo.rotation.x = -Math.PI / 2;
     halo.position.y = 0.06;
-    body.castShadow = head.castShadow = backpack.castShadow = true;
+    body.castShadow = head.castShadow = backpack.castShadow = false;
     pawn.add(body, head, backpack, halo);
     setPawnPosition(validPoint(data.start) ? data.start : [centerX, centerZ]);
     world.add(pawn);
+    renderer.shadowMap.needsUpdate = true;
     updateHighlights();
   }
 
@@ -541,7 +544,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
   function tick(time: number): void {
     if (disposed) return;
-    const dt = previousTime ? Math.min(0.1, Math.max(0, (time - previousTime) / 1000)) : 0;
+    const dt = previousTime ? Math.min(1, Math.max(0, (time - previousTime) / 1000)) : 0;
     previousTime = time;
     if (tween) {
       tween.elapsed += dt;
@@ -578,6 +581,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
   function interruptView(): void { tween = null; }
   controls.addEventListener('start', interruptView);
+  function resetFrameClock(): void { previousTime = 0; }
+  document.addEventListener('visibilitychange', resetFrameClock);
   function pointerDown(event: PointerEvent): void {
     if (pointer && event.pointerId !== pointer.id) { pointer.moved = true; return; }
     if (event.button !== 0 || pointer) return;
@@ -612,6 +617,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     resizeObserver?.disconnect();
     window.removeEventListener('resize', resize);
     controls.removeEventListener('start', interruptView);
+    document.removeEventListener('visibilitychange', resetFrameClock);
     controls.dispose();
     canvas.removeEventListener('pointerdown', pointerDown);
     canvas.removeEventListener('pointermove', pointerMove);
