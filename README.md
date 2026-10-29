@@ -31,7 +31,7 @@ npm run test:e2e
 
 ## 验证状态
 
-本地 typecheck、lint、20 项单元测试、build 已通过。当前云环境限制独立浏览器进程，Playwright 的浏览器测试尚需 GitHub Actions 验证，不能把此版本称为完整验收通过。
+本地 typecheck、lint、20 项单元测试、build 已通过。GitHub Actions 已在提交 `69334abb9dcb7d7f31933a2956d54bc8a858a59b` 上通过全部检查，包括 5 项 Playwright 浏览器测试（桌面/移动视口、画布拾取、任务、刷新、WebGL 初始化失败与运行时 context loss）。[验证记录](https://github.com/1263-ux/open-world/actions/runs/40892347891)。这只证明技术样板通过已列测试，不代表建筑精度、真实手机性能或最终 MVP 已验收。
 
 ## 项目资料
 

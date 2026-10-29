@@ -27,3 +27,11 @@ These are API-reported usage, not dollar invoices or remaining balance. Input ca
 ## Remaining validation
 
 Browser interaction, canvas picking, pointer-drag suppression, mobile layout, WebGL fallback, keyboard focus, screenshots and actual device performance. Building identity/layout are intentionally schematic pending sourced refinement.
+
+## CI verification and visual review
+
+- First run40891266985 for18c39aa passed20 unit +4 browser tests. Screenshots exposed portrait framing and content-order issues; fixed locally, plus runtime WebGL context-loss handling and Escape close.
+- Final code run40892347891 for69334abb9dcb7d7f31933a2956d54bc8a858a59b passed typecheck/lint/unit20/build/browser5. Verified run success and downloaded artifact12905491506. Desktop/mobile screenshots visually inspected.
+- Main was advanced to exactly that tested code commit. No public hosting deployed.
+- An API fresh-code-review request was blocked pending explicit permission to send this private repository source to OpenAI API. No review response/usage artifact exists, so no successful review or invoice charge is claimed. Necessary sharing approval requested; no reroute to evade denial.
+- Remaining: accurate geometry/maps, GLB pipeline, real-device performance and human visual baseline acceptance.
