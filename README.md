@@ -1,26 +1,44 @@
-# Open World · 太理校园世界
+# 太理 · 校园漫游 / Campus Atlas
 
-浏览器中的太原理工大学虎峪、迎西校园探索原型。目标是可辨认的 3D 地标、信息查看与至少一条完整探索任务；不追求首版 BIM 精度。
+一个浏览器里的低多边形校园探索原型，覆盖太原理工大学虎峪与迎西校区的示意地标、信息卡片和一条可完成、重玩、退出的探索任务。
 
-## 当前状态
+> 当前是技术与视觉样板。建筑外观、尺寸及局部坐标为原创程序化示意，不是准确复原或导航地图。尚未公开部署。
 
-项目处于计划与技术准备阶段；当前交接只包含文档和安全忽略规则，**尚未提供可运行应用或 npm 脚本**，也未声称构建/测试/部署通过。
+## 运行
 
-- 栈：Vue 3 + TypeScript + Vite + Three.js，Blender→GLB，JSON/localStorage。
-- 首个切片：一个校门、2–3 栋可辨认建筑、短路线、信息卡和可完成/重玩/退出的任务；之后扩至双校区。
-- 地图视角为可逆默认，角色控制未定；批量建模前先验证视觉基准。
-- 后端和多人暂缓到未来阶段，并非永久排除。
+Node.js 24；依赖版本由 package-lock.json 锁定。
 
-## 从哪里继续
+```bash
+npm ci
+npm run dev
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+npx playwright install --with-deps chromium
+npm run test:e2e
+```
 
-1. 先读 [Agent 规则](AGENTS.md)。
-2. 查看 [.agent/plans/](.agent/plans/) 中的三份原计划副本。
-3. 以 [当前决策](.agent/decisions.md)、[进展与证据](.agent/progress.md)、[Current State](.agent/CURRENT_STATE.md) 区分已完成、建议和待验证项。
+默认开发服务仅监听 127.0.0.1。本机预览地址由 Vite 输出。若已有适配的 Chromium，可通过 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH 指定；默认使用 Playwright 管理的浏览器。
 
-每轮计划前重新读计划并做相关资料调研；优先复用成熟、许可清晰的组件，不自造框架。API 预算上限 $90，真实余额未知，到期日为 2026-11-26；不能把计划预算当实际支出或剩余。
+## 当前功能
 
-## 安全与发布
+- 虎峪、迎西场景切换；斜俯视旋转、拖拽、缩放、重置。
+- 点击建筑或使用键盘地标目录查看说明及来源。
+- 按顺序记录地标，开始/完成/重玩/退出；本地进度保存，损坏存储安全回退。
+- WebGL 不可用时仍可使用地标列表与任务流程。
+- 响应式布局。实际移动设备性能仍待实测。
 
-不在客户端、Git 或文档中保存任何 API Key/auth 值；`.env.local` 不会自动阻止前端打包泄密。第三方资产使用前登记来源与许可，许可不明先用自制占位。
+## 验证状态
 
-用户已授权主控在适用检查后直接推送 main，并只参与重大成果验收；公开部署、额外付费及访问范围变更仍需明确授权。仓库推送不等同站点已发布。
+本地 typecheck、lint、20 项单元测试、build 已通过。当前云环境限制独立浏览器进程，Playwright 的浏览器测试尚需 GitHub Actions 验证，不能把此版本称为完整验收通过。
+
+## 项目资料
+
+- [执行规则](AGENTS.md)
+- [三份原计划](.agent/plans/)
+- [当前进度](.agent/CURRENT_STATE.md)
+- [来源与复用调研](.agent/research/round-00-resources.md)
+- [本轮检查记录](.agent/reports/round-01-local-checks.md)
+
+MVP 先做可玩的单体前端，后端与多人为后续方向。API 只用于开发过程，网站运行不需要 API key；任何密钥都不得进入仓库或客户端。

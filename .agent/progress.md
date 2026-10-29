@@ -49,3 +49,7 @@
 3. 在持续开发授权内建立最小可运行技术骨架与真实测试脚本；先闭环一个校门/2–3 建筑/一条任务，不先铺满双校区细模。
 4. 补官方校园事实与来源表、视觉基准，验证后扩为双校区；主控检查后可直接推 main，核验远端身份及 CI。
 5. 更新每轮真实证据/费用/阻塞，按重大成果通知用户；不以“计划已写完”冒充用户要求的校园世界做好了。
+
+## Round 01 update — 2026-10-29 14:22 UTC
+
+The initial status above is historical. See CURRENT_STATE.md and reports/round-01-local-checks.md for current implemented features, 20 passing unit tests, actual API model usage and blocked local browser checks. A temporary CI branch will be used before advancing main. No public deployment or final completion is claimed.
