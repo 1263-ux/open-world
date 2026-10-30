@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { PHOTO_POINTS, type PhotoPoint } from '../games/photography';
 
 const props = defineProps<{
@@ -9,12 +9,25 @@ const props = defineProps<{
   status: { inRange: boolean; framed: boolean; obstructed: boolean; distance: number } | null;
   disabled: boolean;
   viewAvailable: boolean;
-  modelSettled: boolean;
+  modelStatus: 'loading' | 'ready' | 'fallback';
   panelOpen: boolean;
   feedback: string;
   completeOpen: boolean;
 }>();
 const emit = defineEmits<{ record: []; close: []; open: []; replay: []; select: [id: string] }>();
+const dialog = ref<HTMLElement | null>(null);
+const closeButton = ref<HTMLButtonElement | null>(null);
+watch(() => props.completeOpen, async open => {
+  if (open) { await nextTick(); closeButton.value?.focus(); }
+});
+function trapFocus(event: KeyboardEvent) {
+  if (event.key !== 'Tab' || !dialog.value) return;
+  const focusable = Array.from(dialog.value.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+  if (!focusable.length) { event.preventDefault(); return; }
+  const index = focusable.indexOf(document.activeElement as HTMLButtonElement);
+  if (event.shiftKey && index <= 0) { event.preventDefault(); focusable[focusable.length - 1]?.focus(); }
+  else if (!event.shiftKey && (index === -1 || index === focusable.length - 1)) { event.preventDefault(); focusable[0]?.focus(); }
+}
 const downloading = ref(false);
 const downloadError = ref(false);
 const count = computed(() => props.stamps.length);
@@ -22,11 +35,12 @@ const hint = computed(() => {
   if (props.disabled) return '三维场景不可用，取景手记暂不可用';
   if (props.panelOpen) return '关闭地点面板后继续取景';
   if (!props.viewAvailable) return '请先返回人物视角，再继续取景';
-  if (!props.modelSettled) return '机械馆细节正在加载，稍候即可取景';
+  if (props.modelStatus === 'fallback') return '机械馆细节未能加载，暂无法记录钟楼';
+  if (props.modelStatus === 'loading') return '机械馆细节正在加载，稍候即可取景';
   if (!props.status) return '正在寻找观察位置…';
   if (!props.status.inRange) return `向观察处靠近 · 约 ${Math.round(props.status.distance)} 米`;
   if (props.status.obstructed) return '钟楼被景物遮住了，换个位置看看';
-  if (!props.status.framed) return '转动视角，把钟楼放进画面中央';
+  if (!props.status.framed) return '调整视角：钟面放进框内，塔顶完整入画';
   return '构图就绪 · 按 E 或轻触记录';
 });
 function imageFor(url: string): Promise<HTMLImageElement> {
@@ -72,19 +86,21 @@ async function downloadPostcard() {
 <template>
   <div class="photo-guide" data-testid="photo-guide">
     <div class="photo-guide-copy">
-      <span class="photo-kicker">晴日 · 太理手记 <b>{{ count }} / 2</b></span>
+      <span class="photo-kicker">晴日 · 取景手记 <b>{{ count }} / 2</b></span>
       <strong>{{ point.title }}</strong>
       <small>{{ point.instruction }}</small>
-      <span class="photo-hint" data-testid="photo-hint" aria-live="polite">{{ feedback || hint }}</span>
+      <span class="photo-hint" data-testid="photo-hint">{{ feedback || hint }}</span><span class="sr-only" aria-live="polite">{{ feedback }}</span>
     </div>
     <button v-if="count === 2" type="button" class="photo-open" @click="emit('open')">查看手记 ↗</button>
-    <button type="button" class="photo-shutter" data-testid="photo-record" :disabled="disabled || panelOpen || !modelSettled" @click="emit('record')"><span aria-hidden="true">◎</span> 记录 <kbd>E</kbd></button>
+    <button type="button" class="photo-shutter" data-testid="photo-record" :disabled="disabled || panelOpen || modelStatus !== 'ready'" @click="emit('record')"><span aria-hidden="true">◎</span> 记录 <kbd>E</kbd></button>
   </div>
   <div v-if="status?.inRange && !disabled && !panelOpen && viewAvailable" class="photo-frame" :class="{ ready: status.framed && !status.obstructed }" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-  <section v-if="completeOpen" class="postcard-sheet" data-testid="photo-complete" aria-label="校园手记已完成">
-    <button class="postcard-close" type="button" aria-label="关闭手记" @click="emit('close')">×</button>
+  <Teleport to="body">
+  <div v-if="completeOpen" class="postcard-backdrop">
+  <section ref="dialog" class="postcard-sheet" data-testid="photo-complete" role="dialog" aria-modal="true" aria-labelledby="postcard-title" @keydown="trapFocus">
+    <button ref="closeButton" class="postcard-close" type="button" aria-label="关闭手记" @click="emit('close')">×</button>
     <span class="photo-kicker">TWO MOMENTS / YINGXI</span>
-    <h2>把晴日，<br>留在手记里</h2>
+    <h2 id="postcard-title">把晴日，<br>留在手记里</h2>
     <p>两处驻足，两枚自己发现的校园印记。</p>
     <div class="postcard-previews">
       <button v-for="item in PHOTO_POINTS" :key="item.id" type="button" @click="emit('select', item.id)">
@@ -98,4 +114,6 @@ async function downloadPostcard() {
     <div class="postcard-actions"><button type="button" @click="emit('close')">继续漫游</button><button type="button" @click="emit('replay')">重新收集</button></div>
     <small class="postcard-privacy">仅在本机生成，不会上传或自动分享。</small>
   </section>
+  </div>
+  </Teleport>
 </template>

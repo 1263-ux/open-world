@@ -66,7 +66,7 @@ export class PlayerController {
     this.advance();
     if (p.kind === 'look') {
       this.yaw -= (e.clientX - p.x) * .005;
-      this.pitch = THREE.MathUtils.clamp(this.pitch + (e.clientY - p.y) * .004, -.15, .8);
+      this.pitch = THREE.MathUtils.clamp(this.pitch + (e.clientY - p.y) * .004, -.7, .8);
     } else {
       const x = (e.clientX - p.startX) / 50, y = (e.clientY - p.startY) / 50;
       this.joystick.set(x, y).clampLength(0, 1);
@@ -289,13 +289,16 @@ export class PlayerController {
     const target = this.avatar.position.clone().add(new THREE.Vector3(0, 1.4, 0));
     const horizontal = Math.cos(this.pitch) * 6;
     const desired = target.clone().add(new THREE.Vector3(-Math.sin(this.yaw) * horizontal, Math.sin(this.pitch) * 6 + 1.1, -Math.cos(this.yaw) * horizontal));
+    // Looking up lowers the orbit, but the camera must remain above the ground.
+    desired.y = Math.max(.6, desired.y);
     const delta = desired.clone().sub(target), distance = delta.length();
     const hit = this.octree.rayIntersect(new THREE.Ray(target, delta.normalize()));
     const obstructed = Boolean(hit && hit.distance < distance);
     if (hit && obstructed) desired.copy(target).addScaledVector(delta, Math.max(.1, hit.distance - .12));
     // Pull in immediately to avoid interpolating through a wall; ease back out when clear.
     if (immediate || obstructed || this.camera.position.lengthSq() === 0) this.camera.position.copy(desired); else this.camera.position.lerp(desired, .22);
-    this.camera.lookAt(target);
+    const lookTarget = target.clone().add(new THREE.Vector3(0, Math.max(0, -.15 - this.pitch) * 9, 0));
+    this.camera.lookAt(lookTarget);
     this.applyAvatarFade(THREE.MathUtils.smoothstep(this.camera.position.distanceTo(target), 1, 1.8));
   }
   dispose() {

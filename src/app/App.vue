@@ -44,9 +44,9 @@ const displayedFeature = computed(() => campus.value.features.find(item => item.
 const visitedNames = computed(() => quest.value.visited.map(id => campus.value.landmarks.find(item => item.id === id)?.name).filter(Boolean));
 
 const hksOpen = ref(false);
-function openHks() { scene?.pause(); hksOpen.value = true; }
+function openHks() { hksOpen.value = true; syncScenePause(); }
 function focusScene() { nextTick(() => sceneElement.value?.querySelector('canvas')?.focus()); }
-function closeHks() { hksOpen.value = false; scene?.resume(); focusScene(); }
+function closeHks() { hksOpen.value = false; syncScenePause(); if (!photoCompleteOpen.value) focusScene(); }
 
 const panel = ref<Panel>('quest');
 const panelOpen = ref(false);
@@ -69,8 +69,67 @@ const photoPoint = computed(() => PHOTO_POINTS.find(point => point.id === photoP
 const photoStatus = ref<{ inRange: boolean; framed: boolean; obstructed: boolean; distance: number } | null>(null);
 const photoFeedback = ref('');
 const photoViewAvailable = ref(true);
-const photoModelSettled = ref(false);
+const photoModelStatus = ref<'loading' | 'ready' | 'fallback'>('loading');
 const photoCompleteOpen = ref(false);
+let photoReturnFocus: HTMLElement | null = null;
+function syncScenePause() {
+  if (hksOpen.value || photoCompleteOpen.value) scene?.pause(); else scene?.resume();
+}
+function openPhotoComplete() {
+  photoReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  photoCompleteOpen.value = true;
+  syncScenePause();
+}
+function closePhotoComplete(restore = true) {
+  photoCompleteOpen.value = false;
+  syncScenePause();
+  if (restore && !hksOpen.value) nextTick(() => {
+    if (photoReturnFocus?.isConnected) photoReturnFocus.focus(); else focusScene();
+  });
+}
+const orientationDismissed = ref(false);
+const orientationMessage = ref('旋转设备，开启更宽阔的校园视野');
+let orientationFullscreen = false;
+let orientationLocked = false;
+let orientationAttempt = 0;
+const orientationBusy = ref(false);
+async function tryLandscape() {
+  if (orientationBusy.value) return;
+  const attempt = ++orientationAttempt;
+  orientationBusy.value = true;
+  try {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      await document.documentElement.requestFullscreen();
+      if (attempt !== orientationAttempt || orientationDismissed.value) {
+        if (document.fullscreenElement === document.documentElement && document.exitFullscreen) await document.exitFullscreen();
+        return;
+      }
+      orientationFullscreen = true;
+    }
+    const orientation = screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> };
+    if (!orientation?.lock) throw new Error('unsupported');
+    await orientation.lock('landscape');
+    if (attempt !== orientationAttempt || orientationDismissed.value) { orientation.unlock?.(); return; }
+    orientationLocked = true;
+    orientationMessage.value = '如果画面没有旋转，可手动旋转设备或继续竖屏浏览。';
+  } catch {
+    if (attempt === orientationAttempt && !orientationDismissed.value) orientationMessage.value = '设备未允许自动横屏，可手动旋转或继续竖屏浏览。';
+  } finally { orientationBusy.value = false; }
+}
+async function dismissOrientation() {
+  orientationDismissed.value = true;
+  orientationAttempt++;
+  if (orientationLocked) {
+    try { screen.orientation?.unlock?.(); } catch { /* Not supported on every device. */ }
+    orientationLocked = false;
+  }
+  if (orientationFullscreen && document.fullscreenElement === document.documentElement && document.exitFullscreen) {
+    try { await document.exitFullscreen(); } catch { /* User can use the browser fullscreen control. */ }
+  }
+  orientationFullscreen = false;
+  focusScene();
+}
+
 let photoTimer: number | undefined;
 let feedbackTimer: number | undefined;
 function updatePhotoStatus() {
@@ -85,13 +144,13 @@ function photoMessage(message: string) {
 }
 function recordPhoto() {
   if (campusId.value !== 'yingxi' || hksOpen.value || panelOpen.value || photoCompleteOpen.value || sceneError.value) return;
-  if (!photoModelSettled.value) { photoMessage('机械馆细节正在加载，稍候即可取景。'); return; }
+  if (photoModelStatus.value !== 'ready') { photoMessage(photoModelStatus.value === 'fallback' ? '机械馆细节未能加载，暂无法记录钟楼。' : '机械馆细节正在加载，稍候即可取景。'); return; }
   updatePhotoStatus();
   const status = photoStatus.value;
   if (!status) { photoMessage('请先返回人物视角，再继续取景。'); return; }
   if (!status.inRange) { photoMessage(`还未到观察处，继续靠近 · 约 ${Math.round(status.distance)} 米`); return; }
   if (status.obstructed) { photoMessage('钟楼被景物遮住了，换个位置看看。'); return; }
-  if (!status.framed) { photoMessage('转动视角，把钟楼放进画面中央。'); return; }
+  if (!status.framed) { photoMessage('调整视角：钟面放进框内，塔顶完整入画。'); return; }
   const image = scene?.capturePhoto();
   if (!image) { photoMessage('未能保存当前画面，请返回人物视角再试。'); return; }
   const id = photoPoint.value.id;
@@ -100,11 +159,11 @@ function recordPhoto() {
   savePhotoStamps(photoStamps.value);
   const next = PHOTO_POINTS.find(point => !photoImages.value[point.id]);
   if (next) { photoPointId.value = next.id; photoMessage('已收入手记 · 去寻找下一处风景'); }
-  else { photoCompleteOpen.value = true; photoFeedback.value = ''; }
+  else { openPhotoComplete(); photoFeedback.value = ''; }
   updatePhotoStatus();
 }
-function selectPhotoPoint(id: string) { photoPointId.value = id; photoCompleteOpen.value = false; photoFeedback.value = ''; updatePhotoStatus(); focusScene(); }
-function replayPhotos() { photoStamps.value = []; photoImages.value = {}; savePhotoStamps([]); photoPointId.value = PHOTO_POINTS[0]!.id; photoCompleteOpen.value = false; photoFeedback.value = ''; updatePhotoStatus(); focusScene(); }
+function selectPhotoPoint(id: string) { photoPointId.value = id; closePhotoComplete(false); photoFeedback.value = ''; updatePhotoStatus(); focusScene(); }
+function replayPhotos() { photoStamps.value = []; photoImages.value = {}; savePhotoStamps([]); photoPointId.value = PHOTO_POINTS[0]!.id; closePhotoComplete(false); photoFeedback.value = ''; updatePhotoStatus(); focusScene(); }
 
 
 function persist() {
@@ -136,7 +195,7 @@ function closePanel() {
 function switchCampus(id: CampusId) {
   if (id === campusId.value) return;
   modelErrors.value = {};
-  photoModelSettled.value = false;
+  photoModelStatus.value = 'loading';
   scene?.resetJourney();
   clearJourneyView();
   selectedId.value = null;
@@ -217,7 +276,7 @@ function checkIn() {
 }
 function onSceneEvent(event: SceneEvent) {
   if (event.type === 'modelstatus') {
-    if (event.id === 'yx-mechanical') photoModelSettled.value = true;
+    if (event.id === 'yx-mechanical') photoModelStatus.value = event.status;
     if (event.status === 'fallback') modelErrors.value = { ...modelErrors.value, [event.id]: `${event.name}细节暂未加载；保留基础体块或标记，漫游仍可继续。` };
     else { const next = { ...modelErrors.value }; delete next[event.id]; modelErrors.value = next; }
     return;
@@ -256,7 +315,7 @@ function heightLabel(status: string) {
 }
 function onKeydown(event: KeyboardEvent) {
   if (hksOpen.value) return;
-  if (event.key === 'Escape' && photoCompleteOpen.value) { photoCompleteOpen.value = false; focusScene(); return; }
+  if (event.key === 'Escape' && photoCompleteOpen.value) { event.preventDefault(); closePhotoComplete(); return; }
   if (event.key === 'Escape' && panelOpen.value) closePanel();
   const element = event.target as HTMLElement | null;
   if (event.code === 'KeyE' && !event.repeat && !element?.closest('input, textarea, select, [contenteditable=true]')) { event.preventDefault(); recordPhoto(); }
@@ -285,14 +344,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-shell" :inert="hksOpen" :aria-hidden="hksOpen ? 'true' : undefined">
+  <div class="app-shell" :inert="hksOpen || photoCompleteOpen" :aria-hidden="hksOpen || photoCompleteOpen ? 'true' : undefined">
     <header class="masthead">
       <div class="brand"><span class="brand-mark" aria-hidden="true">太</span><span>太理 <i>·</i> 时光漫游</span></div>
       <nav class="campus-switch" aria-label="选择校区">
         <button v-for="item in campusList" :key="item.id" type="button" :data-testid="`campus-${item.id}`" :aria-pressed="campusId === item.id" @click="switchCampus(item.id)">{{ item.name }}</button>
       </nav>
-      <div class="header-progress" :aria-label="`本章已记录 ${quest.visited.length} 站，共 ${orderedLandmarks.length} 站`">
-        <span>本章印记</span><span class="header-count">{{ String(quest.visited.length).padStart(2, '0') }} <em>/</em> {{ String(orderedLandmarks.length).padStart(2, '0') }}</span>
+      <div class="header-progress" :aria-label="`地标探索已记录 ${quest.visited.length} 站，共 ${orderedLandmarks.length} 站`">
+        <span>地标探索</span><span class="header-count">{{ String(quest.visited.length).padStart(2, '0') }} <em>/</em> {{ String(orderedLandmarks.length).padStart(2, '0') }}</span>
         <span class="stamp-dots" aria-hidden="true"><b v-for="item in orderedLandmarks" :key="item.id" :class="{ filled: quest.visited.includes(item.id) }"></b></span>
       </div>
     </header>
@@ -306,7 +365,7 @@ onBeforeUnmount(() => {
         <p>{{ campus.name }} <span> / </span> {{ campus.englishName }}</p>
       </div>
 
-      <PhotoJournal v-if="campusId === 'yingxi' && !hksOpen" :point="photoPoint" :stamps="photoStamps" :photos="photoImages" :status="photoStatus" :disabled="!!sceneError" :view-available="photoViewAvailable" :model-settled="photoModelSettled" :panel-open="panelOpen" :feedback="photoFeedback" :complete-open="photoCompleteOpen" @record="recordPhoto" @close="photoCompleteOpen = false; focusScene()" @open="photoCompleteOpen = true" @replay="replayPhotos" @select="selectPhotoPoint" />
+      <PhotoJournal v-if="campusId === 'yingxi' && !hksOpen" :point="photoPoint" :stamps="photoStamps" :photos="photoImages" :status="photoStatus" :disabled="!!sceneError" :view-available="photoViewAvailable" :model-status="photoModelStatus" :panel-open="panelOpen" :feedback="photoFeedback" :complete-open="photoCompleteOpen" @record="recordPhoto" @close="closePhotoComplete()" @open="openPhotoComplete" @replay="replayPhotos" @select="selectPhotoPoint" />
 
       <div v-if="sceneError" class="error-banner" data-testid="scene-error" role="status">
         <strong>无障碍列表模式</strong><span>{{ sceneError }}</span>
@@ -401,8 +460,12 @@ onBeforeUnmount(() => {
       <div class="bar-end"><span>{{ quest.status === 'active' ? '下一站' : '漫游进度' }}</span><strong>{{ quest.visited.length }} <i>/</i> {{ orderedLandmarks.length }}</strong></div>
     </footer>
     <div class="control-caption" aria-hidden="true"><b>W A S D</b> 行走 <span>·</span> 拖动视角 <span>·</span> Shift 跑步 <span>·</span> Space 跳跃</div>
-    <div class="orientation-prompt" role="status"><span>↻</span><strong>请横屏漫游</strong><small>旋转设备，开启更宽阔的校园视野</small></div>
     <div class="sr-only" aria-live="polite">{{ notice }}</div>
+  </div>
+  <div v-if="!orientationDismissed && !photoCompleteOpen && !hksOpen" class="orientation-prompt" role="status" data-testid="orientation-prompt">
+    <span aria-hidden="true">↻</span><strong>建议横屏漫游</strong><small>{{ orientationMessage }}</small>
+    <button type="button" data-testid="orientation-fullscreen" :disabled="orientationBusy" @click="tryLandscape">尝试全屏横屏</button>
+    <button type="button" data-testid="orientation-dismiss" @click="dismissOrientation">继续竖屏浏览</button>
   </div>
   <HksOverlay v-if="hksOpen" @close="closeHks" />
 </template>

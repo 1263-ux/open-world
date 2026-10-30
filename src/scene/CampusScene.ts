@@ -496,6 +496,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         windows.instanceMatrix.needsUpdate = true;
         windows.computeBoundingSphere();
         windows.receiveShadow = true;
+        windows.userData.photoIgnore = true; // Building bodies already provide occlusion.
         world.add(windows);
       }
     } else windowMat.dispose();
@@ -570,6 +571,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       const building = feature ? buildingMeshes.get(feature.id) : undefined;
       marker.position.set(landmark.position[0], building ? Number(building.userData.height) + 4 : 4, landmark.position[1]);
       marker.userData.landmarkId = landmark.id;
+      marker.userData.photoIgnore = true; // UI markers are not physical scenery.
       marker.castShadow = true;
       markerMeshes.set(landmark.id, marker);
       pickables.push(marker);
@@ -625,6 +627,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
             pickables.push(object);
           }
         });
+        model.userData.landmarkId = config.landmarkId;
         ownerWorld.add(model);
         model.updateMatrixWorld(true);
         const marker = markerMeshes.get(config.landmarkId);
@@ -818,15 +821,21 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const distance = Math.hypot(pawn.position.x - point.position[0], pawn.position.z - point.position[1]);
     const result: PhotoInspection = { distance, inRange: distance <= point.radius, framed: false, obstructed: false };
     if (disposed || paused || mapMode || !validPoint(point.position) || !point.target.every(Number.isFinite) || !Number.isFinite(point.radius) || point.radius <= 0 || !result.inRange) return result;
-    const target = new THREE.Vector3(...point.target);
     player.camera.updateMatrixWorld(true);
-    const projected = target.clone().project(player.camera);
-    result.framed = projected.z >= -1 && projected.z <= 1 && Math.abs(projected.x) <= .45 && Math.abs(projected.y) <= .5;
-    const ray = target.clone().sub(player.camera.position);
-    const targetDistance = ray.length();
-    if (targetDistance <= .001) return result;
-    raycaster.set(player.camera.position, ray.normalize());
-    raycaster.far = Math.max(0, targetDistance - .2);
+    const visibleInFrame = (xyz: [number, number, number], maxX: number, maxY: number): boolean => {
+      if (!Array.isArray(xyz) || xyz.length !== 3 || !xyz.every(Number.isFinite)) return false;
+      const p = new THREE.Vector3(...xyz).project(player.camera);
+      return p.z >= -1 && p.z <= 1 && Math.abs(p.x) <= maxX && Math.abs(p.y) <= maxY;
+    };
+    // The clock must fit the central focus frame and the authored tower
+    // silhouette must fit the image, not merely its centroid.
+    result.framed = visibleInFrame(point.target, .45, .5)
+      && Array.isArray(point.focusExtent) && point.focusExtent.length >= 4 && point.focusExtent.every(xyz => visibleInFrame(xyz, .45, .5))
+      && Array.isArray(point.frameExtent) && point.frameExtent.length >= 4 && point.frameExtent.every(xyz => visibleInFrame(xyz, .95, .95));
+    // Only evaluate expensive occlusion once the bounded subject fits. Check
+    // the center and each clock edge so a branch cannot cover the clock while
+    // a single center ray happens to pass through a gap.
+    if (!result.framed) return result;
     const visible = (object: THREE.Object3D): boolean => {
       for (let current: THREE.Object3D | null = object; current; current = current.parent) if (!current.visible) return false;
       return true;
@@ -835,8 +844,17 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       for (let current: THREE.Object3D | null = object; current; current = current.parent) if (current.userData.landmarkId === point.landmarkId && point.landmarkId) return true;
       return false;
     };
-    const objects = world.children.filter(object => object !== pawn && object !== player.shadow);
-    result.obstructed = raycaster.intersectObjects(objects, true).some(hit => visible(hit.object) && !belongsToTarget(hit.object));
+    const objects = world.children.filter(object => object !== pawn && object !== player.shadow && object.visible && !object.userData.photoIgnore && !(point.landmarkId && object.userData.landmarkId === point.landmarkId));
+    for (const xyz of [point.target, ...point.focusExtent]) {
+      const ray = new THREE.Vector3(...xyz).sub(player.camera.position);
+      const targetDistance = ray.length();
+      if (targetDistance <= .001) continue;
+      raycaster.set(player.camera.position, ray.normalize());
+      raycaster.far = Math.max(0, targetDistance - .2);
+      if (raycaster.intersectObjects(objects, true).some(hit => visible(hit.object) && !belongsToTarget(hit.object))) {
+        result.obstructed = true; break;
+      }
+    }
     raycaster.far = Infinity;
     return result;
   }
