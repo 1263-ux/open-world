@@ -5,6 +5,11 @@ import { position } from './campus-walk';
 declare global { interface Window { __testFocusEvents: string[] } }
 // Headless Chromium did not emit a window blur in CI. This scenario must use
 // a real headed window; never synthesize blur or treat a skip as a pass.
+// Playwright 1.64.1 coreBundle.js enables focus emulation on each main frame.
+// Disable that framework override via the documented experimental CDP command
+// after navigation; actual tab activation below must then produce a real blur.
+// https://github.com/ChromeDevTools/devtools-protocol/blob/master/pdl/domains/Emulation.pdl
+// https://playwright.dev/docs/api/class-cdpsession (accessed 2026-10-30).
 // Linux CI: RUN_HEADED_FOCUS=1 xvfb-run -a npx playwright test tests/e2e/focus.spec.ts --headed
 // Playwright CI guidance: https://playwright.dev/docs/ci#running-headed (2026-10-30).
 test.skip(process.env.RUN_HEADED_FOCUS !== '1', 'Requires a real headed window under Xvfb; run the dedicated focus job');
@@ -17,7 +22,11 @@ test('window blur clears held movement when keyup is missed', async ({ page }, i
     window.addEventListener('blur', () => window.__testFocusEvents.push('blur'));
     window.addEventListener('focus', () => window.__testFocusEvents.push('focus'));
   });
-  await page.goto('/'); await page.getByTestId('campus-huyu').click();
+  await page.goto('/');
+  const focusSession = await page.context().newCDPSession(page);
+  await focusSession.send('Emulation.setFocusEmulationEnabled', { enabled: false });
+  await page.bringToFront(); await expect.poll(() => page.evaluate(() => document.hasFocus()), { timeout: 10000 }).toBe(true);
+  await page.getByTestId('campus-huyu').click();
   const canvas = page.getByTestId('campus-canvas');
   await expect.poll(async () => {
     const x=await canvas.getAttribute('data-player-x'),z=await canvas.getAttribute('data-player-z');
@@ -33,7 +42,11 @@ test('window blur clears held movement when keyup is missed', async ({ page }, i
   try {
     await expect.poll(async () => { const p=await position(canvas);return Math.hypot(p[0]-initial[0],p[2]-initial[2]); }, {timeout:15000}).toBeGreaterThan(.5);
     const priorBlurCount = await page.evaluate(() => window.__testFocusEvents.filter(x => x === 'blur').length);
-    other = await page.context().newPage(); await other.goto('about:blank'); await other.bringToFront();
+    other = await page.context().newPage(); await other.goto('about:blank');
+    const otherFocusSession = await page.context().newCDPSession(other);
+    await otherFocusSession.send('Emulation.setFocusEmulationEnabled', { enabled: false });
+    await other.bringToFront();
+    await expect.poll(() => page.evaluate(() => !document.hasFocus()), { timeout: 10000 }).toBe(true);
     await expect.poll(() => page.evaluate(() => window.__testFocusEvents.filter(x => x === 'blur').length), { timeout: 10000 }).toBeGreaterThan(priorBlurCount);
     await page.bringToFront(); await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(true);
     await advance(await frame(),1);
@@ -42,6 +55,7 @@ test('window blur clears held movement when keyup is missed', async ({ page }, i
   } finally {
     await page.keyboard.up('w'); if (other) await other.close();
     const events = await page.evaluate(() => window.__testFocusEvents).catch(() => []);
-    await info.attach('real-window-focus-events', { body: JSON.stringify(events), contentType: 'application/json' });
+    await info.attach('real-window-focus-events', { body: JSON.stringify({ events, frameworkFocusEmulation: 'disabled via CDP after navigation; no synthetic blur events' }), contentType: 'application/json' });
+    await focusSession.detach().catch(() => undefined);
   }
 });

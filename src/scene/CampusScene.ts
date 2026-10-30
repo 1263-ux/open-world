@@ -6,11 +6,12 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
-import type { CampusData, CampusRoad, CampusSceneHandle, Landmark, Point2, SceneEvent, SceneState } from '../shared/contracts';
+import type { CampusData, CampusRoad, CampusSceneHandle, Landmark, PhotoInspection, PhotoPoint, Point2, SceneEvent, SceneState } from '../shared/contracts';
 
 const noopHandle = (): CampusSceneHandle => ({
   setCampus() {}, setState() {}, navigateTo: () => false, resetJourney() {},
   focusLandmark() {}, overview() {}, resetView() {}, pause() {}, resume() {}, dispose() {},
+  inspectPhoto: () => ({ inRange: false, framed: false, obstructed: false, distance: Infinity }), capturePhoto: () => null,
 });
 
 function validPoint(p: Point2 | undefined): p is Point2 {
@@ -244,6 +245,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   let markerTarget: THREE.MeshStandardMaterial;
   let travel: { id: string; initialDistance: number; arrival: Point2; waypoints: Point2[] } | null = null;
   let frameSpan = 500;
+  let mapShadow = { x: 0, z: 0, extent: 600 };
+  let playerShadowX = Infinity, playerShadowZ = Infinity;
   let tween: { fromPosition: THREE.Vector3; toPosition: THREE.Vector3; fromTarget: THREE.Vector3; toTarget: THREE.Vector3; fromSpan: number; toSpan: number; elapsed: number; duration: number } | null = null;
   let disposed = false;
   let paused = false;
@@ -353,14 +356,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (boundary.length >= 3) addSurface(world, boundary, -0.025, createSurfaceMaterial('grass', 0xa6c19e));
     const curb = perimeter(boundary, 0.015, new THREE.LineBasicMaterial({ color: 0x8b9684 }));
     if (curb) world.add(curb);
-    sun.position.set(centerX - extent * 0.7, extent * 1.15, centerZ + extent * 0.55);
-    sun.target.position.set(centerX, 0, centerZ);
-    const shadowCamera = sun.shadow.camera;
-    const shadowExtent = extent * 0.95 + 100;
-    shadowCamera.left = -shadowExtent; shadowCamera.right = shadowExtent;
-    shadowCamera.top = shadowExtent; shadowCamera.bottom = -shadowExtent;
-    shadowCamera.near = 1; shadowCamera.far = extent * 3.5 + 500;
-    shadowCamera.updateProjectionMatrix();
+    mapShadow = { x: centerX, z: centerZ, extent };
+    playerShadowX = playerShadowZ = Infinity;
 
     const roadEdge = new THREE.Mesh(strips(data.roads, 1.15), createSurfaceMaterial('paving', 0xd7d0bb));
     const roads = new THREE.Mesh(strips(data.roads, 0), createSurfaceMaterial('asphalt', 0xa4a79c));
@@ -666,8 +663,25 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const [x0, z0, x1, z1] = boundsOf(points);
     animateView(new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), Math.max(300, (x1 - x0) * 1.35, (z1 - z0) * 1.35), initial);
   }
-  function showMap(): void { mapMode = true; controls.enabled = true; player.setEnabled(false); canvas.dataset.view = 'map'; }
-  function showPlayer(): void { mapMode = false; controls.enabled = false; player.setEnabled(true); player.updateCamera(true); canvas.dataset.view = 'player'; }
+  function updateSun(forMap: boolean, force = false): void {
+    const grid = 20;
+    const x = forMap ? mapShadow.x : Math.round(pawn.position.x / grid) * grid;
+    const z = forMap ? mapShadow.z : Math.round(pawn.position.z / grid) * grid;
+    if (!forMap && !force && x === playerShadowX && z === playerShadowZ) return;
+    const extent = forMap ? mapShadow.extent : 400;
+    sun.position.set(x - extent * .7, extent * 1.15, z + extent * .55);
+    sun.target.position.set(x, 0, z);
+    const shadowCamera = sun.shadow.camera;
+    const shadowExtent = forMap ? extent * .95 + 100 : 100;
+    shadowCamera.left = -shadowExtent; shadowCamera.right = shadowExtent;
+    shadowCamera.top = shadowExtent; shadowCamera.bottom = -shadowExtent;
+    shadowCamera.near = 1; shadowCamera.far = extent * 3.5 + 500;
+    shadowCamera.updateProjectionMatrix();
+    playerShadowX = forMap ? Infinity : x; playerShadowZ = forMap ? Infinity : z;
+    renderer.shadowMap.needsUpdate = true;
+  }
+  function showMap(): void { mapMode = true; controls.enabled = true; player.setEnabled(false); updateSun(true); canvas.dataset.view = 'map'; }
+  function showPlayer(): void { mapMode = false; controls.enabled = false; player.setEnabled(true); player.updateCamera(true); updateSun(false, true); canvas.dataset.view = 'player'; }
   function overview(): void {
     showMap();
     const points = cleanPolygon(data.boundary || []);
@@ -762,6 +776,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       if (t >= 1) tween = null;
     }
     player.advance();
+    if (!mapMode) updateSun(false);
     if (travel) {
       const current = travel;
       const distance = Math.hypot(pawn.position.x - current.arrival[0], pawn.position.z - current.arrival[1]);
@@ -798,6 +813,41 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
     canvas.dataset.triangles = String(renderer.info.render.triangles);
     raf = requestAnimationFrame(tick);
+  }
+  function inspectPhoto(point: PhotoPoint): PhotoInspection {
+    const distance = Math.hypot(pawn.position.x - point.position[0], pawn.position.z - point.position[1]);
+    const result: PhotoInspection = { distance, inRange: distance <= point.radius, framed: false, obstructed: false };
+    if (disposed || paused || mapMode || !validPoint(point.position) || !point.target.every(Number.isFinite) || !Number.isFinite(point.radius) || point.radius <= 0 || !result.inRange) return result;
+    const target = new THREE.Vector3(...point.target);
+    player.camera.updateMatrixWorld(true);
+    const projected = target.clone().project(player.camera);
+    result.framed = projected.z >= -1 && projected.z <= 1 && Math.abs(projected.x) <= .45 && Math.abs(projected.y) <= .5;
+    const ray = target.clone().sub(player.camera.position);
+    const targetDistance = ray.length();
+    if (targetDistance <= .001) return result;
+    raycaster.set(player.camera.position, ray.normalize());
+    raycaster.far = Math.max(0, targetDistance - .2);
+    const visible = (object: THREE.Object3D): boolean => {
+      for (let current: THREE.Object3D | null = object; current; current = current.parent) if (!current.visible) return false;
+      return true;
+    };
+    const belongsToTarget = (object: THREE.Object3D): boolean => {
+      for (let current: THREE.Object3D | null = object; current; current = current.parent) if (current.userData.landmarkId === point.landmarkId && point.landmarkId) return true;
+      return false;
+    };
+    const objects = world.children.filter(object => object !== pawn && object !== player.shadow);
+    result.obstructed = raycaster.intersectObjects(objects, true).some(hit => visible(hit.object) && !belongsToTarget(hit.object));
+    raycaster.far = Infinity;
+    return result;
+  }
+  function capturePhoto(): string | null {
+    if (disposed || paused || mapMode) return null;
+    try {
+      // The default WebGL buffer need not persist after a frame; render and
+      // read synchronously rather than returning a blank canvas.
+      renderer.render(scene, player.camera);
+      return canvas.toDataURL('image/png');
+    } catch { return null; }
   }
   function interruptView(): void { tween = null; }
   controls.addEventListener('start', interruptView);
@@ -878,6 +928,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       try { data = next; state = { selectedId: null, targetId: null }; buildCampus(); questView(true); showPlayer(); labels.render(scene, player.camera); }
       catch (error) { dispose(); onEvent({ type: 'error', reason: `Unable to build the 3D scene: ${error instanceof Error ? error.message : 'unknown error'}` }); }
     },
+    inspectPhoto,
+    capturePhoto,
     setState(next) { if (!disposed) { state = { selectedId: next.selectedId, targetId: next.targetId }; updateHighlights(); } },
     navigateTo,
     resetJourney,

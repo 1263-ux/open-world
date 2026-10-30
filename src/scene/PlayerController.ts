@@ -2,11 +2,17 @@ import * as THREE from 'three';
 import { Octree } from 'three/examples/jsm/math/Octree.js';
 import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 import type { CampusData, Point2 } from '../shared/contracts';
+import { StudentModel } from './StudentModel';
 
 /** Third-person movement against the same source footprints used by the campus renderer. */
 export class PlayerController {
   readonly camera = new THREE.PerspectiveCamera(52, 1, 0.1, 2500);
   readonly avatar = new THREE.Group();
+  private readonly fallback = new THREE.Group();
+  private student: StudentModel | null = null;
+  private disposed = false;
+  private readonly fadeMaterials = new Map<THREE.Material, { opacity: number; depthWrite: boolean }>();
+  private avatarOpacity = 1;
   readonly shadow = new THREE.Mesh(new THREE.CircleGeometry(.38, 20), new THREE.MeshBasicMaterial({ color: 0x253a30, transparent: true, opacity: .24, depthWrite: false }));
   private readonly collider = new Capsule(new THREE.Vector3(0, .34, 0), new THREE.Vector3(0, 1.38, 0), .34);
   private octree = new Octree();
@@ -77,7 +83,15 @@ export class PlayerController {
   constructor(container: HTMLElement, private readonly canvas: HTMLCanvasElement) {
     this.camera.rotation.order = 'YXZ';
     this.shadow.rotation.x = -Math.PI / 2;
+    this.avatar.add(this.fallback);
     this.makeAvatar();
+    this.registerFadeMaterials(this.fallback);
+    this.canvas.dataset.playerModel = 'loading';
+    void StudentModel.load().then(student => {
+      if (this.disposed) { student.dispose(); return; }
+      this.student = student; this.avatar.add(student.root); this.registerFadeMaterials(student.root); this.applyAvatarFade(this.avatarOpacity); this.fallback.visible = false;
+      this.canvas.dataset.playerModel = 'ready';
+    }).catch(() => { if (!this.disposed) this.canvas.dataset.playerModel = 'fallback'; });
     this.ui = document.createElement('div');
     this.ui.className = 'player-controls';
     this.ui.innerHTML = '<div class="virtual-stick" aria-hidden="true"><span></span></div><div class="touch-hint" aria-hidden="true">右侧滑动视角</div><button class="touch-run" type="button" aria-label="按住跑步">跑</button><button class="touch-jump" type="button" aria-label="跳跃">跳</button>';
@@ -109,20 +123,41 @@ export class PlayerController {
     const add = (parent: THREE.Group, geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number) => {
       const mesh = new THREE.Mesh(geometry, material); mesh.position.set(x, y, z); parent.add(mesh); return mesh;
     };
-    this.torso = add(this.avatar, new THREE.CapsuleGeometry(.25, .38, 4, 10), cloth, 0, 1.17, 0);
-    add(this.avatar, new THREE.SphereGeometry(.19, 12, 10), skin, 0, 1.68, 0);
-    add(this.avatar, new THREE.SphereGeometry(.2, 12, 8, 0, Math.PI * 2, 0, Math.PI * .56), hair, 0, 1.71, 0);
-    add(this.avatar, new THREE.BoxGeometry(.35, .45, .15), pack, 0, 1.18, -.24);
+    this.torso = add(this.fallback, new THREE.CapsuleGeometry(.25, .38, 4, 10), cloth, 0, 1.17, 0);
+    add(this.fallback, new THREE.SphereGeometry(.19, 12, 10), skin, 0, 1.68, 0);
+    add(this.fallback, new THREE.SphereGeometry(.2, 12, 8, 0, Math.PI * 2, 0, Math.PI * .56), hair, 0, 1.71, 0);
+    add(this.fallback, new THREE.BoxGeometry(.35, .45, .15), pack, 0, 1.18, -.24);
     for (const side of [-1, 1]) {
-      const arm = new THREE.Group(); arm.position.set(side * .29, 1.35, 0); this.avatar.add(arm);
+      const arm = new THREE.Group(); arm.position.set(side * .29, 1.35, 0); this.fallback.add(arm);
       add(arm, new THREE.CapsuleGeometry(.075, .35, 3, 8), cloth, 0, -.22, 0);
       add(arm, new THREE.SphereGeometry(.075, 8, 6), skin, 0, -.47, 0); this.arms.push(arm);
-      const leg = new THREE.Group(); leg.position.set(side * .13, .87, 0); this.avatar.add(leg);
+      const leg = new THREE.Group(); leg.position.set(side * .13, .87, 0); this.fallback.add(leg);
       add(leg, new THREE.CapsuleGeometry(.105, .43, 3, 8), trousers, 0, -.32, 0);
       add(leg, new THREE.BoxGeometry(.18, .1, .27), hair, 0, -.68, .04); this.legs.push(leg);
     }
     // Foot origin and total height ~1.77 m.
-    for (const child of this.avatar.children) child.position.y -= .14;
+    for (const child of this.fallback.children) child.position.y -= .14;
+  }
+  private registerFadeMaterials(root: THREE.Object3D): void {
+    // Avatar materials belong to this controller, not the campus world. Set
+    // transparency once, then change only render-state/opacity while moving.
+    root.traverse(object => {
+      if (!(object instanceof THREE.Mesh)) return;
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        if (this.fadeMaterials.has(material)) continue;
+        this.fadeMaterials.set(material, { opacity: material.opacity, depthWrite: material.depthWrite });
+        if (!material.transparent) { material.transparent = true; material.needsUpdate = true; }
+      }
+    });
+  }
+  private applyAvatarFade(opacity: number): void {
+    this.avatarOpacity = opacity;
+    for (const [material, original] of this.fadeMaterials) {
+      material.opacity = original.opacity * opacity;
+      material.depthWrite = opacity >= .999 ? original.depthWrite : false;
+    }
+    this.avatar.visible = opacity > .001;
+    this.canvas.dataset.playerOpacity = opacity.toFixed(3);
   }
   setCampus(data: CampusData, props?: THREE.Group) {
     const group = new THREE.Group();
@@ -205,6 +240,7 @@ export class PlayerController {
     // be invisible. Slow only the airborne vertical simulation in that case;
     // horizontal movement still uses elapsed time and remains collision-tested.
     const verticalDt = this.grounded ? dt : Math.min(dt, .25);
+    const previousX = this.collider.start.x, previousZ = this.collider.start.z;
     // Small fixed substeps limit tunnelling at low frame rates, then project out of collision for wall sliding.
     const steps = Math.max(1, Math.ceil(dt / (1 / 60)));
     const sub = dt / steps, verticalSub = verticalDt / steps;
@@ -238,6 +274,10 @@ export class PlayerController {
     this.legs[0].rotation.x = this.grounded ? swing : -.25; this.legs[1].rotation.x = this.grounded ? -swing : .38;
     this.arms[0].rotation.x = this.grounded ? -swing * .8 : -.6; this.arms[1].rotation.x = this.grounded ? swing * .8 : -.6;
     if (this.torso) this.torso.scale.y = 1 + (input.lengthSq() < .001 && this.grounded ? Math.sin(performance.now() * .002) * .015 : 0);
+    const travelled = Math.hypot(this.collider.start.x - previousX, this.collider.start.z - previousZ);
+    const motion = !this.grounded ? 'airborne' : travelled > dt * .05 ? (running ? 'run' : 'walk') : 'idle';
+    this.student?.update(motion, dt);
+    this.canvas.dataset.playerMotion = motion;
     this.updateCamera(false);
     this.canvas.dataset.cameraYaw = this.yaw.toFixed(4);
     this.canvas.dataset.cameraPitch = this.pitch.toFixed(4);
@@ -252,12 +292,17 @@ export class PlayerController {
     const delta = desired.clone().sub(target), distance = delta.length();
     const hit = this.octree.rayIntersect(new THREE.Ray(target, delta.normalize()));
     const obstructed = Boolean(hit && hit.distance < distance);
-    if (hit && obstructed) desired.copy(target).addScaledVector(delta, Math.max(.5, hit.distance - .3));
+    if (hit && obstructed) desired.copy(target).addScaledVector(delta, Math.max(.1, hit.distance - .12));
     // Pull in immediately to avoid interpolating through a wall; ease back out when clear.
     if (immediate || obstructed || this.camera.position.lengthSq() === 0) this.camera.position.copy(desired); else this.camera.position.lerp(desired, .22);
     this.camera.lookAt(target);
+    this.applyAvatarFade(THREE.MathUtils.smoothstep(this.camera.position.distanceTo(target), 1, 1.8));
   }
   dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.student?.dispose(); this.student = null;
+    this.fadeMaterials.clear();
     window.removeEventListener('keydown', this.onKeyDown); window.removeEventListener('keyup', this.onKeyUp); window.removeEventListener('blur', this.onBlur);
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.canvas.removeEventListener('lostpointercapture', this.onPointerUp);

@@ -22,7 +22,11 @@ export interface CampusData {
 }
 export type SceneEvent = {type:'select';id:string}|{type:'arrive';id:string}|{type:'travel';progress:number}|{type:'error';reason:string}|{type:'modelstatus';id:string;name:string;status:'ready'|'fallback'};
 export interface SceneState {selectedId:string|null;targetId:string|null;}
+export interface PhotoPoint { position: Point2; target: [number, number, number]; radius: number; landmarkId?: string; }
+export interface PhotoInspection { inRange: boolean; framed: boolean; obstructed: boolean; distance: number; }
 export interface CampusSceneHandle {
+  inspectPhoto(point: PhotoPoint): PhotoInspection;
+  capturePhoto(): string | null;
   setCampus(data:CampusData):void;
   setState(state:SceneState):void;
   navigateTo(id:string):boolean;

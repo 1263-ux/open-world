@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import HksOverlay from '../components/HksOverlay.vue';
+import PhotoJournal from '../components/PhotoJournal.vue';
+import { PHOTO_POINTS, loadPhotoStamps, savePhotoStamps } from '../games/photography';
 import { campuses } from '../campus-data/campuses';
 import { emptyQuest, startQuest, visitQuest } from '../games/quest';
 import { loadProgress, saveProgress } from '../games/storage';
@@ -60,6 +62,50 @@ const sceneElement = ref<HTMLElement | null>(null);
 const questButton = ref<HTMLButtonElement | null>(null);
 let returnFocus: HTMLElement | null = null;
 let scene: CampusSceneHandle | null = null;
+const photoStamps = ref(loadPhotoStamps());
+const photoImages = ref<Record<string, string>>({});
+const photoPointId = ref(PHOTO_POINTS.find(point => !photoStamps.value.includes(point.id))?.id ?? PHOTO_POINTS[0]!.id);
+const photoPoint = computed(() => PHOTO_POINTS.find(point => point.id === photoPointId.value) ?? PHOTO_POINTS[0]!);
+const photoStatus = ref<{ inRange: boolean; framed: boolean; obstructed: boolean; distance: number } | null>(null);
+const photoFeedback = ref('');
+const photoViewAvailable = ref(true);
+const photoModelSettled = ref(false);
+const photoCompleteOpen = ref(false);
+let photoTimer: number | undefined;
+let feedbackTimer: number | undefined;
+function updatePhotoStatus() {
+  if (campusId.value !== 'yingxi' || hksOpen.value || sceneError.value || !scene) { photoStatus.value = null; return; }
+  photoViewAvailable.value = sceneElement.value?.querySelector('canvas')?.dataset.view === 'player';
+  photoStatus.value = photoViewAvailable.value ? scene.inspectPhoto(photoPoint.value) : null;
+}
+function photoMessage(message: string) {
+  photoFeedback.value = message;
+  window.clearTimeout(feedbackTimer);
+  feedbackTimer = window.setTimeout(() => { photoFeedback.value = ''; }, 2800);
+}
+function recordPhoto() {
+  if (campusId.value !== 'yingxi' || hksOpen.value || panelOpen.value || photoCompleteOpen.value || sceneError.value) return;
+  if (!photoModelSettled.value) { photoMessage('机械馆细节正在加载，稍候即可取景。'); return; }
+  updatePhotoStatus();
+  const status = photoStatus.value;
+  if (!status) { photoMessage('请先返回人物视角，再继续取景。'); return; }
+  if (!status.inRange) { photoMessage(`还未到观察处，继续靠近 · 约 ${Math.round(status.distance)} 米`); return; }
+  if (status.obstructed) { photoMessage('钟楼被景物遮住了，换个位置看看。'); return; }
+  if (!status.framed) { photoMessage('转动视角，把钟楼放进画面中央。'); return; }
+  const image = scene?.capturePhoto();
+  if (!image) { photoMessage('未能保存当前画面，请返回人物视角再试。'); return; }
+  const id = photoPoint.value.id;
+  photoImages.value = { ...photoImages.value, [id]: image };
+  if (!photoStamps.value.includes(id)) photoStamps.value = [...photoStamps.value, id];
+  savePhotoStamps(photoStamps.value);
+  const next = PHOTO_POINTS.find(point => !photoImages.value[point.id]);
+  if (next) { photoPointId.value = next.id; photoMessage('已收入手记 · 去寻找下一处风景'); }
+  else { photoCompleteOpen.value = true; photoFeedback.value = ''; }
+  updatePhotoStatus();
+}
+function selectPhotoPoint(id: string) { photoPointId.value = id; photoCompleteOpen.value = false; photoFeedback.value = ''; updatePhotoStatus(); focusScene(); }
+function replayPhotos() { photoStamps.value = []; photoImages.value = {}; savePhotoStamps([]); photoPointId.value = PHOTO_POINTS[0]!.id; photoCompleteOpen.value = false; photoFeedback.value = ''; updatePhotoStatus(); focusScene(); }
+
 
 function persist() {
   try { saveProgress(progress.value); } catch { /* Continue without storage. */ }
@@ -90,6 +136,7 @@ function closePanel() {
 function switchCampus(id: CampusId) {
   if (id === campusId.value) return;
   modelErrors.value = {};
+  photoModelSettled.value = false;
   scene?.resetJourney();
   clearJourneyView();
   selectedId.value = null;
@@ -170,6 +217,7 @@ function checkIn() {
 }
 function onSceneEvent(event: SceneEvent) {
   if (event.type === 'modelstatus') {
+    if (event.id === 'yx-mechanical') photoModelSettled.value = true;
     if (event.status === 'fallback') modelErrors.value = { ...modelErrors.value, [event.id]: `${event.name}细节暂未加载；保留基础体块或标记，漫游仍可继续。` };
     else { const next = { ...modelErrors.value }; delete next[event.id]; modelErrors.value = next; }
     return;
@@ -208,10 +256,14 @@ function heightLabel(status: string) {
 }
 function onKeydown(event: KeyboardEvent) {
   if (hksOpen.value) return;
+  if (event.key === 'Escape' && photoCompleteOpen.value) { photoCompleteOpen.value = false; focusScene(); return; }
   if (event.key === 'Escape' && panelOpen.value) closePanel();
+  const element = event.target as HTMLElement | null;
+  if (event.code === 'KeyE' && !event.repeat && !element?.closest('input, textarea, select, [contenteditable=true]')) { event.preventDefault(); recordPhoto(); }
 }
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
+  photoTimer = window.setInterval(updatePhotoStatus, 250);
   if (!sceneElement.value) return;
   try {
     scene = createCampusScene(sceneElement.value, campus.value, onSceneEvent);
@@ -226,6 +278,7 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
+  window.clearInterval(photoTimer); window.clearTimeout(feedbackTimer);
   scene?.dispose();
   scene = null;
 });
@@ -247,11 +300,13 @@ onBeforeUnmount(() => {
     <main class="scene-area" aria-label="校园漫游场景">
       <div ref="sceneElement" class="scene-canvas" aria-label="校园三维场景"></div>
       <div class="scene-shade" aria-hidden="true"></div>
-      <div class="chapter-title">
+      <div class="chapter-title" :class="{ 'photo-chapter': campusId === 'yingxi' }">
         <span class="eyebrow">CAMPUS CHAPTER <span class="eyebrow-line"></span> {{ campus.id === 'huyu' ? '01' : '02' }}</span>
         <h1>沿着校园，<br>慢慢走</h1>
         <p>{{ campus.name }} <span> / </span> {{ campus.englishName }}</p>
       </div>
+
+      <PhotoJournal v-if="campusId === 'yingxi' && !hksOpen" :point="photoPoint" :stamps="photoStamps" :photos="photoImages" :status="photoStatus" :disabled="!!sceneError" :view-available="photoViewAvailable" :model-settled="photoModelSettled" :panel-open="panelOpen" :feedback="photoFeedback" :complete-open="photoCompleteOpen" @record="recordPhoto" @close="photoCompleteOpen = false; focusScene()" @open="photoCompleteOpen = true" @replay="replayPhotos" @select="selectPhotoPoint" />
 
       <div v-if="sceneError" class="error-banner" data-testid="scene-error" role="status">
         <strong>无障碍列表模式</strong><span>{{ sceneError }}</span>

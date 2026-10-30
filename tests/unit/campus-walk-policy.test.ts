@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { campuses } from '../../src/campus-data/campuses';
+import { PHOTO_POINTS } from '../../src/games/photography';
 import { walkRoute, waypointKeys } from '../e2e/campus-walk';
 
 describe('test-side campus walking policy', () => {
@@ -9,6 +10,9 @@ describe('test-side campus walking policy', () => {
     }
     expect(waypointKeys(1, 0, 0)).toEqual(['KeyD']);
     expect(waypointKeys(1, 0, Math.PI)).toEqual(['KeyA']);
+  });
+  it('finds a test-side route between the two scenic view points', () => {
+    expect(walkRoute(campuses.yingxi, PHOTO_POINTS[0]!.position, PHOTO_POINTS[1]!.position).at(-1)).toEqual(PHOTO_POINTS[1]!.position);
   });
   it('finds collision-aware routes between chapter entries and successive arrivals', () => {
     expect(walkRoute(campuses.yingxi, [-20,175.5], campuses.yingxi.landmarks.find(l => l.id === campuses.yingxi.questOrder[0])!.arrival).length).toBeGreaterThan(0);

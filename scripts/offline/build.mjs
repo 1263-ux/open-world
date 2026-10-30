@@ -20,7 +20,7 @@ if(fs.existsSync(marker)) {
 fs.rmSync(stage,{recursive:true,force:true}); fs.rmSync(out,{recursive:true,force:true});
 fs.mkdirSync(stage,{recursive:true}); fs.mkdirSync(out,{recursive:true});
 const cp=(rel)=>{ const from=path.join(src,rel), to=path.join(stage,rel); fs.mkdirSync(path.dirname(to),{recursive:true}); fs.cpSync(from,to,{recursive:true}); };
-for(const rel of ['index.html','package.json','package-lock.json','games/hks/index.html','games/hks/package.json','games/hks/package-lock.json','games/hks/MODIFICATIONS.md','games/hks/MODERNIZATION.md','games/hks/ASSET_INVENTORY.json','games/hks/SOURCE_INVENTORY.json','games/hks/MODERNIZED_INVENTORY.json','games/hks/PHASER-LICENSE.md',
+for(const rel of ['docs/resources/licenses/quaternius-characters-CC0.txt','index.html','package.json','package-lock.json','games/hks/index.html','games/hks/package.json','games/hks/package-lock.json','games/hks/MODIFICATIONS.md','games/hks/MODERNIZATION.md','games/hks/ASSET_INVENTORY.json','games/hks/SOURCE_INVENTORY.json','games/hks/MODERNIZED_INVENTORY.json','games/hks/PHASER-LICENSE.md',
 'public/data/README.md','public/data/augmentation-huyu-audit.json','public/data/augmentation-yingxi-audit.json','public/data/campus-spatial.json','public/data/osm-source.geojson','public/data/sources/README.md','public/data/sources/manifest.json','public/data/sources/tyut-globfp-huyu.geojson','public/data/sources/tyut-globfp-yingxi.geojson','public/data/sources/tyut-overture-huyu.geojson','public/data/sources/tyut-overture-yingxi.geojson']) cp(rel);
 function copyApproved(dir,allow) {
   for(const e of fs.readdirSync(path.join(src,dir),{withFileTypes:true})) {
@@ -89,6 +89,15 @@ if(models.length!==new Set(models).size || JSON.stringify([...models].sort())!==
 if(!models.length)throw Error('No models embedded');
 fs.writeFileSync(modelSource,modelCode);
 console.log('Embedded GLBs:',models.join(', '));
+// The optional rigged student is also self-contained; reject external payloads.
+const studentPath = path.join(stage, 'public/assets/characters/casual-hoodie.glb');
+const studentBytes = fs.readFileSync(studentPath);
+if (studentBytes.readUInt32LE(0) !== 0x46546c67 || studentBytes.readUInt32LE(4) !== 2 || studentBytes.readUInt32LE(8) !== studentBytes.length || studentBytes.readUInt32LE(16) !== 0x4e4f534a) throw Error('Invalid student GLB');
+const studentJson = JSON.parse(studentBytes.subarray(20,20 + studentBytes.readUInt32LE(12)).toString('utf8').trim());
+for (const entry of [...(studentJson.buffers || []), ...(studentJson.images || [])]) if (entry.uri && !entry.uri.startsWith('data:')) throw Error('External student resource');
+edit('src/scene/StudentModel.ts', code => code.replace('`${import.meta.env.BASE_URL}assets/characters/casual-hoodie.glb`', JSON.stringify(data(studentPath, 'model/gltf-binary'))));
+console.log('Embedded character GLB: casual-hoodie.glb');
+
 const rootReq=createRequire(path.join(src,'package.json')); 
 const vite8=await import(pathToFileURL(rootReq.resolve('vite')).href), vite5=await import(pathToFileURL(path.join(src,'games/hks/node_modules/vite/dist/node/index.js')).href), vue=(await import(pathToFileURL(rootReq.resolve('@vitejs/plugin-vue')).href)).default;
 const buildOne=async(vite,root,entry,output,plugins=[])=>vite.build({configFile:false,root,publicDir:false,cacheDir:path.join(work,'cache',output),plugins,define:{'import.meta.env.VITE_OFFLINE_BUILD':JSON.stringify('true'),'process.env.NODE_ENV':JSON.stringify('production')},build:{outDir:path.join(out,output),emptyOutDir:true,target:'es2020',minify:false,cssCodeSplit:false,lib:{entry:path.join(root,entry),name:output==='hks'?'HksOffline':'CampusOffline',formats:['iife'],fileName:()=> 'bundle.js'},rollupOptions:{output:{inlineDynamicImports:true}}}});

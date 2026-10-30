@@ -72,3 +72,13 @@ fresh-context reviewer 只收 Goal/Constraints/Diff/Evidence/Questions，不收�
 ## 本轮研究引用
 
 2026-10-30 已读：[Three OrbitControls](https://threejs.org/docs/pages/OrbitControls.html)、[Phaser Scale Manager](https://docs.phaser.io/phaser/concepts/scale-manager)。参考原链接和 `jlu.online` 的 web 读取失败；Firecrawl live fetch 返回内部代理 `ERR_TUNNEL_CONNECTION_FAILED`。可复用结论与不确定项见 DESIGN。
+
+## 当前品质切片（2026-10-30 14:11 UTC）
+
+用户最新要求：持续深度调研、自行试玩改进，未有实质高质量成果不发零碎进度。研究与验收标准见 docs/research/game-quality-benchmark.md；此要求不是“已达到市场一流”的证据。
+
+1. 本轮固定CC0 Quaternius Hoodie、1.75m人尺度、Idle/Walk/Run混合、原创Idle-based跳姿与近镜淡隐，确保失败回退/迟到释放；来源及限制在 docs/resources/quality-assets.md 和角色metadata。
+2. 收紧近景单sun阴影并保留地图范围；原创米制地表和多团树冠保持。没有新造真实校园事实。
+3. 两站自主取景→记录印记→本地明信片；场景投影/距离/遮挡判定，无自动走路；旧章节/Hks保留、无账户/外传；导出保留地图/高度来源。
+4. 在同一候选运行旧场景、Hks、离线、headed真实焦点及quality-slice六场景；人工目视机械馆/连接段/清泽园、导出图、角色动作、近墙和手机。静态54单测不能替代这些。
+5. 失败必须定位真实场景或测试机制，不修改状态/RNG/时钟造成功；修复后复验相关路径。若全过再fresh review/版本身份核对/既有公开站点升级。当前不发布。
