@@ -11,7 +11,7 @@ async function record(page:Page){
 }
 test('desktop: continuous travel, observation, progress restore, complete and replay',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');await expect(page.getByTestId('campus-canvas')).toBeVisible();await expect(page.getByTestId('scene-error')).toHaveCount(0);
- await expect(page.locator('.landmark-label')).toHaveCount(3);await expect.poll(()=>page.getByTestId('campus-canvas').getAttribute('data-draw-calls'),{timeout:30000}).not.toBeNull();expect(Number(await page.getByTestId('campus-canvas').getAttribute('data-draw-calls'))).toBeLessThan(180);await page.screenshot({path:'test-results/desktop-baseline.png',fullPage:true});await start(page);await record(page);await page.getByTestId('campus-yingxi').click();await page.getByTestId('campus-huyu').click();await expect(page.getByTestId('quest-status')).toContainText('1 / 3');await page.reload();
+ await expect(page.locator('.landmark-label')).toHaveCount(5);await expect.poll(()=>page.getByTestId('campus-canvas').getAttribute('data-draw-calls'),{timeout:30000}).not.toBeNull();expect(Number(await page.getByTestId('campus-canvas').getAttribute('data-draw-calls'))).toBeLessThan(180);await page.screenshot({path:'test-results/desktop-baseline.png',fullPage:true});await start(page);await record(page);await page.getByTestId('campus-yingxi').click();await page.getByTestId('campus-huyu').click();await expect(page.getByTestId('quest-status')).toContainText('1 / 3');await page.reload();
  await expect(page.getByTestId('quest-status')).toContainText('1 / 3');
  await record(page);await record(page);await expect(page.getByTestId('completion')).toBeVisible();
  await page.screenshot({path:'test-results/completed-journey.png',fullPage:true});
@@ -21,7 +21,7 @@ test('desktop: continuous travel, observation, progress restore, complete and re
 test('real canvas picking, drag suppression and repeated campus switching',async({page})=>{
  await page.goto('/');const canvas=page.getByTestId('campus-canvas');await expect(canvas).toBeVisible();await page.getByTestId('landmark-close').click();
  const r=await canvas.boundingBox();if(!r)throw new Error('No canvas bounds');
- const campus=campuses.huyu,pts=campus.landmarks.flatMap(l=>[l.position,l.arrival]);const xs=pts.map(p=>p[0]),zs=pts.map(p=>p[1]);const x0=Math.min(...xs),x1=Math.max(...xs),z0=Math.min(...zs),z1=Math.max(...zs);
+ const campus=campuses.huyu,pts=campus.questOrder.flatMap(id=>{const l=campus.landmarks.find(item=>item.id===id)!;return [l.position,l.arrival];});const xs=pts.map(p=>p[0]),zs=pts.map(p=>p[1]);const x0=Math.min(...xs),x1=Math.max(...xs),z0=Math.min(...zs),z1=Math.max(...zs);
  const span=Math.max(300,(x1-x0)*1.35,(z1-z0)*1.35),aspect=r.width/r.height,h=span/Math.min(1,aspect);const camera=new OrthographicCamera(-h*aspect/2,h*aspect/2,h/2,-h/2,.1,6000);const target=new Vector3((x0+x1)/2,0,(z0+z1)/2);camera.position.copy(target).addScaledVector(new Vector3(.7,1,-1.1).normalize(),Math.max(span*1.5,200));camera.lookAt(target);camera.updateMatrixWorld();
  const l=campus.landmarks.find(l=>l.id==='hy-training')!;const feature=campus.features.find(f=>f.id===l.featureId)!;const p=new Vector3(l.position[0],feature.height+4,l.position[1]).project(camera);const x=r.x+(p.x+1)*r.width/2,y=r.y+(1-p.y)*r.height/2;
  const touch=await page.context().newCDPSession(page);
@@ -33,8 +33,8 @@ test('real canvas picking, drag suppression and repeated campus switching',async
  // Reset camera after pinch before testing the deterministic initial-view pick.
  await page.reload();await page.getByTestId('landmark-close').click();
  await page.mouse.click(x,y);await expect(page.locator('.panel-scroll')).toContainText('训练馆');await page.getByTestId('landmark-close').click();await page.mouse.move(r.x+r.width*.48,r.y+r.height*.6);await page.mouse.down();await page.mouse.move(r.x+r.width*.52,r.y+r.height*.65,{steps:8});await page.mouse.up();await expect(page.getByTestId('landmark-close')).toHaveCount(0);
- for(let i=0;i<3;i++){await page.getByTestId('campus-yingxi').click();await expect(page.locator('.landmark-label')).toHaveCount(4);await page.getByTestId('campus-huyu').click();await expect(page.locator('.landmark-label')).toHaveCount(3);}await expect(page.getByTestId('scene-error')).toHaveCount(0);
- await expect(canvas).toHaveAttribute('data-hero-model','none');
+ for(let i=0;i<3;i++){await page.getByTestId('campus-yingxi').click();await expect(page.locator('.landmark-label')).toHaveCount(4);await page.getByTestId('campus-huyu').click();await expect(page.locator('.landmark-label')).toHaveCount(5);}await expect(page.getByTestId('scene-error')).toHaveCount(0);
+ await expect(canvas).toHaveAttribute('data-hero-model','ready',{timeout:30000});
  await page.getByTestId('campus-yingxi').click();await expect(canvas).toHaveAttribute('data-hero-model','ready',{timeout:30000});
  await page.getByTestId('open-directory').click();await page.getByTestId('landmark-yx-mechanical').click();
  await page.getByTestId('landmark-close').click();await page.waitForTimeout(1100);
@@ -61,4 +61,42 @@ test('landmark model load failure keeps the source-backed campus playable',async
  await expect(page.getByTestId('scene-error')).toHaveCount(0);
  await start(page);await page.getByTestId('quest-travel').click();
  await expect(page.getByTestId('arrival-status')).toContainText('已到达',{timeout:90000});
+});
+
+test('focused optional models and independent failure status',async({page})=>{
+ await page.goto('/');const canvas=page.getByTestId('campus-canvas');
+ await expect(canvas).toHaveAttribute('data-model-hy-meihua','ready',{timeout:30000});
+ await expect(canvas).toHaveAttribute('data-model-hy-north-gate','ready',{timeout:30000});
+ await page.getByTestId('open-directory').click();await page.getByTestId('landmark-hy-meihua').click();
+ await expect(page.locator('.panel-scroll')).toContainText('非实测');
+ await page.getByTestId('landmark-close').click();await page.waitForTimeout(1100);
+ await page.screenshot({path:'test-results/meihua-focus.png',fullPage:true});
+ await page.getByTestId('open-directory').click();await page.getByTestId('landmark-hy-north-gate').click();
+ await expect(page.locator('.panel-scroll')).toContainText('并非地图标注或实测位置');
+ await page.getByTestId('landmark-close').click();await page.waitForTimeout(1100);
+ await page.screenshot({path:'test-results/north-gate-focus.png',fullPage:true});
+});
+test('one failed Huyu model remains reported when the other succeeds',async({page})=>{
+ await page.route('**/assets/campuses/huyu/meihua-classroom-group.glb',route=>route.abort());
+ await page.goto('/');const canvas=page.getByTestId('campus-canvas');
+ await expect(canvas).toHaveAttribute('data-model-hy-meihua','fallback',{timeout:30000});
+ await expect(canvas).toHaveAttribute('data-model-hy-north-gate','ready',{timeout:30000});
+ await expect(canvas).toHaveAttribute('data-hero-model','fallback');
+ await expect(page.getByTestId('model-notice')).toContainText('梅花教室组合');
+ await expect(page.getByTestId('scene-error')).toHaveCount(0);
+});
+
+test('late Huyu loads cannot replace current Yingxi scene and gate failure is isolated',async({page})=>{
+ await page.route('**/assets/campuses/huyu/*.glb',async route=>{await new Promise(resolve=>setTimeout(resolve,900));await route.continue();});
+ await page.goto('/');const canvas=page.getByTestId('campus-canvas');await page.getByTestId('campus-yingxi').click();
+ await expect(canvas).toHaveAttribute('data-model-yx-mechanical','ready',{timeout:30000});
+ await page.waitForTimeout(1800);await expect(page.locator('.landmark-label')).toHaveCount(4);
+ await expect(canvas).not.toHaveAttribute('data-model-hy-meihua','ready');
+ await page.unroute('**/assets/campuses/huyu/*.glb');
+ await page.route('**/assets/campuses/huyu/north-gate.glb',route=>route.abort());
+ await page.getByTestId('campus-huyu').click();
+ await expect(canvas).toHaveAttribute('data-model-hy-north-gate','fallback',{timeout:30000});
+ await expect(canvas).toHaveAttribute('data-model-hy-meihua','ready',{timeout:30000});
+ await expect(page.getByTestId('model-notice')).toContainText('北门');
+ await expect(page.getByTestId('scene-error')).toHaveCount(0);
 });

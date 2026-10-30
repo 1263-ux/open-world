@@ -800,5 +800,147 @@
       "iou": 0.9998549973625176,
       "reason": "invalid_height"
     }
+  ],
+  "visualOverrides": [
+    {
+      "featureId": "overture:028c91bf-ac23-439e-bfa5-7f5138dac851",
+      "before": {
+        "height": 14.254427,
+        "heightStatus": "ml-estimate",
+        "heightSource": {
+          "dataset": "3D-GloBFP",
+          "year": 2020,
+          "method": "ML prediction; not survey",
+          "matchIoU": 1.0,
+          "sourceId": "396b7eb019e68fb3",
+          "source": "https://doi.org/10.5281/zenodo.15487006"
+        },
+        "name": "校园建筑（名称待核）"
+      },
+      "after": {
+        "height": 4.5,
+        "heightStatus": "unverified",
+        "heightSource": {
+          "dataset": "校友网历史照片（外观参考）",
+          "method": "照片相对比例的一层展示估计；非实测，当前状态未知",
+          "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
+        },
+        "name": "梅花教室组合候选体块"
+      },
+      "reason": "旧照片显示单层，原 ML 预测与视觉参考不一致；展示估计并非测绘或当前状态证明",
+      "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
+    },
+    {
+      "featureId": "overture:37283b65-e218-4a49-9c81-ad5015a8f078",
+      "before": {
+        "height": 11.021126,
+        "heightStatus": "ml-estimate",
+        "heightSource": {
+          "dataset": "3D-GloBFP",
+          "year": 2020,
+          "method": "ML prediction; not survey",
+          "matchIoU": 0.9993225935413175,
+          "sourceId": "6a66b54cde75e9d9",
+          "source": "https://doi.org/10.5281/zenodo.15487006"
+        },
+        "name": "校园建筑（名称待核）"
+      },
+      "after": {
+        "height": 4.5,
+        "heightStatus": "unverified",
+        "heightSource": {
+          "dataset": "校友网历史照片（外观参考）",
+          "method": "照片相对比例的一层展示估计；非实测，当前状态未知",
+          "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
+        },
+        "name": "梅花教室组合候选体块"
+      },
+      "reason": "旧照片显示单层，原 ML 预测与视觉参考不一致；展示估计并非测绘或当前状态证明",
+      "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
+    },
+    {
+      "featureId": "overture:5ac53a1f-ce87-4161-9e1a-6e88741e0e3f",
+      "before": {
+        "height": 9.73326,
+        "heightStatus": "ml-estimate",
+        "heightSource": {
+          "dataset": "3D-GloBFP",
+          "year": 2020,
+          "method": "ML prediction; not survey",
+          "matchIoU": 1.0,
+          "sourceId": "2d4de7e30eba63d4",
+          "source": "https://doi.org/10.5281/zenodo.15487006"
+        },
+        "name": "校园建筑（名称待核）"
+      },
+      "after": {
+        "height": 4.5,
+        "heightStatus": "unverified",
+        "heightSource": {
+          "dataset": "校友网历史照片（外观参考）",
+          "method": "照片相对比例的一层展示估计；非实测，当前状态未知",
+          "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
+        },
+        "name": "梅花教室组合候选体块"
+      },
+      "reason": "旧照片显示单层，原 ML 预测与视觉参考不一致；展示估计并非测绘或当前状态证明",
+      "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
+    },
+    {
+      "featureId": "overture:b457deb5-22d4-4522-b66a-e2fe8a723d92",
+      "before": {
+        "height": 15.531299,
+        "heightStatus": "ml-estimate",
+        "heightSource": {
+          "dataset": "3D-GloBFP",
+          "year": 2020,
+          "method": "ML prediction; not survey",
+          "matchIoU": 0.9994760971396417,
+          "sourceId": "42d4e25d9cba4af6",
+          "source": "https://doi.org/10.5281/zenodo.15487006"
+        },
+        "name": "校园建筑（名称待核）"
+      },
+      "after": {
+        "height": 4.5,
+        "heightStatus": "unverified",
+        "heightSource": {
+          "dataset": "校友网历史照片（外观参考）",
+          "method": "照片相对比例的一层展示估计；非实测，当前状态未知",
+          "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
+        },
+        "name": "梅花教室组合候选体块"
+      },
+      "reason": "旧照片显示单层，原 ML 预测与视觉参考不一致；展示估计并非测绘或当前状态证明",
+      "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
+    },
+    {
+      "featureId": "overture:69b27930-08ee-49ac-abf6-6589dcb1cf64",
+      "before": {
+        "height": 13.510515,
+        "heightStatus": "ml-estimate",
+        "heightSource": {
+          "dataset": "3D-GloBFP",
+          "year": 2020,
+          "method": "ML prediction; not survey",
+          "matchIoU": 1.0,
+          "sourceId": "651078b3fdc9bc01",
+          "source": "https://doi.org/10.5281/zenodo.15487006"
+        },
+        "name": "校园建筑（名称待核）"
+      },
+      "after": {
+        "height": 4.5,
+        "heightStatus": "unverified",
+        "heightSource": {
+          "dataset": "校友网历史照片（外观参考）",
+          "method": "照片相对比例的一层展示估计；非实测，当前状态未知",
+          "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
+        },
+        "name": "梅花教室组合候选体块"
+      },
+      "reason": "旧照片显示单层，原 ML 预测与视觉参考不一致；展示估计并非测绘或当前状态证明",
+      "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
+    }
   ]
 }

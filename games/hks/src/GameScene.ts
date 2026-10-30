@@ -81,6 +81,9 @@ export class GameScene extends Phaser.Scene {
   private invincibleTimer = 0;
   private spawnInterval = INITIAL_SPAWN_INTERVAL;
   private isGameOver = false;
+  // Outcome evidence only; the existing endGame rule remains the sole authority.
+  private lastOutcome: 'victory' | 'defeat' | null = null;
+  private lastOutcomeStructures: Record<string, { currentHp: number; maxHp: number }> | null = null;
   private isPaused = false;
   private seenMonsterTypes = new Set<MonsterType>();
 
@@ -135,6 +138,8 @@ export class GameScene extends Phaser.Scene {
     this.invincibleTimer = 0;
     this.spawnInterval = INITIAL_SPAWN_INTERVAL;
     this.isGameOver = false;
+    this.lastOutcome = null;
+    this.lastOutcomeStructures = null;
     this.isPaused = false;
     this.seenMonsterTypes = new Set<MonsterType>();
     this.boss = null;
@@ -1039,6 +1044,9 @@ export class GameScene extends Phaser.Scene {
   // ── 胜负 ──
   private endGame(victory: boolean): void {
     if (this.isGameOver) return;
+    this.lastOutcome = victory ? 'victory' : 'defeat';
+    // Latch terminal HP before the original update can continue through repairs.
+    this.lastOutcomeStructures = Object.fromEntries([...this.building.structures].map(([type, hp]) => [type, { currentHp: hp.currentHp, maxHp: hp.maxHp }]));
     this.isGameOver = true;
     if (victory) SoundManager.victory(); else SoundManager.defeat();
     const elapsed = GAME_DURATION - this.gameTime;

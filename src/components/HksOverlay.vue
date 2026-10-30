@@ -20,7 +20,8 @@
       <iframe
         :key="frameKey"
         ref="frame"
-        :src="gameUrl"
+        :src="offlineHtml ? undefined : gameUrl"
+        :srcdoc="offlineHtml"
         title="山西古建保卫战"
         data-testid="hks-frame"
         @error="fail"
@@ -40,6 +41,7 @@
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 
 const emit = defineEmits<{ close: [] }>()
+const offlineHtml = import.meta.env.VITE_OFFLINE_BUILD === 'true' ? (window as Window & { __HKS_OFFLINE_HTML__?: string }).__HKS_OFFLINE_HTML__ : undefined
 const gameUrl = `${import.meta.env.BASE_URL}games/hks/index.html`
 const frame = ref<HTMLIFrameElement | null>(null)
 const returnButton = ref<HTMLButtonElement | null>(null)

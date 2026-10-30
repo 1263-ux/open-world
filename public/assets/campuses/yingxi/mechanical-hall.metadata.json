@@ -144,5 +144,6 @@
     ]
   },
   "glb_triangles": 3369,
-  "validation": "GLB 2.0 binary and mesh accessors parsed; all 25 source polygon base vertices match in meter coordinates, no external buffers or images; see verify.py. Bounds include superficial trim."
+  "validation": "GLB binary parsed; all 25 source base vertices match; winding agrees with vertex normals; roof faces up, 25 shell edges outward, all six sides of all 31 authored boxes outward, front/back windows and clock faces outward; see verify.py. Bounds include superficial trim.",
+  "artifactSha256": "a19a35a6049ba9a7ce5f42933544cd789cc6b55780b68b3d0b1ecdc793bba39d"
 }

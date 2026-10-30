@@ -44,6 +44,27 @@ for cid in ['huyu','yingxi']:
         features.append(item)
         if kind=='building':buildings.append(shape)
     features, augmentation_audit = augment_buildings(cid, features, project)
+    model_obstacles=[]
+    meihua=None
+    if cid=='huyu':
+        meihua=json.loads((ROOT/'public/assets/campuses/huyu/meihua-classroom-group.metadata.json').read_text())
+        gate=json.loads((ROOT/'public/assets/campuses/huyu/north-gate.metadata.json').read_text())
+        overrides=[]
+        for ident, polygon in meihua['sourceFootprintsWorldXZ'].items():
+            item=next(f for f in features if f['id']=='overture:'+ident)
+            assert item['polygon']==polygon+[polygon[0]], f'footprint changed: {ident}'
+            before={k:item.get(k) for k in ('height','heightStatus','heightSource','name')}
+            item.update(name='梅花教室组合候选体块',height=4.5,heightStatus='unverified',heightSource={
+                'dataset':'校友网历史照片（外观参考）','method':'照片相对比例的一层展示估计；非实测，当前状态未知',
+                'source':meihua['sourceURLs']['officialPhotoPage']})
+            overrides.append({'featureId':item['id'],'before':before,'after':{k:item.get(k) for k in before},
+                'reason':'旧照片显示单层，原 ML 预测与视觉参考不一致；展示估计并非测绘或当前状态证明',
+                'source':meihua['sourceURLs']['officialPhotoPage']})
+        augmentation_audit['visualOverrides']=overrides
+        model_obstacles=[{'id':'meihua-inferred-connector','polygon':meihua['inferredConnector']['fullWorldXZPolygon'],
+                          'status':'model-design-only','source':meihua['sourceURLs']['officialPhotoPage']}]
+        model_obstacles += [{'id':f'gate-design-{i+1}','polygon':poly,'status':'model-design-only',
+                            'source':gate['sources'][0]['url']} for i,poly in enumerate(gate['displayDesign']['collisionDesign']['worldXZPolygons'])]
     buildings=[Polygon(f['polygon']) for f in features if f['kind']=='building']
     (ROOT/'public/data'/f'augmentation-{cid}-audit.json').write_text(json.dumps(augmentation_audit,ensure_ascii=False,indent=2)+'\n')
     roads=[]
@@ -55,7 +76,7 @@ for cid in ['huyu','yingxi']:
         for n,seg in enumerate(parts):
             if seg.geom_type!='LineString' or seg.length<4:continue
             roads.append({'id':str(e['id'])+'-'+str(n),'points':[[round(x,2),round(z,2)] for x,z in seg.coords],'width':7 if tags['highway'] in ['secondary','tertiary'] else 4.5,'source':'https://www.openstreetmap.org/way/'+str(e['id'])})
-    free=area.buffer(-4).difference(unary_union([p.buffer(3) for p in buildings]))
+    free=area.buffer(-4).difference(unary_union([p.buffer(3) for p in buildings]+[Polygon(o['polygon']).buffer(3) for o in model_obstacles]))
     bounds=list(area.bounds);step=6;minx,minz,maxx,maxz=bounds
     graph=nx.Graph();points={}
     for ix in range(math.ceil((maxx-minx)/step)+1):
@@ -86,6 +107,22 @@ for cid in ['huyu','yingxi']:
             if landmark_item['id']=='yx-mechanical':
                 landmark_item['visualSource']='https://www.tyut.edu.cn/xxgk1/xydl.htm'
                 landmark_item['facts']='占地轮廓来自 OpenStreetMap；立面依据官方照片作简化表达。三层侧翼约9米、钟楼约15米仍为展示估计，朝向由轮廓推断，不是现场实测。游戏到站点并非现实入口导航。'
+    quest_order=[p['id'] for p in landmarks]
+    if cid=='huyu':
+        assert meihua is not None
+        def optional_landmark(lid,name,position,feature_ids,facts,source,visual_source):
+            arrival=points[nearest(position)]
+            return {'id':lid,'name':name,'subtitle':'自由探索 · 非任务站点','position':[round(x,2) for x in position],
+                'arrival':[round(x,2) for x in arrival], 'featureId':None, 'featureIds':feature_ids,
+                'optional':True,'positionStatus':'approximate-inferred', 'facts':facts,'source':source,'visualSource':visual_source,
+                'clue':'自由探索','question':'','choices':[],'answer':0}
+        landmarks.append(optional_landmark('hy-meihua','梅花教室组合',[meihua['centerX'],meihua['centerZ']],
+            ['overture:'+ident for ident in meihua['sourceFootprintsWorldXZ']],
+            '官方地图标示梅花教室组合；五个地理轮廓为候选组合，不对应独立教室编号。单层 4.5 米为依据历史照片的展示估计，非实测且现状未知。连接部分为模型设计而非地理事实。到站点是游戏网格点，不是真实入口。',
+            meihua['sourceURLs']['officialMapPage'],meihua['sourceURLs']['officialPhotoPage']))
+        landmarks.append(optional_landmark('hy-north-gate','北门（示意）',gate['displayDesign']['renderingAnchorWorldXZ'],[],
+            '校门位置为推断的近似展示锚点，并非地图标注或实测位置；32 × 2 × 9 米为视觉设计，不是实测尺寸。到站点是游戏网格点，不是真实入口或导航。',
+            gate['sources'][1]['url'],gate['sources'][0]['url']))
     destinations={'start':start,**{p['id']:p['arrival'] for p in landmarks}};routes={}
     for ka,pa in destinations.items():
         for kb,pb in destinations.items():
@@ -97,12 +134,16 @@ for cid in ['huyu','yingxi']:
             shape=LineString(coords).simplify(.01)
             assert free.buffer(.001).covers(shape),f'route violates obstacle {ka}>{kb}'
             routes[ka+'>'+kb]=[[round(x,2),round(z,2)] for x,z in shape.coords]
-    out[cid]={'id':cid,'name':'虎峪校区' if cid=='huyu' else '迎西校区','englishName':'HUYU' if cid=='huyu' else 'YINGXI','description':'书与工的线索' if cid=='huyu' else '清泽园的四枚印记','origin':meta['origins'][cid],'boundary':boundary,'bounds':[round(x,2) for x in bounds],'features':features,'roads':roads,'landmarks':landmarks,'questOrder':[p['id'] for p in landmarks],'start':[round(x,2) for x in start],'routes':routes,'extentMeters':[round(maxx-minx,1),round(maxz-minz,1)],'attribution':'© OpenStreetMap contributors / Overture · ODbL 1.0 · Che et al. 3D-GloBFP · CC BY 4.0'}
+    out[cid]={'id':cid,'name':'虎峪校区' if cid=='huyu' else '迎西校区','englishName':'HUYU' if cid=='huyu' else 'YINGXI','description':'书与工的线索' if cid=='huyu' else '清泽园的四枚印记','origin':meta['origins'][cid],'boundary':boundary,'bounds':[round(x,2) for x in bounds],'features':features,'roads':roads,'landmarks':landmarks,'questOrder':quest_order,'modelObstacles':model_obstacles,'start':[round(x,2) for x in start],'routes':routes,'extentMeters':[round(maxx-minx,1),round(maxz-minz,1)],'attribution':'© OpenStreetMap contributors / Overture · ODbL 1.0 · Che et al. 3D-GloBFP · CC BY 4.0'}
     print(cid, 'features',len(features),'roads',len(roads),'routes',len(routes),'extent',out[cid]['extentMeters'])
 (ROOT/'src/campus-data/spatial.json').write_text(json.dumps(out,ensure_ascii=False,separators=(',',':'))+'\n')
 (ROOT/'public/data/campus-spatial.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
 (ROOT/'public/data/osm-source.geojson').write_text(json.dumps(geo,ensure_ascii=False,indent=2)+'\n')
-print('Validated all game-route segments against campus bounds and buffered building footprints.')
+print('Validated all game-route segments against campus bounds, buffered buildings and model-only obstacles.')
 
 model_meta=json.loads((ROOT/'public/assets/campuses/yingxi/mechanical-hall.metadata.json').read_text())
 (ROOT/'src/campus-data/mechanical-hall-model.json').write_text(json.dumps({'centerX':model_meta['centerX'],'centerZ':model_meta['centerZ']},separators=(',',':'))+'\n')
+
+meihua=json.loads((ROOT/'public/assets/campuses/huyu/meihua-classroom-group.metadata.json').read_text())
+gate=json.loads((ROOT/'public/assets/campuses/huyu/north-gate.metadata.json').read_text())
+(ROOT/'src/campus-data/huyu-models.json').write_text(json.dumps({'meihua':{'centerX':meihua['centerX'],'centerZ':meihua['centerZ'],'featureIds':['overture:'+ident for ident in meihua['sourceFootprintsWorldXZ']]},'gate':{'centerX':gate['displayDesign']['renderingAnchorWorldXZ'][0],'centerZ':gate['displayDesign']['renderingAnchorWorldXZ'][1]}},separators=(',',':'))+'\n')

@@ -47,3 +47,7 @@ The first real browser run reached combat, natural defeat, menu replay and Escap
 Latest six-file upstream feedback/readability improvements and seven existing project PNGs from3cb39bc8 were subsequently merged; see MODERNIZATION.md and ASSET_INVENTORY.json. All imported PNG bytes are original. Latest visual version still requires fresh browser checks.
 
 - The phone trial now creates a touch-capable mobile browser context before Phaser boots; merely changing viewport width did not enable Phaser TouchManager. Input windowEvents is disabled so Phaser does not retain parent-window listeners after iframe removal. Joystick release also handles leaving the canvas.
+
+## Candidate telemetry / offline delivery round
+
+Natural-play QA reads player, XP, Boss, upgrade-card locations and structure HP through canvas data attributes. Terminal outcome/HP snapshots are latched only for reporting, not used to change combat, timer or victory conditions. Tests drive ordinary keys and canvas clicks. Offline mode embeds the same game in srcdoc; child messages use a wildcard target only for the null file origin, while the parent still verifies both origin and exact iframe source. The HTTP path keeps its explicit same-origin target. The original seven PNGs remain byte-identical.

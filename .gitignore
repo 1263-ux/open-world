@@ -37,3 +37,7 @@ games/hks/dist/
 
 scripts/landmarks/**/*.png
 scripts/landmarks/**/*.glb
+
+offline-playwright-report/
+survival-playwright-report/
+__pycache__/

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { mechanicalHall, loadMechanicalHall } from './LandmarkModels';
+import { landmarkModels, loadLandmarkModel } from './LandmarkModels';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
@@ -236,18 +236,29 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const ids = [state.targetId, state.selectedId].filter((id, index, all): id is string => !!id && all.indexOf(id) === index);
     for (const id of ids) {
       const landmark = data.landmarks.find((item) => item.id === id);
-      const feature = landmark && data.features.find((item) => item.id === landmark.featureId);
-      if (!feature || feature.kind !== 'building') continue;
-      const mesh = buildingMeshes.get(feature.id);
-      if (!mesh) continue;
-      const line = perimeter(feature.polygon, feature.id === mechanicalHall.featureId ? 0.3 : Number(mesh.userData.height) + 0.28, new THREE.LineBasicMaterial({ color: id === state.selectedId ? 0x69e1db : 0xf4c36f, depthTest: true }));
-      if (line) highlightLayer.add(line);
+      const ids = landmark ? [...(landmark.featureIds ?? []), ...(landmark.featureId ? [landmark.featureId] : [])] : [];
+      for (const featureId of ids) {
+        const feature = data.features.find((item) => item.id === featureId && item.kind === 'building');
+        const mesh = buildingMeshes.get(featureId);
+        if (!feature || !mesh) continue;
+        const line = perimeter(feature.polygon, mesh.visible ? Number(mesh.userData.height) + 0.28 : 0.3, new THREE.LineBasicMaterial({ color: id === state.selectedId ? 0x69e1db : 0xf4c36f, depthTest: true }));
+        if (line) highlightLayer.add(line);
+      }
     }
   }
 
   function buildCampus(): void {
     const generation = ++campusGeneration;
-    canvas.dataset.heroModel = data.id === 'yingxi' ? 'loading' : 'none';
+    const models = landmarkModels.filter(item => item.campusId === data.id);
+    const modelStatuses = new Map(models.map(item => [item.landmarkId, 'loading']));
+    for (const model of landmarkModels) canvas.removeAttribute(`data-model-${model.landmarkId}`);
+    const updateModelStatus = (id: string, status: string): void => {
+      modelStatuses.set(id, status);
+      canvas.setAttribute(`data-model-${id}`, status);
+      const statuses = [...modelStatuses.values()];
+      canvas.dataset.heroModel = statuses.includes('fallback') ? 'fallback' : statuses.includes('loading') ? 'loading' : statuses.length ? 'ready' : 'none';
+    };
+    for (const model of models) updateModelStatus(model.landmarkId, 'loading');
     travel = null;
     lastId = 'start';
     tween = null;
@@ -343,7 +354,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         let hash = 0;
         for (const ch of feature.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
         const facadeIndex = hash % facadeMats.length;
-        const linked = data.landmarks.find((item) => item.featureId === feature.id);
+        const linked = data.landmarks.find((item) => item.featureId === feature.id || item.featureIds?.includes(feature.id));
         if (!linked) {
           backgroundBuckets[facadeIndex].push(geometry);
           continue;
@@ -470,7 +481,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       world.add(marker);
       const name = document.createElement('div');
       name.className = 'landmark-label';
-      name.textContent = `${String(data.questOrder.indexOf(landmark.id) + 1).padStart(2, '0')}  ${landmark.name}`;
+      const index = data.questOrder.indexOf(landmark.id);
+      name.textContent = `${index < 0 ? '•' : String(index + 1).padStart(2, '0')}  ${landmark.name}`;
       const label = new CSS2DObject(name);
       label.position.set(0, 5, 0);
       label.center.set(0.5, 1);
@@ -501,42 +513,44 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     world.add(pawn);
     renderer.shadowMap.needsUpdate = true;
     updateHighlights();
-    if (data.id === 'yingxi') {
-      const ownerWorld = world;
-      void loadMechanicalHall().then(model => {
+    const ownerWorld = world;
+    for (const config of models) {
+      void loadLandmarkModel(config).then(model => {
         if (disposed || generation !== campusGeneration || ownerWorld !== world) {
           disposeObject(model);
           return;
         }
-        const fallback = buildingMeshes.get(mechanicalHall.featureId);
-        if (fallback) {
-          fallback.visible = false;
-          pickables = pickables.filter(item => item !== fallback);
-        }
-        const roof = roofLines.get(mechanicalHall.featureId);
-        if (roof) roof.visible = false;
-        const range = modelWindowRanges.get(mechanicalHall.featureId);
-        if (range && windowInstances) {
-          const hidden = new THREE.Matrix4().makeScale(0, 0, 0);
-          for (let i = range[0]; i < range[1]; i++) windowInstances.setMatrixAt(i, hidden);
-          windowInstances.instanceMatrix.needsUpdate = true;
+        for (const featureId of config.featureIds) {
+          const fallback = buildingMeshes.get(featureId);
+          if (fallback) { fallback.visible = false; pickables = pickables.filter(item => item !== fallback); }
+          const roof = roofLines.get(featureId);
+          if (roof) roof.visible = false;
+          const range = modelWindowRanges.get(featureId);
+          if (range && windowInstances) {
+            const hidden = new THREE.Matrix4().makeScale(0, 0, 0);
+            for (let i = range[0]; i < range[1]; i++) windowInstances.setMatrixAt(i, hidden);
+            windowInstances.instanceMatrix.needsUpdate = true;
+          }
         }
         model.traverse(object => {
           if (object instanceof THREE.Mesh) {
             object.castShadow = object.receiveShadow = true;
-            object.userData.landmarkId = mechanicalHall.landmarkId;
+            object.userData.landmarkId = config.landmarkId;
             pickables.push(object);
           }
         });
         ownerWorld.add(model);
         model.updateMatrixWorld(true);
+        const marker = markerMeshes.get(config.landmarkId);
+        if (marker) marker.position.y = config.markerHeight;
+        updateHighlights();
         renderer.shadowMap.needsUpdate = true;
-        canvas.dataset.heroModel = 'ready';
-        onEvent({ type: 'modelstatus', status: 'ready' });
+        updateModelStatus(config.landmarkId, 'ready');
+        onEvent({ type: 'modelstatus', id: config.landmarkId, name: config.name, status: 'ready' });
       }).catch(() => {
-        if (disposed || generation !== campusGeneration) return;
-        canvas.dataset.heroModel = 'fallback';
-        onEvent({ type: 'modelstatus', status: 'fallback' });
+        if (disposed || generation !== campusGeneration || ownerWorld !== world) return;
+        updateModelStatus(config.landmarkId, 'fallback');
+        onEvent({ type: 'modelstatus', id: config.landmarkId, name: config.name, status: 'fallback' });
       });
     }
   }
@@ -571,8 +585,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   function focusLandmark(id: string): void {
     const landmark = data.landmarks.find((item) => item.id === id);
     if (!landmark || !validPoint(landmark.position)) return;
-    const feature = data.features.find((f) => f.id === landmark.featureId);
-    const [x0, z0, x1, z1] = feature ? boundsOf(feature.polygon) : [0, 0, 0, 0];
+    const features = data.features.filter((f) => f.id === landmark.featureId || landmark.featureIds?.includes(f.id));
+    const [x0, z0, x1, z1] = features.length ? boundsOf(features.flatMap(f => f.polygon)) : [0, 0, 0, 0];
     const span = Math.max(110, (x1 - x0) * 1.35, (z1 - z0) * 1.35);
     animateView(new THREE.Vector3(landmark.position[0], 0, landmark.position[1]), span);
   }

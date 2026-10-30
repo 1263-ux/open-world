@@ -348,7 +348,7 @@
       },
       {
         "id": "overture:028c91bf-ac23-439e-bfa5-7f5138dac851",
-        "name": "校园建筑（名称待核）",
+        "name": "梅花教室组合候选体块",
         "kind": "building",
         "polygon": [
           [
@@ -372,18 +372,15 @@
             -57.65
           ]
         ],
-        "height": 14.254427,
-        "heightStatus": "ml-estimate",
+        "height": 4.5,
+        "heightStatus": "unverified",
         "levels": null,
         "source": "https://docs.overturemaps.org/guides/buildings/",
         "sourceId": "028c91bf-ac23-439e-bfa5-7f5138dac851",
         "heightSource": {
-          "dataset": "3D-GloBFP",
-          "year": 2020,
-          "method": "ML prediction; not survey",
-          "matchIoU": 1.0,
-          "sourceId": "396b7eb019e68fb3",
-          "source": "https://doi.org/10.5281/zenodo.15487006"
+          "dataset": "校友网历史照片（外观参考）",
+          "method": "照片相对比例的一层展示估计；非实测，当前状态未知",
+          "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
         }
       },
       {
@@ -1388,7 +1385,7 @@
       },
       {
         "id": "overture:37283b65-e218-4a49-9c81-ad5015a8f078",
-        "name": "校园建筑（名称待核）",
+        "name": "梅花教室组合候选体块",
         "kind": "building",
         "polygon": [
           [
@@ -1412,18 +1409,15 @@
             -52.06
           ]
         ],
-        "height": 11.021126,
-        "heightStatus": "ml-estimate",
+        "height": 4.5,
+        "heightStatus": "unverified",
         "levels": null,
         "source": "https://docs.overturemaps.org/guides/buildings/",
         "sourceId": "37283b65-e218-4a49-9c81-ad5015a8f078",
         "heightSource": {
-          "dataset": "3D-GloBFP",
-          "year": 2020,
-          "method": "ML prediction; not survey",
-          "matchIoU": 0.9993225935413175,
-          "sourceId": "6a66b54cde75e9d9",
-          "source": "https://doi.org/10.5281/zenodo.15487006"
+          "dataset": "校友网历史照片（外观参考）",
+          "method": "照片相对比例的一层展示估计；非实测，当前状态未知",
+          "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
         }
       },
       {
@@ -1828,7 +1822,7 @@
       },
       {
         "id": "overture:5ac53a1f-ce87-4161-9e1a-6e88741e0e3f",
-        "name": "校园建筑（名称待核）",
+        "name": "梅花教室组合候选体块",
         "kind": "building",
         "polygon": [
           [
@@ -1852,18 +1846,15 @@
             -33.7
           ]
         ],
-        "height": 9.73326,
-        "heightStatus": "ml-estimate",
+        "height": 4.5,
+        "heightStatus": "unverified",
         "levels": null,
         "source": "https://docs.overturemaps.org/guides/buildings/",
         "sourceId": "5ac53a1f-ce87-4161-9e1a-6e88741e0e3f",
         "heightSource": {
-          "dataset": "3D-GloBFP",
-          "year": 2020,
-          "method": "ML prediction; not survey",
-          "matchIoU": 1.0,
-          "sourceId": "2d4de7e30eba63d4",
-          "source": "https://doi.org/10.5281/zenodo.15487006"
+          "dataset": "校友网历史照片（外观参考）",
+          "method": "照片相对比例的一层展示估计；非实测，当前状态未知",
+          "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
         }
       },
       {
@@ -2084,7 +2075,7 @@
       },
       {
         "id": "overture:69b27930-08ee-49ac-abf6-6589dcb1cf64",
-        "name": "校园建筑（名称待核）",
+        "name": "梅花教室组合候选体块",
         "kind": "building",
         "polygon": [
           [
@@ -2108,18 +2099,15 @@
             -49.07
           ]
         ],
-        "height": 13.510515,
-        "heightStatus": "ml-estimate",
+        "height": 4.5,
+        "heightStatus": "unverified",
         "levels": null,
         "source": "https://docs.overturemaps.org/guides/buildings/",
         "sourceId": "69b27930-08ee-49ac-abf6-6589dcb1cf64",
         "heightSource": {
-          "dataset": "3D-GloBFP",
-          "year": 2020,
-          "method": "ML prediction; not survey",
-          "matchIoU": 1.0,
-          "sourceId": "651078b3fdc9bc01",
-          "source": "https://doi.org/10.5281/zenodo.15487006"
+          "dataset": "校友网历史照片（外观参考）",
+          "method": "照片相对比例的一层展示估计；非实测，当前状态未知",
+          "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
         }
       },
       {
@@ -3164,7 +3152,7 @@
       },
       {
         "id": "overture:b457deb5-22d4-4522-b66a-e2fe8a723d92",
-        "name": "校园建筑（名称待核）",
+        "name": "梅花教室组合候选体块",
         "kind": "building",
         "polygon": [
           [
@@ -3188,18 +3176,15 @@
             -36.2
           ]
         ],
-        "height": 15.531299,
-        "heightStatus": "ml-estimate",
+        "height": 4.5,
+        "heightStatus": "unverified",
         "levels": null,
         "source": "https://docs.overturemaps.org/guides/buildings/",
         "sourceId": "b457deb5-22d4-4522-b66a-e2fe8a723d92",
         "heightSource": {
-          "dataset": "3D-GloBFP",
-          "year": 2020,
-          "method": "ML prediction; not survey",
-          "matchIoU": 0.9994760971396417,
-          "sourceId": "42d4e25d9cba4af6",
-          "source": "https://doi.org/10.5281/zenodo.15487006"
+          "dataset": "校友网历史照片（外观参考）",
+          "method": "照片相对比例的一层展示估计；非实测，当前状态未知",
+          "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
         }
       },
       {
@@ -4243,12 +4228,161 @@
           "机场"
         ],
         "answer": 0
+      },
+      {
+        "id": "hy-meihua",
+        "name": "梅花教室组合",
+        "subtitle": "自由探索 · 非任务站点",
+        "position": [
+          -80.74,
+          -45.94
+        ],
+        "arrival": [
+          -65.74,
+          -45.03
+        ],
+        "featureId": null,
+        "featureIds": [
+          "overture:028c91bf-ac23-439e-bfa5-7f5138dac851",
+          "overture:37283b65-e218-4a49-9c81-ad5015a8f078",
+          "overture:5ac53a1f-ce87-4161-9e1a-6e88741e0e3f",
+          "overture:b457deb5-22d4-4522-b66a-e2fe8a723d92",
+          "overture:69b27930-08ee-49ac-abf6-6589dcb1cf64"
+        ],
+        "optional": true,
+        "positionStatus": "approximate-inferred",
+        "facts": "官方地图标示梅花教室组合；五个地理轮廓为候选组合，不对应独立教室编号。单层 4.5 米为依据历史照片的展示估计，非实测且现状未知。连接部分为模型设计而非地理事实。到站点是游戏网格点，不是真实入口。",
+        "source": "https://dangban.tyut.edu.cn/ggzx/xqdt.htm",
+        "visualSource": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm",
+        "clue": "自由探索",
+        "question": "",
+        "choices": [],
+        "answer": 0
+      },
+      {
+        "id": "hy-north-gate",
+        "name": "北门（示意）",
+        "subtitle": "自由探索 · 非任务站点",
+        "position": [
+          14,
+          -200
+        ],
+        "arrival": [
+          12.26,
+          -195.03
+        ],
+        "featureId": null,
+        "featureIds": [],
+        "optional": true,
+        "positionStatus": "approximate-inferred",
+        "facts": "校门位置为推断的近似展示锚点，并非地图标注或实测位置；32 × 2 × 9 米为视觉设计，不是实测尺寸。到站点是游戏网格点，不是真实入口或导航。",
+        "source": "https://dangban.tyut.edu.cn/ggzx/xqdt.htm",
+        "visualSource": "https://bwc.tyut.edu.cn/info/1023/2906.htm",
+        "clue": "自由探索",
+        "question": "",
+        "choices": [],
+        "answer": 0
       }
     ],
     "questOrder": [
       "hy-main",
       "hy-library",
       "hy-training"
+    ],
+    "modelObstacles": [
+      {
+        "id": "meihua-inferred-connector",
+        "polygon": [
+          [
+            -90,
+            -59
+          ],
+          [
+            -79,
+            -59
+          ],
+          [
+            -74,
+            -54
+          ],
+          [
+            -74,
+            -44
+          ],
+          [
+            -80,
+            -36
+          ],
+          [
+            -90,
+            -37
+          ],
+          [
+            -93,
+            -45
+          ],
+          [
+            -91,
+            -53
+          ]
+        ],
+        "status": "model-design-only",
+        "source": "https://xiaoyou.tyut.edu.cn/info/1078/1809.htm"
+      },
+      {
+        "id": "gate-design-1",
+        "polygon": [
+          [
+            -2,
+            -201
+          ],
+          [
+            0.5,
+            -201
+          ],
+          [
+            0.5,
+            -199
+          ],
+          [
+            -2,
+            -199
+          ],
+          [
+            -2,
+            -201
+          ]
+        ],
+        "status": "model-design-only",
+        "source": "https://bwc.tyut.edu.cn/info/1023/2906.htm"
+      },
+      {
+        "id": "gate-design-2",
+        "polygon": [
+          [
+            27.5,
+            -201
+          ],
+          [
+            30,
+            -201
+          ],
+          [
+            30,
+            -199
+          ],
+          [
+            27.5,
+            -199
+          ],
+          [
+            27.5,
+            -201
+          ]
+        ],
+        "status": "model-design-only",
+        "source": "https://bwc.tyut.edu.cn/info/1023/2906.htm"
+      }
     ],
     "start": [
       18.26,
@@ -4333,6 +4467,82 @@
           98.97
         ]
       ],
+      "start>hy-meihua": [
+        [
+          18.26,
+          -177.03
+        ],
+        [
+          -11.74,
+          -147.03
+        ],
+        [
+          -35.74,
+          -147.03
+        ],
+        [
+          -35.74,
+          -105.03
+        ],
+        [
+          -41.74,
+          -99.03
+        ],
+        [
+          -41.74,
+          -93.03
+        ],
+        [
+          -47.74,
+          -87.03
+        ],
+        [
+          -47.74,
+          -81.03
+        ],
+        [
+          -53.74,
+          -75.03
+        ],
+        [
+          -53.74,
+          -69.03
+        ],
+        [
+          -59.74,
+          -63.03
+        ],
+        [
+          -59.74,
+          -57.03
+        ],
+        [
+          -65.74,
+          -51.03
+        ],
+        [
+          -65.74,
+          -45.03
+        ]
+      ],
+      "start>hy-north-gate": [
+        [
+          18.26,
+          -177.03
+        ],
+        [
+          18.26,
+          -183.03
+        ],
+        [
+          12.26,
+          -189.03
+        ],
+        [
+          12.26,
+          -195.03
+        ]
+      ],
       "hy-main>hy-library": [
         [
           18.26,
@@ -4391,6 +4601,78 @@
         [
           36.26,
           98.97
+        ]
+      ],
+      "hy-main>hy-meihua": [
+        [
+          18.26,
+          -147.03
+        ],
+        [
+          -35.74,
+          -147.03
+        ],
+        [
+          -35.74,
+          -105.03
+        ],
+        [
+          -41.74,
+          -99.03
+        ],
+        [
+          -41.74,
+          -93.03
+        ],
+        [
+          -47.74,
+          -87.03
+        ],
+        [
+          -47.74,
+          -81.03
+        ],
+        [
+          -53.74,
+          -75.03
+        ],
+        [
+          -53.74,
+          -69.03
+        ],
+        [
+          -59.74,
+          -63.03
+        ],
+        [
+          -59.74,
+          -57.03
+        ],
+        [
+          -65.74,
+          -51.03
+        ],
+        [
+          -65.74,
+          -45.03
+        ]
+      ],
+      "hy-main>hy-north-gate": [
+        [
+          18.26,
+          -147.03
+        ],
+        [
+          18.26,
+          -183.03
+        ],
+        [
+          12.26,
+          -189.03
+        ],
+        [
+          12.26,
+          -195.03
         ]
       ],
       "hy-library>hy-main": [
@@ -4453,6 +4735,70 @@
           98.97
         ]
       ],
+      "hy-library>hy-meihua": [
+        [
+          48.26,
+          -45.03
+        ],
+        [
+          48.26,
+          -75.03
+        ],
+        [
+          42.26,
+          -81.03
+        ],
+        [
+          -11.74,
+          -81.03
+        ],
+        [
+          -35.74,
+          -57.03
+        ],
+        [
+          -41.74,
+          -57.03
+        ],
+        [
+          -47.74,
+          -51.03
+        ],
+        [
+          -59.74,
+          -51.03
+        ],
+        [
+          -65.74,
+          -45.03
+        ]
+      ],
+      "hy-library>hy-north-gate": [
+        [
+          48.26,
+          -45.03
+        ],
+        [
+          48.26,
+          -63.03
+        ],
+        [
+          66.26,
+          -81.03
+        ],
+        [
+          66.26,
+          -147.03
+        ],
+        [
+          18.26,
+          -195.03
+        ],
+        [
+          12.26,
+          -195.03
+        ]
+      ],
       "hy-training>hy-main": [
         [
           36.26,
@@ -4510,6 +4856,318 @@
         ],
         [
           48.26,
+          -45.03
+        ]
+      ],
+      "hy-training>hy-meihua": [
+        [
+          36.26,
+          98.97
+        ],
+        [
+          18.26,
+          98.97
+        ],
+        [
+          -11.74,
+          68.97
+        ],
+        [
+          -11.74,
+          -3.03
+        ],
+        [
+          -47.74,
+          -39.03
+        ],
+        [
+          -53.74,
+          -39.03
+        ],
+        [
+          -59.74,
+          -45.03
+        ],
+        [
+          -65.74,
+          -45.03
+        ]
+      ],
+      "hy-training>hy-north-gate": [
+        [
+          36.26,
+          98.97
+        ],
+        [
+          48.26,
+          98.97
+        ],
+        [
+          66.26,
+          80.97
+        ],
+        [
+          66.26,
+          -147.03
+        ],
+        [
+          18.26,
+          -195.03
+        ],
+        [
+          12.26,
+          -195.03
+        ]
+      ],
+      "hy-meihua>hy-main": [
+        [
+          -65.74,
+          -45.03
+        ],
+        [
+          -35.74,
+          -75.03
+        ],
+        [
+          -35.74,
+          -147.03
+        ],
+        [
+          18.26,
+          -147.03
+        ]
+      ],
+      "hy-meihua>hy-library": [
+        [
+          -65.74,
+          -45.03
+        ],
+        [
+          -47.74,
+          -45.03
+        ],
+        [
+          -11.74,
+          -81.03
+        ],
+        [
+          42.26,
+          -81.03
+        ],
+        [
+          48.26,
+          -75.03
+        ],
+        [
+          48.26,
+          -45.03
+        ]
+      ],
+      "hy-meihua>hy-training": [
+        [
+          -65.74,
+          -45.03
+        ],
+        [
+          -29.74,
+          -9.03
+        ],
+        [
+          -17.74,
+          -9.03
+        ],
+        [
+          -5.74,
+          2.97
+        ],
+        [
+          -5.74,
+          8.97
+        ],
+        [
+          0.26,
+          14.97
+        ],
+        [
+          0.26,
+          80.97
+        ],
+        [
+          18.26,
+          98.97
+        ],
+        [
+          36.26,
+          98.97
+        ]
+      ],
+      "hy-meihua>hy-north-gate": [
+        [
+          -65.74,
+          -45.03
+        ],
+        [
+          -59.74,
+          -51.03
+        ],
+        [
+          -59.74,
+          -57.03
+        ],
+        [
+          -41.74,
+          -75.03
+        ],
+        [
+          -41.74,
+          -81.03
+        ],
+        [
+          -35.74,
+          -87.03
+        ],
+        [
+          -35.74,
+          -147.03
+        ],
+        [
+          12.26,
+          -195.03
+        ]
+      ],
+      "hy-north-gate>hy-main": [
+        [
+          12.26,
+          -195.03
+        ],
+        [
+          12.26,
+          -153.03
+        ],
+        [
+          18.26,
+          -147.03
+        ]
+      ],
+      "hy-north-gate>hy-library": [
+        [
+          12.26,
+          -195.03
+        ],
+        [
+          60.26,
+          -147.03
+        ],
+        [
+          66.26,
+          -147.03
+        ],
+        [
+          66.26,
+          -81.03
+        ],
+        [
+          60.26,
+          -75.03
+        ],
+        [
+          60.26,
+          -69.03
+        ],
+        [
+          54.26,
+          -63.03
+        ],
+        [
+          54.26,
+          -57.03
+        ],
+        [
+          48.26,
+          -51.03
+        ],
+        [
+          48.26,
+          -45.03
+        ]
+      ],
+      "hy-north-gate>hy-training": [
+        [
+          12.26,
+          -195.03
+        ],
+        [
+          60.26,
+          -147.03
+        ],
+        [
+          66.26,
+          -147.03
+        ],
+        [
+          66.26,
+          80.97
+        ],
+        [
+          48.26,
+          98.97
+        ],
+        [
+          36.26,
+          98.97
+        ]
+      ],
+      "hy-north-gate>hy-meihua": [
+        [
+          12.26,
+          -195.03
+        ],
+        [
+          -35.74,
+          -147.03
+        ],
+        [
+          -35.74,
+          -105.03
+        ],
+        [
+          -41.74,
+          -99.03
+        ],
+        [
+          -41.74,
+          -93.03
+        ],
+        [
+          -47.74,
+          -87.03
+        ],
+        [
+          -47.74,
+          -81.03
+        ],
+        [
+          -53.74,
+          -75.03
+        ],
+        [
+          -53.74,
+          -69.03
+        ],
+        [
+          -59.74,
+          -63.03
+        ],
+        [
+          -59.74,
+          -57.03
+        ],
+        [
+          -65.74,
+          -51.03
+        ],
+        [
+          -65.74,
           -45.03
         ]
       ]
@@ -12007,6 +12665,7 @@
       "yx-mechanical",
       "yx-library"
     ],
+    "modelObstacles": [],
     "start": [
       33.44,
       388.76

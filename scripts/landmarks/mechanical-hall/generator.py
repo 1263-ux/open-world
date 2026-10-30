@@ -1,4 +1,4 @@
-import bpy, math, json, os
+import bpy, math, json, os, hashlib
 from mathutils import Vector
 from mathutils.geometry import tessellate_polygon
 D=os.environ.get("MODEL_OUTPUT_DIR", os.path.dirname(os.path.abspath(__file__)))
@@ -16,20 +16,22 @@ mats={}
 for n,c in colors.items():
  m=bpy.data.materials.new(n);m.diffuse_color=c;m.use_nodes=True;m.node_tree.nodes.get('Principled BSDF').inputs['Base Color'].default_value=c;m.node_tree.nodes.get('Principled BSDF').inputs['Roughness'].default_value=.84;mats[n]=m
 # Geometry is batched per material; all details are original geometry, no textures.
+# pt() reflects the map's X/Z plane. Explicit outward winding below accounts for it;
+# clockline was already +X-facing and is intentionally not reversed.
 geo={n:[[],[]] for n in colors}
 def face(n,vs):
  V,F=geo[n]; start=len(V);V.extend(vs);F.append(tuple(range(start,start+len(vs))))
 def box(n,x0,x1,z0,z1,h0,h1):
  p=[pt(x0,z0,h0),pt(x1,z0,h0),pt(x1,z1,h0),pt(x0,z1,h0),pt(x0,z0,h1),pt(x1,z0,h1),pt(x1,z1,h1),pt(x0,z1,h1)]
- for q in [(0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)]:face(n,[p[i] for i in q])
+ for q in [(0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)]:face(n,[p[i] for i in reversed(q)])
 def wall_quad(n,a,b,h0,h1,off=0):
  x,z=a;u,v=b; L=math.hypot(u-x,v-z);nx=(v-z)/L;nz=-(u-x)/L
- face(n,[pt(x+nx*off,z+nz*off,h0),pt(u+nx*off,v+nz*off,h0),pt(u+nx*off,v+nz*off,h1),pt(x+nx*off,z+nz*off,h1)])
+ face(n,[pt(x+nx*off,z+nz*off,h1),pt(u+nx*off,v+nz*off,h1),pt(u+nx*off,v+nz*off,h0),pt(x+nx*off,z+nz*off,h0)])
 # exact polygon shell incl concave roof; no box approximation
 for a,b in zip(P,P[1:]+P[:1]):wall_quad('stone',a,b,0,9)
 poly=[Vector(pt(x,z,9)) for x,z in P]
 for tri in tessellate_polygon([poly]):
- face('roof',[tuple(poly[i]) for i in tri])
+ face('roof',[tuple(poly[i]) for i in reversed(tri)])
 # Narrow horizontal mouldings are visual facade detail, not revised footprint.
 for a,b in zip(P,P[1:]+P[:1]):
  for h in (0.22,3.15,6.05,8.6): wall_quad('trim',a,b,h,h+.13,.035)
@@ -45,7 +47,7 @@ for x in [-65.6,-64.2,-62.8,-61.4,-60,-58.6,-57.2,-55.8,-54.4]:
 def panel(n,a,b,t0,t1,h0,h1,off=.07):
  x,z=a; u,v=b; L=math.hypot(u-x,v-z);dx=(u-x)/L;dz=(v-z)/L;nx=dz;nz=-dx
  def point(t,h):return pt(x+dx*t+nx*off,z+dz*t+nz*off,h)
- face(n,[point(t0,h0),point(t1,h0),point(t1,h1),point(t0,h1)])
+ face(n,[point(t0,h1),point(t1,h1),point(t1,h0),point(t0,h0)])
 def arch(n,a,b,c,w,h0,h1,off=.08):
  x,z=a;u,v=b;L=math.hypot(u-x,v-z);dx=(u-x)/L;dz=(v-z)/L;nx=dz;nz=-dx
  def point(t,h):return pt(x+dx*t+nx*off,z+dz*t+nz*off,h)
@@ -53,7 +55,7 @@ def arch(n,a,b,c,w,h0,h1,off=.08):
  points=[point(c-r,h0),point(c+r,h0),point(c+r,spring)]
  for i in range(1,9):
   theta=math.pi*i/8;points.append(point(c+r*math.cos(theta),spring+r*math.sin(theta)))
- face(n,points)
+ face(n,list(reversed(points)))
 def window(a,b,c,h0,h1,w,arched=False):
  if arched:
   arch('trim',a,b,c,w+.24,h0-.1,h1+.1,.06);arch('glass',a,b,c,w,h0,h1,.075)
@@ -86,7 +88,7 @@ for d in (-5.45,5.45):panel('light',A0,B0,c+d-.23,c+d+.23,.2,9.0,.12)
 x=-53.17; zc=175.65; hc=12.52
 def disk(mat,r,offset,segments=40):
  vs=[pt(x+offset,zc,hc)] + [pt(x+offset,zc+r*math.cos(2*math.pi*i/segments),hc+r*math.sin(2*math.pi*i/segments)) for i in range(segments)]
- for i in range(segments): face(mat,[vs[0],vs[i+1],vs[(i+1)%segments+1]])
+ for i in range(segments): face(mat,[vs[0],vs[(i+1)%segments+1],vs[i+1]])
 arch('light',[-53.22,170],[-53.22,181.2],5.65,2.9,10.88,14.18,.02)
 arch('stone',[-53.22,170],[-53.22,181.2],5.65,2.50,11.0,14.0,.04)
 disk('trim',1.16,.09);disk('clock',.98,.11)
@@ -127,5 +129,7 @@ render('oblique',(120,-115,100),(0,0,3),155)
 render('top',(0,0,160),(0,0,0),235)
 tris=sum(sum(len(p.vertices)-2 for p in o.data.polygons) for o in objs)
 meta={'name':'机械馆','source_feature':'https://www.openstreetmap.org/way/182055474','reference_page':'https://www.tyut.edu.cn/xxgk1/xydl.htm','reference_image':'https://www.tyut.edu.cn/__local/2/5C/41/446E0BE7610583437A2528CE065_89898C9B_2AE58.jpg','reference_license':'unknown; inspected only, not embedded or distributed','centerX':cx,'centerZ':cz,'coordinate_system':'x east, y up, z south; origin at source polygon centroid; meters','front_orientation':'inferred +X from projecting central footprint, not field verified','source_polygon':P,'source_bounds':{'x':[-90.65,-52.23],'z':[112.66,236.61]},'height_m':15,'height_status':'unverified display estimate, not survey; 9m wings / 15m tower are visual-relative estimates','triangles_authoring':tris,'glb_bytes':os.path.getsize(os.path.join(D,'mechanical-hall.glb')),'software':bpy.app.version_string,'generator':'generator.py','attribution':'OpenStreetMap contributors; footprint ODbL, source data may be inaccurate or outdated','research_date':'2026-10-30','not_included':'No image textures, people, invented signage or interior'}
+meta['glb_triangles']=tris
+meta['artifactSha256']=hashlib.sha256(open(os.path.join(D,'mechanical-hall.glb'),'rb').read()).hexdigest()
 json.dump(meta,open(os.path.join(D,'mechanical-hall.metadata.json'),'w'),ensure_ascii=False,indent=2)
 print('CENTROID',cx,cz,'TRIS',tris,'BYTES',meta['glb_bytes'])

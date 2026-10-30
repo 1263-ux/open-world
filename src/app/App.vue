@@ -29,7 +29,7 @@ const target = computed(() => quest.value.status === 'active'
 const selectedId = ref<string | null>(null);
 const selected = computed(() => campus.value.landmarks.find(item => item.id === selectedId.value) ?? null);
 const displayed = computed(() => panel.value === 'detail' ? selected.value : target.value);
-const displayedFeature = computed(() => campus.value.features.find(item => item.id === displayed.value?.featureId) ?? null);
+const displayedFeature = computed(() => campus.value.features.find(item => item.id === displayed.value?.featureId || displayed.value?.featureIds?.includes(item.id)) ?? null);
 const visitedNames = computed(() => quest.value.visited.map(id => campus.value.landmarks.find(item => item.id === id)?.name).filter(Boolean));
 
 const hksOpen = ref(false);
@@ -45,7 +45,8 @@ const travelling = ref(false);
 const travelProgress = ref(0);
 const notice = ref('');
 const sceneError = ref('');
-const modelNotice = ref('');
+const modelErrors = ref<Record<string, string>>({});
+const modelNotice = computed(() => Object.values(modelErrors.value).join(' '));
 const sceneElement = ref<HTMLElement | null>(null);
 const questButton = ref<HTMLButtonElement | null>(null);
 let returnFocus: HTMLElement | null = null;
@@ -79,7 +80,7 @@ function closePanel() {
 }
 function switchCampus(id: CampusId) {
   if (id === campusId.value) return;
-  modelNotice.value = ''; 
+  modelErrors.value = {};
   scene?.resetJourney();
   clearJourneyView();
   selectedId.value = null;
@@ -158,7 +159,8 @@ function checkIn() {
 }
 function onSceneEvent(event: SceneEvent) {
   if (event.type === 'modelstatus') {
-    modelNotice.value = event.status === 'fallback' ? '机械馆细节暂未加载，显示基础体块；漫游仍可继续。' : '';
+    if (event.status === 'fallback') modelErrors.value = { ...modelErrors.value, [event.id]: `${event.name}细节暂未加载；保留基础体块或标记，漫游仍可继续。` };
+    else { const next = { ...modelErrors.value }; delete next[event.id]; modelErrors.value = next; }
     return;
   }
   if (event.type === 'error') {
@@ -267,7 +269,7 @@ onBeforeUnmount(() => {
             <h2>校园地点</h2><p class="muted">从列表中选择地点，查看它的故事与数据来源。</p>
             <div class="directory-list">
               <button v-for="(item, index) in campus.landmarks" :key="item.id" type="button" :data-testid="`landmark-${item.id}`" :aria-label="`查看 ${item.name} 详情`" @click="selectLandmark(item)">
-                <span class="list-index">{{ String(index + 1).padStart(2, '0') }}</span><span class="list-copy"><strong>{{ item.name }}</strong><small>{{ item.subtitle }}</small></span><span class="arrow" aria-hidden="true">↗</span>
+                <span class="list-index">{{ item.optional ? '•' : String(index + 1).padStart(2, '0') }}</span><span class="list-copy"><strong>{{ item.name }}</strong><small>{{ item.subtitle }}</small></span><span class="arrow" aria-hidden="true">↗</span>
               </button>
             </div>
           </template>
