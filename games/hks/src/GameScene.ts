@@ -110,6 +110,17 @@ export class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' });
   }
 
+  /** Only the seven verified local project images are loaded; generated fallbacks remain. */
+  preload(): void {
+    this.load.image('bg', 'assets/bg.png');
+    this.load.image('gj', 'assets/building.png');
+    this.load.image('illus_termite', 'assets/monster_termite.png');
+    this.load.image('illus_wind', 'assets/monster_wind.png');
+    this.load.image('illus_acid_rain', 'assets/monster_acid_rain.png');
+    this.load.image('illus_fire', 'assets/monster_fire.png');
+    this.load.image('illus_freeze_thaw', 'assets/monster_freeze_thaw.png');
+  }
+
   /** Phaser reuses Scene instances; all run state must be initialized again. */
   init(): void {
     this.monsters = [];

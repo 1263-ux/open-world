@@ -7,7 +7,7 @@ async function snapshot(canvas: Locator): Promise<State> {
 async function clickGame(page: Page, canvas: Locator, x: number, y: number) {
   const box = await canvas.boundingBox();
   if (!box) throw new Error('Game canvas is not visible');
-  await page.mouse.click(box.x + box.width * x / 1024, box.y + box.height * y / 768);
+  await page.mouse.click(box.x + box.width * x / Number(await canvas.getAttribute('data-logical-width') ?? 1024), box.y + box.height * y / Number(await canvas.getAttribute('data-logical-height') ?? 768));
 }
 async function launch(page: Page) {
   await page.getByTestId('open-hks').click();
@@ -20,9 +20,10 @@ async function launch(page: Page) {
   return canvas;
 }
 async function startGame(page: Page, canvas: Locator) {
-  await clickGame(page, canvas, 512, 395);
+  const width = Number(await canvas.getAttribute('data-logical-width') ?? 1024);
+  await clickGame(page, canvas, width / 2, 395);
   await expect.poll(async () => (await snapshot(canvas)).scene, { timeout: 10000 }).toContain('TutorialScene');
-  await clickGame(page, canvas, 980, 37);
+  await clickGame(page, canvas, width - 44, 37);
   await expect.poll(async () => (await snapshot(canvas)).scene, { timeout: 15000 }).toContain('GameScene');
   await expect.poll(async () => (await snapshot(canvas)).ended).toBe(false);
 }
@@ -32,7 +33,7 @@ test('Hks real play: movement, natural defeat, menu replay, exit and campus rest
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
   await page.getByTestId('quest-start').click();
-  const originalStatus = await page.getByTestId('quest-status').innerText();
+  const originalStatus = await page.getByTestId('quest-status').textContent() ?? '';
   const campusCanvas = page.getByTestId('campus-canvas');
   const canvas = await launch(page);
   await expect(campusCanvas).toHaveAttribute('data-paused', 'true');
@@ -80,10 +81,23 @@ test('Hks real play: movement, natural defeat, menu replay, exit and campus rest
 test('Hks mobile launch and failed-load return always leave campus usable', async ({ page }) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/'); await launch(page);
+  await page.goto('/'); const canvas = await launch(page);
   await expect(page.getByTestId('hks-return')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({ path: 'test-results/hks-mobile-menu.png', fullPage: true });
+  const box = await canvas.boundingBox();
+  expect(box!.height).toBeGreaterThan(500);
+  await startGame(page, canvas);
+  const before = await snapshot(canvas);
+  const touch = await page.context().newCDPSession(page);
+  const r = await canvas.boundingBox();
+  const x = r!.x + r!.width * .2, y = r!.y + r!.height * .75;
+  await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] });
+  await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + 60, y, id: 1 }] });
+  await page.waitForTimeout(900);
+  await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect.poll(async () => (await snapshot(canvas)).x).toBeGreaterThan((before.x ?? 960) + 20);
+  await page.screenshot({ path: 'test-results/hks-mobile-play.png', fullPage: true });
   await page.getByTestId('hks-return').click();
   await page.route('**/games/hks/index.html', route => route.abort());
   await page.getByTestId('open-hks').click();

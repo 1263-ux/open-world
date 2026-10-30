@@ -9,7 +9,7 @@
     <header class="header">
       <div class="heading">
         <h1 id="hks-title">山西古建保卫战</h1>
-        <p>Hks · 古建守护</p>
+        <p>移动 · 自动攻击 · 守护五分钟</p>
       </div>
       <button ref="returnButton" type="button" data-testid="hks-return" @click="emit('close')">
         返回校园
@@ -135,7 +135,8 @@ onUnmounted(() => {
 .heading { min-width: 0; }
 h1 { margin: 0; font-size: 1.1rem; }
 .heading p { margin: 4px 0 0; font-size: 0.8rem; }
-button { min-width: 44px; min-height: 44px; padding: 8px 12px; cursor: pointer; }
+button { min-width: 44px; min-height: 44px; padding: 8px 12px; cursor: pointer; background:#f4ead0; color:#392615; border:1px solid #b38b48; border-radius:6px; }
+button:focus-visible { outline:2px solid #edc76a; outline-offset:3px; }
 .game { position: relative; height: calc(100dvh - 72px); min-height: 200px; }
 iframe { display: block; width: 100%; height: 100%; min-height: 200px; border: 0; }
 .status {

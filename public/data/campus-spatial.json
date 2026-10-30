@@ -11964,7 +11964,7 @@
           160.76
         ],
         "featureId": "182055474",
-        "facts": "占地轮廓来自 OpenStreetMap 社区地理数据，按米制坐标投影。立面细节与楼高仍待独立核验；到站点为游戏设定，不是现实导航入口。",
+        "facts": "占地轮廓来自 OpenStreetMap；立面依据官方照片作简化表达。三层侧翼约9米、钟楼约15米仍为展示估计，朝向由轮廓推断，不是现场实测。游戏到站点并非现实入口导航。",
         "source": "https://www.openstreetmap.org/way/182055474",
         "clue": "从园区前往机械馆，沿着狭长的建筑轮廓观察。",
         "question": "机械馆的占地更接近哪种形态？",
@@ -11973,7 +11973,8 @@
           "紧凑圆形",
           "没有建筑轮廓"
         ],
-        "answer": 0
+        "answer": 0,
+        "visualSource": "https://www.tyut.edu.cn/xxgk1/xydl.htm"
       },
       {
         "id": "yx-library",

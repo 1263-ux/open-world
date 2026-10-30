@@ -55,6 +55,12 @@ export class Building {
     this.pngMode = texKey === 'gj';
     this.graphics = scene.add.image(x, y, texKey);
     this.graphics.setDepth(3);
+    if (this.pngMode) {
+      // Keep the tower's base on the same logical target/collider, without changing gameplay.
+      const aspect = this.graphics.height / this.graphics.width;
+      this.graphics.setOrigin(0.5, 1).setPosition(x, y + 36);
+      this.graphics.setDisplaySize(224, Math.round(224 * aspect));
+    }
   }
 
   /** 对指定结构造成伤害 */

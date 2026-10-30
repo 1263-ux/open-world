@@ -82,6 +82,10 @@ for cid in ['huyu','yingxi']:
     else:
         landmarks=[landmark('yx-office','182055472','主楼','序章 · 校园中轴','由南侧进入校园，先观察主楼横向展开的翼体。','主楼的占地轮廓有什么特点？',['多段翼体横向展开','只有圆形轮廓','单独一根柱子'],0),landmark('yx-garden','343238097','清泽园','第二站 · 绿意之间','沿室外路径来到清泽园，让建筑与树影相互映衬。','这一站在地图上主要属于什么空间？',['园林绿地','教学楼室内','地下停车场'],0),landmark('yx-mechanical','182055474','机械馆','第三站 · 工科记忆','从园区前往机械馆，沿着狭长的建筑轮廓观察。','机械馆的占地更接近哪种形态？',['沿南北延伸的长形','紧凑圆形','没有建筑轮廓'],0),landmark('yx-library','182055475','图书馆','终章 · 收集一页校史','前往图书馆，为这次迎西漫游收集最后一枚印记。','本次旅程中的建筑尺度主要依据什么？',['公开地理轮廓数据','随机大小的方块','真实测绘竣工图'],0)]
         start=list(points[nearest(project([112.5166178,37.8576493]))])
+        for landmark_item in landmarks:
+            if landmark_item['id']=='yx-mechanical':
+                landmark_item['visualSource']='https://www.tyut.edu.cn/xxgk1/xydl.htm'
+                landmark_item['facts']='占地轮廓来自 OpenStreetMap；立面依据官方照片作简化表达。三层侧翼约9米、钟楼约15米仍为展示估计，朝向由轮廓推断，不是现场实测。游戏到站点并非现实入口导航。'
     destinations={'start':start,**{p['id']:p['arrival'] for p in landmarks}};routes={}
     for ka,pa in destinations.items():
         for kb,pb in destinations.items():

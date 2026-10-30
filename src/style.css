@@ -156,3 +156,5 @@ a { color: #3c6b4b; text-underline-offset: 2px; }
 /* Official Three CSS2D labels: screen-readable, never intercept scene gestures. */
 .landmark-label-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .landmark-label { color: #244338; background: rgba(250,249,242,.94); border: 1px solid rgba(60,83,69,.25); padding: 5px 9px; border-radius: 3px; font: 500 12px/1.4 system-ui, sans-serif; letter-spacing: .04em; white-space: nowrap; box-shadow: 0 3px 10px #203a2415; pointer-events: none; }
+
+.model-note { position:absolute; left:12px; bottom:98px; pointer-events:none; z-index:1; max-width:420px; padding:8px 12px; margin:0; background:#fff8e9; color:#5a4931; font-size:12px; }

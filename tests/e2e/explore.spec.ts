@@ -38,7 +38,7 @@ test('real canvas picking, drag suppression and repeated campus switching',async
 test('mobile: scene-first viewport and complete second campus chapter',async({page})=>{
  await page.setViewportSize({width:390,height:844});await page.goto('/');await expect(page.getByTestId('campus-canvas')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  const box=await page.getByTestId('campus-canvas').boundingBox();expect(box!.height).toBeGreaterThan(844*.65);await page.screenshot({path:'test-results/mobile-baseline.png',fullPage:true});
- await page.getByTestId('campus-yingxi').click();await expect(page.locator('.landmark-label')).toHaveCount(4);await page.screenshot({path:'test-results/yingxi-dense.png',fullPage:true});await start(page);for(let i=0;i<4;i++)await record(page);await expect(page.getByTestId('completion')).toBeVisible();
+ await page.getByTestId('campus-yingxi').click();await expect(page.locator('.landmark-label')).toHaveCount(4);await expect(page.getByTestId('campus-canvas')).toHaveAttribute('data-hero-model','ready',{timeout:30000});await page.screenshot({path:'test-results/yingxi-dense.png',fullPage:true});await start(page);for(let i=0;i<4;i++)await record(page);await expect(page.getByTestId('completion')).toBeVisible();
 });
 test('WebGL denied: explicit accessible route can complete, corrupt saves ignored',async({page})=>{
  await page.addInitScript(()=>{localStorage.setItem('campus-atlas:quests','{broken');const original=HTMLCanvasElement.prototype.getContext;Object.defineProperty(HTMLCanvasElement.prototype,'getContext',{value:function(this:HTMLCanvasElement,type:string,...args:unknown[]){if(type.startsWith('webgl'))return null;return Reflect.apply(original,this,[type,...args]);}});});
@@ -46,4 +46,14 @@ test('WebGL denied: explicit accessible route can complete, corrupt saves ignore
 });
 test('runtime context loss and keyboard close preserve usable UI',async({page})=>{
  await page.goto('/');await expect(page.getByTestId('campus-canvas')).toBeVisible();const lost=await page.evaluate(()=>{const ext=document.querySelector('canvas')?.getContext('webgl2')?.getExtension('WEBGL_lose_context');if(!ext)return false;ext.loseContext();return true;});expect(lost).toBe(true);await expect(page.getByTestId('scene-error')).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByTestId('landmark-close')).toHaveCount(0);await page.getByTestId('open-directory').click();await expect(page.getByTestId('landmark-hy-main')).toBeVisible();
+});
+
+test('landmark model load failure keeps the source-backed campus playable',async({page})=>{
+ await page.route('**/assets/campuses/yingxi/mechanical-hall.glb',route=>route.abort());
+ await page.goto('/');await page.getByTestId('campus-yingxi').click();
+ await expect(page.getByTestId('model-notice')).toBeVisible({timeout:30000});
+ await expect(page.getByTestId('campus-canvas')).toHaveAttribute('data-hero-model','fallback');
+ await expect(page.getByTestId('scene-error')).toHaveCount(0);
+ await start(page);await page.getByTestId('quest-travel').click();
+ await expect(page.getByTestId('arrival-status')).toContainText('已到达',{timeout:90000});
 });

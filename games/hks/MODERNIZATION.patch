@@ -1,0 +1,861 @@
+--- a/src/Building.ts
++++ b/src/Building.ts
+@@ -55,6 +55,12 @@
+     this.pngMode = texKey === 'gj';
+     this.graphics = scene.add.image(x, y, texKey);
+     this.graphics.setDepth(3);
++    if (this.pngMode) {
++      // Keep the tower's base on the same logical target/collider, without changing gameplay.
++      const aspect = this.graphics.height / this.graphics.width;
++      this.graphics.setOrigin(0.5, 1).setPosition(x, y + 36);
++      this.graphics.setDisplaySize(224, Math.round(224 * aspect));
++    }
+   }
+ 
+   /** 对指定结构造成伤害 */
+--- a/src/GameScene.ts
++++ b/src/GameScene.ts
+@@ -108,6 +108,17 @@
+ 
+   constructor() {
+     super({ key: 'GameScene' });
++  }
++
++  /** Only the seven verified local project images are loaded; generated fallbacks remain. */
++  preload(): void {
++    this.load.image('bg', 'assets/bg.png');
++    this.load.image('gj', 'assets/building.png');
++    this.load.image('illus_termite', 'assets/monster_termite.png');
++    this.load.image('illus_wind', 'assets/monster_wind.png');
++    this.load.image('illus_acid_rain', 'assets/monster_acid_rain.png');
++    this.load.image('illus_fire', 'assets/monster_fire.png');
++    this.load.image('illus_freeze_thaw', 'assets/monster_freeze_thaw.png');
+   }
+ 
+   /** Phaser reuses Scene instances; all run state must be initialized again. */
+--- a/src/HUD.ts
++++ b/src/HUD.ts
+@@ -327,11 +327,14 @@
+     this.clearPopup();
+     let selected = false;
+ 
+-    const cardW = LEVELUP_CARD.w, cardH = LEVELUP_CARD.h;
+-    const cardGap = 24;
++    const cardGap = 20;
++    const maxPanelW = GAME_WIDTH - 120;
++    const fitCardW = Math.floor((maxPanelW - cardGap * (options.length - 1)) / Math.max(options.length, 1));
++    const cardW = Math.min(LEVELUP_CARD.w, fitCardW);
++    const cardH = LEVELUP_CARD.h;
+     const totalW = cardW * options.length + cardGap * (options.length - 1);
+     const startX = (GAME_WIDTH - totalW) / 2;
+-    const centerY = GAME_HEIGHT / 2 - 20;
++    const centerY = GAME_HEIGHT / 2 - 8;
+     const depth = 300;
+     const cardGridW = Math.ceil(cardW / 2);
+     const cardGridH = Math.ceil(cardH / 2);
+@@ -364,39 +367,52 @@
+       // 类型徽章（像素小标签）
+       const tag = opt.isUpgrade ? '技能升级' : '获得技能';
+       const tagColor = opt.isUpgrade ? PALETTE.BRIGHT_GOLD : PALETTE.JADE_GREEN;
+-      const tagBg = this.scene.add.rectangle(cx, centerY - cardH / 2 + 18, 60, 14, 0x1A1410, 0.8)
++      const tagBg = this.scene.add.rectangle(cx, centerY - cardH / 2 + 22, 82, 18, 0x1A1410, 0.82)
+         .setScrollFactor(0).setDepth(depth + 2).setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(tagColor).color);
+       this.levelUpElements.push(tagBg);
+-      const tagText = this.scene.add.text(cx, centerY - cardH / 2 + 18, tag, {
++      const tagText = this.scene.add.text(cx, centerY - cardH / 2 + 22, tag, {
+         ...FONT.tiny, color: tagColor,
+       }).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 3);
+       this.levelUpElements.push(tagText);
+ 
+       // 技能名
+-      const nameText = this.scene.add.text(cx, centerY - 32, opt.name, {
++      const nameText = this.scene.add.text(cx, centerY - cardH / 2 + 54, opt.name, {
+         ...FONT.large, color: '#FFFFFF',
+         stroke: '#000', strokeThickness: 3,
+-      }).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 2);
++        wordWrap: { width: cardW - 34 }, align: 'center',
++      }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(depth + 2);
+       this.levelUpElements.push(nameText);
+ 
+       // 等级
+-      const lvText = this.scene.add.text(cx, centerY - 10, `Lv.${opt.level}`, {
++      const lvText = this.scene.add.text(cx, centerY - cardH / 2 + 88, `Lv.${opt.level}`, {
+         ...FONT.body, color: PALETTE.BRIGHT_GOLD,
+       }).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 2);
+       this.levelUpElements.push(lvText);
+ 
++      const descTop = centerY - cardH / 2 + 108;
++      const descBoxH = cardH - 162;
++      const descBg = this.scene.add.rectangle(cx, descTop + descBoxH / 2, cardW - 24, descBoxH, 0x1A1410, 0.36)
++        .setScrollFactor(0).setDepth(depth + 1.5)
++        .setStrokeStyle(1, 0x8a6b2f, 0.5);
++      this.levelUpElements.push(descBg);
++
+       // 效果描述
+-      const desc = this.scene.add.text(cx, centerY + 35, opt.description, {
+-        ...FONT.small, color: PALETTE.PARCHMENT,
+-        wordWrap: { width: cardW - 30 }, align: 'center',
+-      }).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 2);
++      const useTiny = opt.description.length > 92;
++      const descFont = useTiny ? FONT.tiny : FONT.small;
++      const wrappedDesc = this.wrapCJK(opt.description, descFont.fontSize, cardW - 42);
++      const desc = this.scene.add.text(cx, descTop, wrappedDesc, {
++        ...descFont, color: PALETTE.PARCHMENT,
++        align: 'center',
++        stroke: '#000', strokeThickness: 2,
++        lineSpacing: 3,
++      }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(depth + 2);
+       this.levelUpElements.push(desc);
+ 
+       // 像素按钮
+       const btnW = Math.ceil(100 / 2), btnH = Math.ceil(28 / 2);
+       const btnKey = `btn_card_${cardGridW}_${i}`;
+       genPixelButton(this.scene, btnKey, btnW, btnH, PALETTE.OAK_WOOD, PALETTE.DARK_GOLD);
+-      const btnY = centerY + cardH / 2 - 30;
++      const btnY = centerY + cardH / 2 - 26;
+       const btnImg = this.scene.add.image(cx, btnY, btnKey + '_normal')
+         .setScrollFactor(0).setDepth(depth + 2).setInteractive({ useHandCursor: true });
+       this.levelUpElements.push(btnImg);
+@@ -408,7 +424,7 @@
+       this.levelUpElements.push(btnText);
+ 
+       // hover 效果
+-      bg.on('pointerover', () => { bg.setScale(1.02); btnImg.setTexture(btnKey + '_hover'); });
++      bg.on('pointerover', () => { bg.setScale(1.015); btnImg.setTexture(btnKey + '_hover'); });
+       bg.on('pointerout', () => { bg.setScale(1); btnImg.setTexture(btnKey + '_normal'); });
+       btnImg.on('pointerover', () => btnImg.setTexture(btnKey + '_hover'));
+       btnImg.on('pointerout', () => btnImg.setTexture(btnKey + '_normal'));
+@@ -463,6 +479,14 @@
+       }
+     }
+     return result;
++  }
++
++  private estimateWrappedLineCount(text: string, fontSize: string, maxWidth: number): number {
++    const charW = parseInt(fontSize, 10);
++    const charsPerLine = Math.max(1, Math.floor(maxWidth / charW));
++    return text
++      .split('\n')
++      .reduce((total, line) => total + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
+   }
+ 
+   // ── 怪物首次遭遇科普弹窗（详细：灾害背景 + 游戏影响） ──
+@@ -499,8 +523,8 @@
+ 
+     const depth = 350;
+     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
+-    const w = 720, h = 400;
+-    const illW = 160, illH = 160;
++    const w = 780, h = 430;
++    const illW = 148, illH = 148;
+     const padding = 24;
+     const leftX = cx - w / 2, topY = cy - h / 2;
+ 
+@@ -518,56 +542,65 @@
+     this.popupElements.push(panel);
+ 
+     // ═══ 左侧：怪物图标 ═══
+-    const illX = leftX + padding + illW / 2, illY = topY + padding + illH / 2 + 20;
++    const illX = leftX + padding + illW / 2, illY = topY + padding + illH / 2 + 28;
+     const illusKey = this.scene.textures.exists(info.illusKey) ? info.illusKey : monsterType;
+     if (this.scene.textures.exists(illusKey)) {
+       const illBg = this.scene.add.rectangle(illX, illY, illW + 12, illH + 12, 0x0a0806, 0.8)
+         .setScrollFactor(0).setDepth(depth + 2);
+       this.popupElements.push(illBg);
+       const ill = this.scene.add.image(illX, illY, illusKey)
+-        .setScrollFactor(0).setDepth(depth + 3)
+-        .setDisplaySize(illW, illH);
++        .setScrollFactor(0).setDepth(depth + 3);
++      ill.setScale(Math.min(illW / ill.width, illH / ill.height));
+       this.popupElements.push(ill);
+     }
+ 
+     // ═══ 右侧：标题 + 描述 ═══
+-    const rightX = leftX + illW + padding * 2;
+-    const rightW = w - illW - padding * 3;
++    const rightX = leftX + illW + padding * 2 + 8;
++    const rightW = w - illW - padding * 3 - 12;
+     const textTop = topY + padding + 14;
+-    const textMaxH = h - padding * 2 - 40;
++    const descTop = textTop + 52;
++    const descBoxH = h - padding * 2 - 92;
+ 
+     // 怪物名称
+     const title = this.scene.add.text(rightX, textTop, info.name, {
+-      fontSize: '24px', fontFamily: 'monospace', color: info.dangerColor,
++      ...FONT.title, color: info.dangerColor,
+       stroke: '#000', strokeThickness: 4,
+     }).setScrollFactor(0).setDepth(depth + 2);
+     this.popupElements.push(title);
+ 
+     // 分隔线
+-    const sepY = textTop + 36;
++    const sepY = textTop + 38;
+     const sepG = this.scene.add.graphics();
+     sepG.fillStyle(0x5C3A1E, 0.6);
+     sepG.fillRect(rightX, sepY, rightW, 1);
+     sepG.setScrollFactor(0).setDepth(depth + 2);
+     this.popupElements.push(sepG);
+ 
+-    // 描述文字 — 自动缩放字号防溢出
+-    let fontSize = 14;
+-    const maxCharsPerLine = Math.floor(rightW / (fontSize * 0.6));
+-    const lines = info.desc.split('\n');
+-    let totalLines = 0;
+-    for (const line of lines) {
+-      totalLines += Math.ceil(line.length / Math.max(1, maxCharsPerLine));
+-    }
+-    const neededH = totalLines * (fontSize + 6);
+-    if (neededH > textMaxH) {
+-      fontSize = Math.max(10, Math.floor(fontSize * textMaxH / neededH));
+-    }
+-
+-    const desc = this.scene.add.text(rightX, sepY + 12, info.desc, {
+-      fontSize: `${fontSize}px`, fontFamily: 'monospace',
+-      color: PALETTE.PARCHMENT, lineSpacing: 4,
+-      wordWrap: { width: rightW },
++    const descBg = this.scene.add.rectangle(rightX + rightW / 2, descTop + descBoxH / 2, rightW, descBoxH, 0x130f0b, 0.42)
++      .setOrigin(0.5).setScrollFactor(0).setDepth(depth + 1.5)
++      .setStrokeStyle(1, 0x6a4a26, 0.6);
++    this.popupElements.push(descBg);
++
++    // 描述文字：优先保持阅读性，再按内容缩字号
++    let descFontSize = 14;
++    let descFont = `${descFontSize}px`;
++    let wrappedDesc = this.wrapCJK(info.desc, descFont, rightW - 24);
++    let estimatedLines = this.estimateWrappedLineCount(info.desc, descFont, rightW - 24);
++    while (descFontSize > 11 && estimatedLines * (descFontSize + 7) > descBoxH - 16) {
++      descFontSize -= 1;
++      descFont = `${descFontSize}px`;
++      wrappedDesc = this.wrapCJK(info.desc, descFont, rightW - 24);
++      estimatedLines = this.estimateWrappedLineCount(info.desc, descFont, rightW - 24);
++    }
++
++    const desc = this.scene.add.text(rightX + 10, descTop + 10, wrappedDesc, {
++      fontSize: descFont,
++      fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif',
++      color: PALETTE.PARCHMENT,
++      lineSpacing: 5,
++      stroke: '#000000',
++      strokeThickness: 2,
++      align: 'left',
+     }).setScrollFactor(0).setDepth(depth + 2);
+     this.popupElements.push(desc);
+ 
+@@ -671,3 +704,4 @@
+     bg.on('pointerdown', close);
+   }
+ }
++
+--- a/src/Monster.ts
++++ b/src/Monster.ts
+@@ -165,7 +165,7 @@
+     this.drawHpBar();
+   }
+ 
+-  takeDamage(amount: number, attackerX?: number, attackerY?: number): boolean {
++  takeDamage(amount: number, attackerX?: number, attackerY?: number, skipGenericSound?: boolean): boolean {
+     if (this.isDead) return false;
+ 
+     // 判定是否为致命一击（在扣血之前检查，避免命中与死亡反馈重叠）
+@@ -212,8 +212,8 @@
+       onComplete: () => { if (!this.isDead) this.idleTween?.resume(); },
+     });
+ 
+-    // ── 受击闪白 ──
+-    const flashDuration = amount >= 30 ? 180 : 120;
++    // ── 受击闪白（减半时长，降低视觉疲劳） ──
++    const flashDuration = amount >= 30 ? 100 : 60;
+     if (amount >= 40) {
+       // 重击：先红闪再白闪
+       this.sprite.setTint(0xff4444);
+@@ -228,8 +228,11 @@
+     });
+ 
+     // ── 音效 + VFX：致命一击跳过命中反馈，由死亡反馈统一接管 ──
++    // 技能命中时跳过通用音效（SkillManager 已播放技能专属命中音）
+     if (!willDie) {
+-      SoundManager.hitMonster(this.sprite.x, this.sprite.y);
++      if (!skipGenericSound) {
++        SoundManager.hitMonster(this.sprite.x, this.sprite.y);
++      }
+       VFX.hitMonster(this.scene, this.x, this.y, amount, attackerX, attackerY, this.type);
+       this.onDamageFeedback?.(this, amount);
+     }
+@@ -364,3 +367,4 @@
+   get x(): number { return this.sprite.x; }
+   get y(): number { return this.sprite.y; }
+ }
++
+--- a/src/SkillManager.ts
++++ b/src/SkillManager.ts
+@@ -170,6 +170,21 @@
+ 
+   // ── 技能释放调度 ──
+   private castSkill(skill: ActiveSkill, player: Player, monsters: Monster[]): void {
++    // ── 统一释放反馈（Cast Burst）：角色微缩 + 微闪 + 轻震 ──
++    player.sprite.setScale(1.04, 1.04);
++    this.scene.tweens.add({
++      targets: player.sprite, scaleX: 1, scaleY: 1,
++      duration: 50, ease: 'Back.easeOut',
++    });
++    const flashRing = this.scene.add.circle(player.x, player.y, 3, 0xffffff, 0.35);
++    flashRing.setDepth(25);
++    const flashCleanup = () => { if (flashRing.active) flashRing.destroy(); };
++    this.scene.tweens.add({
++      targets: flashRing, radius: 8, alpha: 0, duration: 80,
++      onComplete: flashCleanup, onStop: flashCleanup,
++    });
++    VFX.shake(this.scene, 0.001, 30);
++
+     switch (skill.id) {
+       case 'wood_reinforce':
+         SoundManager.skillWood(skill.level, player.x, player.y);
+@@ -197,17 +212,17 @@
+         this.castPaintingRestore(skill, player, monsters);
+         break;
+       case 'repair_field':
+-        SoundManager.skillWater(skill.level, player.x, player.y);
++        SoundManager.skillRepairField(skill.level, player.x, player.y);
+         VFX.skillRepairField(this.scene, player.x, player.y, skill.range, skill.level);
+         this.castRepairField(skill, player);
+         break;
+       case 'whirlwind_slash':
+-        SoundManager.skillStone(skill.level, player.x, player.y);
++        SoundManager.skillWhirlwind(skill.level, player.x, player.y);
+         VFX.skillWhirlwind(this.scene, player.x, player.y, skill.level);
+         this.castWhirlwindSlash(skill, player, monsters);
+         break;
+       case 'chain_lightning':
+-        SoundManager.skillWater(skill.level, player.x, player.y);
++        SoundManager.skillLightning(skill.level, player.x, player.y);
+         VFX.skillLightningCast(this.scene, player.x, player.y, skill.level);
+         this.castChainLightning(skill, player, monsters);
+         break;
+@@ -275,6 +290,8 @@
+         }
+         this.playAoeEffect(player.x, player.y, radius, 0x999999);
+         VFX.burst(this.scene, player.x, player.y, 4 + i * 2, [0x777777, 0x999999, 0xcccccc], 80, 3, 260);
++        VFX.stonePulse(this.scene, player.x, player.y, skill.level);
++        SoundManager.skillStoneHit(skill.level, player.x, player.y);
+       });
+     }
+   }
+@@ -297,7 +314,8 @@
+         if (skill.bonusDamageVs && target instanceof Monster && target.type === skill.bonusDamageVs) {
+           damage *= skill.bonusDamageMultiplier ?? 2;
+         }
+-        target.takeDamage(damage);
++        target.takeDamage(damage, undefined, undefined, true);
++        SoundManager.skillWaterHit(skill.level, hitX, hitY);
+         this.applyRepair(skill.repairType, skill.repairAmount);
+         this.damageSplash(
+           hitX, hitY, target, skill.splashRadius ?? 0, damage * 0.45,
+@@ -413,7 +431,9 @@
+         let hops = 0;
+         while (current && hops <= (skill.chainCount ?? 3)) {
+           VFX.lightningArc(this.scene, fromX, fromY, current.x, current.y, hops === 0, skill.level);
+-          current.takeDamage(skill.damage * Math.max(0.62, 1 - hops * 0.08));
++          VFX.lightningImpact(this.scene, current.x, current.y, skill.level);
++          current.takeDamage(skill.damage * Math.max(0.62, 1 - hops * 0.08), undefined, undefined, true);
++          SoundManager.skillLightningHit(skill.level, current.x, current.y);
+           hitSet.add(current);
+           fromX = current.x;
+           fromY = current.y;
+@@ -580,7 +600,8 @@
+               if (z.bonusDamageVs && m.type === z.bonusDamageVs) {
+                 dmg *= (z.bonusDamageMultiplier ?? 2);
+               }
+-              m.takeDamage(dmg);
++              m.takeDamage(dmg, undefined, undefined, true);
++              SoundManager.skillInsectHit(z.level, m.x, m.y);
+               this.applyRepair(z.repairType, z.repairAmount);
+             }
+           }
+@@ -594,11 +615,13 @@
+               if (z.bonusDamageVs && target instanceof Monster && target.type === z.bonusDamageVs) {
+                 sporeDamage *= z.bonusDamageMultiplier ?? 2;
+               }
+-              target.takeDamage(sporeDamage);
+-              VFX.burst(this.scene, target.x, target.y, 4, [0x44cc44, 0x88cc44, 0xccee88], 70, 2, 220);
++              target.takeDamage(sporeDamage, undefined, undefined, true);
++              SoundManager.skillInsectHit(z.level, target.x, target.y);
++              VFX.insectSpore(this.scene, target.x, target.y);
+             }
+           }
+         } else {
++          // 修复法阵纯回复，不产生命中音效
+           this.applyRepair(z.repairType, z.repairAmount);
+           VFX.repairFieldPulse(this.scene, z.x, z.y, z.radius, z.level, z.extraShots ?? 6);
+         }
+@@ -616,7 +639,7 @@
+       if (m.isDead) continue;
+       const dist = Phaser.Math.Distance.Between(cx, cy, m.x, m.y);
+       if (dist < radius) {
+-        m.takeDamage(damage);
++        m.takeDamage(damage, undefined, undefined, true);
+         this.applyRepair(repairType, repairAmount);
+       }
+     }
+@@ -640,7 +663,7 @@
+       if (m.isDead || m === primary) continue;
+       const dist = Phaser.Math.Distance.Between(cx, cy, m.x, m.y);
+       if (dist < radius) {
+-        m.takeDamage(damage);
++        m.takeDamage(damage, undefined, undefined, true);
+         this.applyRepair(repairType, repairAmount);
+       }
+     }
+@@ -696,7 +719,7 @@
+     const hitX = target.x;
+     const hitY = target.y;
+     p.hitTargets?.add(target);
+-    target.takeDamage(p.damage);
++    target.takeDamage(p.damage, undefined, undefined, true);
+     this.applyRepair(p.repairType, p.repairAmount);
+ 
+     if (p.splashRadius) {
+@@ -704,10 +727,13 @@
+     }
+ 
+     if (p.effectType === 'wood') {
++      SoundManager.skillWoodHit(p.level, hitX, hitY);
+       VFX.woodImpact(this.scene, hitX, hitY, p.level);
+     } else if (p.effectType === 'paint') {
++      SoundManager.skillPaintHit(p.level, hitX, hitY);
+       VFX.paintImpact(this.scene, hitX, hitY, p.splashRadius ?? 24, p.level);
+     } else if (p.effectType === 'whirlwind') {
++      SoundManager.skillWhirlwindHit(p.level, hitX, hitY);
+       VFX.whirlwindHit(this.scene, hitX, hitY, p.level);
+       if (p.knockbackForce) {
+         this.applyKnockbackInRadius(hitX, hitY, 70, p.knockbackForce, monsters);
+@@ -885,3 +911,4 @@
+     };
+   }
+ }
++
+--- a/src/SoundManager.ts
++++ b/src/SoundManager.ts
+@@ -463,6 +463,195 @@
+     }
+   }
+ 
++  // ── 新增技能 Cast 音效 (Batch 3) ──
++
++  static skillRepairField(level = 1, x = 0, _y = 0): void {
++    const a = SKILL_AUDIO.repair_field;
++    const p = SOUND_CONFIG.skillPower.levels[Math.min(level, 3) - 1];
++    const pan = this.worldPan(x);
++    const pri = SOUND_CONFIG.voicePool.PRI_IMPORTANT;
++
++    // Warm woody rising harmony — gentle sine waves ascending
++    this.playTone(a.primaryFreq[0], p.durationMs / 1000, 'sine',
++      0.06 * p.volMul, a.primaryFreq[1],
++      SOUND_CONFIG.pitchVar.ui, pan, 'lowpass', a.noiseLowpass, 1, pri);
++    this.playTone(a.bodyFreq[0], p.durationMs / 1000 * 0.7, 'sine',
++      0.04 * p.volMul, a.bodyFreq[1],
++      SOUND_CONFIG.pitchVar.ui, pan, undefined, undefined, undefined, pri);
++    // Quiet crackle — warm texture
++    this.playNoise(0.15, 0.02, a.noiseHighpass, a.noiseLowpass,
++      undefined, undefined, 0.1, pan, pri);
++  }
++
++  static skillWhirlwind(level = 1, x = 0, _y = 0): void {
++    const a = SKILL_AUDIO.whirlwind_slash;
++    const p = SOUND_CONFIG.skillPower.levels[Math.min(level, 3) - 1];
++    const pan = this.worldPan(x);
++    const pri = SOUND_CONFIG.voicePool.PRI_IMPORTANT;
++
++    // Wind howl whoosh — triangle wave sweeping high→low
++    this.playTone(a.primaryFreq[0], p.durationMs / 1000, 'triangle',
++      0.10 * p.volMul, a.primaryFreq[1],
++      SOUND_CONFIG.pitchVar.impact, pan, 'lowpass', a.noiseLowpass, 1, pri);
++    // Wind noise core — the whoosh body
++    this.playNoise(0.18 * p.transientBoost, 0.05 * p.volMul,
++      a.noiseHighpass, a.noiseLowpass, a.crackFilter, a.crackQ,
++      SOUND_CONFIG.pitchVar.impact, pan, pri);
++    // Sharp edge layer — cutting through
++    this.playNoise(0.08, 0.03, 3000, undefined,
++      undefined, 3, 0.15, pan, pri);
++  }
++
++  static skillLightning(level = 1, x = 0, _y = 0): void {
++    const a = SKILL_AUDIO.chain_lightning;
++    const p = SOUND_CONFIG.skillPower.levels[Math.min(level, 3) - 1];
++    const pan = this.worldPan(x);
++    const pri = SOUND_CONFIG.voicePool.PRI_IMPORTANT;
++
++    // Sharp square burst — electric arc core
++    this.playTone(a.primaryFreq[0], p.durationMs / 1000 * 0.6, 'square',
++      0.08 * p.volMul, a.primaryFreq[1],
++      SOUND_CONFIG.pitchVar.impact, pan, 'highpass', 800, 1, pri);
++    // Secondary metallic resonance
++    this.playTone(a.bodyFreq[0], 0.06, 'square',
++      0.04 * p.volMul, a.bodyFreq[1],
++      SOUND_CONFIG.pitchVar.lightAttack, pan, 'highpass', 1500, 1, pri);
++    // Crackle noise — electrical spark texture
++    this.playNoise(0.06 * p.transientBoost, 0.05 * p.volMul,
++      a.noiseHighpass, undefined, a.crackFilter, a.crackQ,
++      0.15, pan, pri);
++  }
++
++  // ═══════════════════════════════════
++  // 技能命中音效 (Hit) — 每种技能独立签名
++  // ═══════════════════════════════════
++
++  static skillWoodHit(level = 1, x = 0, _y = 0): void {
++    if (!this.dedup('hit_wood')) return;
++    const pan = this.worldPan(x);
++    const pri = SOUND_CONFIG.voicePool.PRI_IMPORTANT;
++
++    // Wooden beam impact: low thump + wood crack
++    this.playImpact({
++      thumpFreq: 100, thumpVol: 0.4,
++      bodyFreq: 220, bodyVol: 0.2, bodyType: 'triangle',
++      crackHighpass: 800, crackVol: 0.15,
++      duration: 0.10, pan, priority: pri,
++    });
++    if (level >= 3) {
++      // Sub-bass rumble
++      this.playTone(60, 0.15, 'sine', 0.04, 30, 0.02, pan,
++        'lowpass', 100, 1, pri);
++    }
++  }
++
++  static skillStoneHit(level = 1, x = 0, _y = 0): void {
++    if (!this.dedup('hit_stone')) return;
++    const pan = this.worldPan(x);
++    const pri = SOUND_CONFIG.voicePool.PRI_IMPORTANT;
++
++    // Stone shatter: mid thump + gravel noise
++    this.playImpact({
++      thumpFreq: 80, thumpVol: 0.45,
++      bodyFreq: 150, bodyVol: 0.25, bodyType: 'sawtooth',
++      crackHighpass: 600, crackVol: 0.2,
++      duration: 0.12, pan, priority: pri,
++    });
++    if (level >= 3) {
++      // Gravel scatter
++      this.playNoise(0.1, 0.04, 3000, 600,
++        undefined, undefined, 0.15, pan, pri);
++    }
++  }
++
++  static skillWaterHit(level = 1, x = 0, _y = 0): void {
++    if (!this.dedup('hit_water')) return;
++    const pan = this.worldPan(x);
++    const pri = SOUND_CONFIG.voicePool.PRI_IMPORTANT;
++
++    // Water splash: high splash + low thud
++    this.playImpact({
++      thumpFreq: 150, thumpVol: 0.3,
++      bodyFreq: 400, bodyVol: 0.15, bodyType: 'sine',
++      crackHighpass: 1200, crackVol: 0.1,
++      duration: 0.08, pan, priority: pri,
++    });
++    if (level >= 3) {
++      // High splash sparkle
++      this.playTone(800, 0.06, 'sine', 0.03, 600,
++        SOUND_CONFIG.pitchVar.pickup, pan, 'highpass', 1000, 1, pri);
++    }
++  }
++
++  static skillInsectHit(level = 1, x = 0, _y = 0): void {
++    if (!this.dedup('hit_insect')) return;
++    const pan = this.worldPan(x);
++    const pri = SOUND_CONFIG.voicePool.PRI_IMPORTANT;
++
++    // Poison spore hit: hiss + soft thud
++    this.playImpact({
++      thumpFreq: 200, thumpVol: 0.2,
++      bodyFreq: 500, bodyVol: 0.12, bodyType: 'triangle',
++      crackHighpass: 2000, crackVol: 0.08,
++      duration: 0.08, pan, priority: pri,
++    });
++    // Hissing quality — spore burst texture
++    this.playNoise(0.1, 0.03, 2500, 800,
++      undefined, undefined, 0.12, pan, pri);
++  }
++
++  static skillPaintHit(level = 1, x = 0, _y = 0): void {
++    if (!this.dedup('hit_paint')) return;
++    const pan = this.worldPan(x);
++    const pri = SOUND_CONFIG.voicePool.PRI_IMPORTANT;
++
++    // Paintball burst: bright pop + color shatter
++    this.playImpact({
++      thumpFreq: 300, thumpVol: 0.25,
++      bodyFreq: 600, bodyVol: 0.15, bodyType: 'sine',
++      crackHighpass: 1500, crackVol: 0.12,
++      duration: 0.09, pan, priority: pri,
++    });
++    if (level >= 3) {
++      // Sparkle high resonance
++      this.playTone(1200, 0.07, 'sine', 0.04, 1600,
++        SOUND_CONFIG.pitchVar.pickup, pan, 'highpass', 1200, 1, pri);
++    }
++  }
++
++  static skillWhirlwindHit(level = 1, x = 0, _y = 0): void {
++    if (!this.dedup('hit_whirlwind')) return;
++    const pan = this.worldPan(x);
++    const pri = SOUND_CONFIG.voicePool.PRI_IMPORTANT;
++
++    // Wind blade slash: sharp cutting whoosh
++    this.playImpact({
++      thumpFreq: 250, thumpVol: 0.35,
++      bodyFreq: 500, bodyVol: 0.2, bodyType: 'triangle',
++      crackHighpass: 1800, crackVol: 0.15,
++      duration: 0.09, pan, priority: pri,
++    });
++  }
++
++  static skillLightningHit(level = 1, x = 0, _y = 0): void {
++    if (!this.dedup('hit_lightning')) return;
++    const pan = this.worldPan(x);
++    const pri = SOUND_CONFIG.voicePool.PRI_IMPORTANT;
++
++    // Lightning strike impact: electric CRACK
++    this.playImpact({
++      thumpFreq: 300, thumpVol: 0.4,
++      bodyFreq: 800, bodyVol: 0.2, bodyType: 'square',
++      crackHighpass: 2500, crackVol: 0.25,
++      duration: 0.07, pan, priority: pri,
++    });
++    if (level >= 3) {
++      // Metallic ring — resonant after-shock
++      this.playTone(1200, 0.08, 'square', 0.03, 900,
++        SOUND_CONFIG.pitchVar.impact, pan, 'highpass', 2000, 1, pri);
++    }
++  }
++
+   // ═══════════════════════════════════
+   // 系统音效
+   // ═══════════════════════════════════
+@@ -607,3 +796,4 @@
+     this.schedule(() => this.playTone(500, 0.5, 'triangle', 0.15, 800, undefined, undefined, undefined, undefined, undefined, pri), 600);
+   }
+ }
++
+--- a/src/VFX.ts
++++ b/src/VFX.ts
+@@ -169,6 +169,28 @@
+     // 元素色碎屑
+     VFX.burst(scene, x, y, 3, particleColors, 60, 2, 200);
+ 
++    // 方向性冲击粒子（沿攻击方向的受力视觉）
++    if (_attackerX !== undefined && _attackerY !== undefined) {
++      const dir = Math.atan2(y - _attackerY, x - _attackerX);
++      const spread = 0.6; // ±35° 扇形
++      for (let i = 0; i < 3; i++) {
++        const a = dir + (Math.random() - 0.5) * spread;
++        const spd = 80 + Math.random() * 40;
++        const c = particleColors[Math.floor(Math.random() * particleColors.length)];
++        const p = scene.add.circle(x, y, 2, c, 0.8);
++        p.setDepth(40);
++        const cleanup = () => { if (p.active) p.destroy(); };
++        scene.tweens.add({
++          targets: p,
++          x: x + Math.cos(a) * spd * 0.25,
++          y: y + Math.sin(a) * spd * 0.25,
++          alpha: 0, scale: 0.2,
++          duration: 180, ease: 'Power2',
++          onComplete: cleanup, onStop: cleanup,
++        });
++      }
++    }
++
+     // 伤害数字（按伤害值分层 + 元素底色）
+     const tier: DamageNumberTier = damage >= 30 ? 'heavy' : 'normal';
+     const style = DAMAGE_NUMBER_CONFIG[tier];
+@@ -192,12 +214,12 @@
+     VFX.shockwave(scene, x, y, 40, ringColor, 350);
+     // 微震
+     VFX.shake(scene, 0.003, 60);
+-    // 白色闪光
+-    const flash = scene.add.circle(x, y, 8, 0xffffff, 1);
++    // 白色闪光（淡）
++    const flash = scene.add.circle(x, y, 6, 0xffffff, 0.6);
+     flash.setDepth(39);
+     const cleanup = () => { if (flash.active) flash.destroy(); };
+     scene.tweens.add({
+-      targets: flash, scale: 4, alpha: 0, duration: 150,
++      targets: flash, scale: 2.5, alpha: 0, duration: 120,
+       onComplete: cleanup,
+       onStop: cleanup,
+     });
+@@ -207,7 +229,7 @@
+     }
+   }
+ 
+-  /** 升级庆祝 */
++  /** 升级庆祝 — 仅金色粒子螺旋上升 + 轻震，摒弃全屏闪 */
+   static levelUp(scene: Phaser.Scene, x: number, y: number): void {
+     // 金色粒子螺旋上升
+     for (let i = 0; i < 20; i++) {
+@@ -231,11 +253,8 @@
+         onStop: cleanup,
+       });
+     }
+-    // 冲击波
+-    VFX.shockwave(scene, x, y, 80, 0xffdd44, 500);
+-    // 闪光
+-    VFX.flash(scene, 80);
+-    VFX.shake(scene, 0.004, 100);
++    // 单一金色扩散圈（柔和）
++    VFX.shockwave(scene, x, y, 60, 0xffdd44, 400);
+   }
+ 
+   // ═══════════════════════════════════
+@@ -307,6 +326,16 @@
+     }
+   }
+ 
++  /** 石材脉冲命中：碎石环 + 灰白粒子爆散 */
++  static stonePulse(scene: Phaser.Scene, x: number, y: number, lv: number): void {
++    // 灰白碎石环
++    VFX.shockwave(scene, x, y, 24 + lv * 6, 0x999999, 250);
++    // 碎石子 burst（6-12个）
++    VFX.burst(scene, x, y, 6 + lv * 2, [0x888888, 0xaaaaaa, 0xcccccc, 0xdddddd], 100, 3, 350);
++    // 微震
++    VFX.shake(scene, 0.002, 40);
++  }
++
+   /** 防水封护：4层水纹+水珠飞溅+护罩穹顶弧线 */
+   static skillWater(scene: Phaser.Scene, x: number, y: number, radius: number, lv: number): void {
+     const layers = lv >= 3 ? 5 : 3;
+@@ -658,6 +687,38 @@
+     });
+   }
+ 
++  /** 雷击命中爆发：白蓝闪点 + 4方向小电弧 + 金属火花 */
++  static lightningImpact(scene: Phaser.Scene, x: number, y: number, lv: number): void {
++    // 中心白蓝闪光
++    const flash = scene.add.circle(x, y, 4, 0xaaddff, 0.95);
++    flash.setDepth(39);
++    const cleanupFlash = () => { if (flash.active) flash.destroy(); };
++    scene.tweens.add({
++      targets: flash, scale: 3.5, alpha: 0, duration: 120,
++      onComplete: cleanupFlash, onStop: cleanupFlash,
++    });
++    // 4 方向短电弧
++    for (let i = 0; i < 4; i++) {
++      const a = (Math.PI / 2) * i + Math.random() * 0.3;
++      const spark = scene.add.rectangle(x, y, 2, 10 + lv * 4, 0xccddff, 0.8);
++      spark.setDepth(38);
++      spark.setRotation(a);
++      const cleanup = () => { if (spark.active) spark.destroy(); };
++      scene.tweens.add({
++        targets: spark,
++        x: x + Math.cos(a) * (18 + lv * 5),
++        y: y + Math.sin(a) * (18 + lv * 5),
++        alpha: 0, scaleX: 0.2,
++        duration: 180,
++        onComplete: cleanup, onStop: cleanup,
++      });
++    }
++    // 金属火花 burst
++    VFX.burst(scene, x, y, 8 + lv * 2, [0xffffff, 0xaaddff, 0xccddff, 0x88bbff], 140, 2, 300);
++    // 微震
++    VFX.shake(scene, 0.004, 50);
++  }
++
+   static woodImpact(scene: Phaser.Scene, x: number, y: number, lv: number): void {
+     const count = lv >= 3 ? 18 : 12;
+     VFX.burst(scene, x, y, count, [0xc4884d, 0xdaa060, 0x8b6914, 0xffdd88], 180, 4, 520);
+@@ -680,9 +741,17 @@
+     VFX.burst(scene, x, y, 8, [0x44cc44, 0x88cc44, 0xccee88], 100, 3, 420);
+   }
+ 
++  /** 药雾孢子命中：绿色菌丝 burst + 微光环 */
++  static insectSpore(scene: Phaser.Scene, x: number, y: number): void {
++    VFX.burst(scene, x, y, 5, [0x44cc44, 0x88cc44, 0xaadd88, 0xccee88], 70, 2, 280);
++    // 微光环
++    VFX.shockwave(scene, x, y, 16, 0x88cc44, 200);
++  }
++
+   static paintImpact(scene: Phaser.Scene, x: number, y: number, radius: number, lv: number): void {
+     const colors = [0xff4488, 0xff8800, 0xffee00, 0x44ff88, 0x4488ff, 0xcc44ff];
+     VFX.burst(scene, x, y, lv >= 3 ? 22 : 16, colors, 210, 5, 650);
+     VFX.shockwave(scene, x, y, Math.max(28, radius * 1.15), 0xff66cc, 380);
+   }
+ }
++
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -352,7 +352,7 @@
+ export const STRUCT_BAR = { w: 160, h: 14, gap: 10 } as const;
+ 
+ /** 升级卡片尺寸 */
+-export const LEVELUP_CARD = { w: 230, h: 250 } as const;
++export const LEVELUP_CARD = { w: 286, h: 340 } as const;
+ 
+ // ============================================================
+ // 战斗手感 — 命中点光晕（替代全屏闪白）
+@@ -493,6 +493,52 @@
+     noiseLowpass: 4200, noiseHighpass: 1200, crackFilter: 5200, crackQ: 4,
+   },
+ } as const;
++
++// ============================================================
++// Batch 3/4 — 技能反馈映射表（Cast + Hit 音效/特效统一入口）
++// ============================================================
++
++export interface SkillFeedbackProfile {
++  castSound: string;   // SoundManager 方法名
++  castVFX: string;     // VFX 方法名
++  hitSound?: string;   // SoundManager 命中方法名（纯治疗技能无命中）
++  hitVFX?: string;     // VFX 命中方法名
++}
++
++export const SKILL_FEEDBACK_MAP: Record<SkillId, SkillFeedbackProfile> = {
++  wood_reinforce: {
++    castSound: 'skillWood',    castVFX: 'skillWood',
++    hitSound:  'skillWoodHit', hitVFX:   'woodImpact',
++  },
++  stone_repair: {
++    castSound: 'skillStone',   castVFX: 'skillStone',
++    hitSound:  'skillStoneHit',hitVFX:   'stonePulse',
++  },
++  waterproof: {
++    castSound: 'skillWater',   castVFX: 'skillWater',
++    hitSound:  'skillWaterHit',hitVFX:   'waterImpact',
++  },
++  insect_control: {
++    castSound: 'skillInsect',  castVFX: 'skillInsect',
++    hitSound:  'skillInsectHit',hitVFX:  'insectSpore',
++  },
++  painting_restore: {
++    castSound: 'skillPaint',   castVFX: 'skillPaint',
++    hitSound:  'skillPaintHit',hitVFX:   'paintImpact',
++  },
++  repair_field: {
++    castSound: 'skillRepairField', castVFX: 'skillRepairField',
++    // 纯治疗技能，无 hitSound/hitVFX
++  },
++  whirlwind_slash: {
++    castSound: 'skillWhirlwind',   castVFX: 'skillWhirlwind',
++    hitSound:  'skillWhirlwindHit',hitVFX:   'whirlwindHit',
++  },
++  chain_lightning: {
++    castSound: 'skillLightning',    castVFX: 'skillLightningCast',
++    hitSound:  'skillLightningHit', hitVFX:   'lightningImpact',
++  },
++};
+ 
+ export const MONSTER_DEATH_AUDIO: Record<MonsterType, {
+   thumpFreq: number; bodyFreq: number; crunchHighpass: number;
+@@ -569,7 +615,7 @@
+   normal:  { color: '#FFFFFF', size: '14px', scale: 1.0 },
+   heavy:   { color: '#FFAA44', size: '16px', scale: 1.2 },
+   crit:    { color: '#FF6600', size: '20px', scale: 1.5, suffix: '!' },
+-  kill:    { color: '#FF4444', size: '18px', scale: 1.3 },
++  kill:    { color: '#FF4444', size: '18px', scale: 1.3, prefix: '击杀 ' },
+   boss:    { color: '#CC44FF', size: '22px', scale: 1.4 },
+   heal:    { color: '#44FF66', size: '14px', scale: 1.0, prefix: '+' },
+ } as const;
+@@ -609,3 +655,4 @@
+   /** Boss 扩散环倍数 */
+   shockwaveBossMult: 3.0,
+ } as const;
++

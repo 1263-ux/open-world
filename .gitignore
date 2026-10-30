@@ -34,3 +34,6 @@ test-results/
 games/hks/node_modules/
 public/games/hks/
 games/hks/dist/
+
+scripts/landmarks/**/*.png
+scripts/landmarks/**/*.glb

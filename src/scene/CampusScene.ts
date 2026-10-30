@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mechanicalHall, loadMechanicalHall } from './LandmarkModels';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
@@ -165,6 +166,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   scene.add(sun, sun.target);
 
   let data = initialData;
+  let campusGeneration = 0;
   let state: SceneState = { selectedId: null, targetId: null };
   let world = new THREE.Group();
   let routeLayer = new THREE.Group();
@@ -238,12 +240,14 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       if (!feature || feature.kind !== 'building') continue;
       const mesh = buildingMeshes.get(feature.id);
       if (!mesh) continue;
-      const line = perimeter(feature.polygon, Number(mesh.userData.height) + 0.28, new THREE.LineBasicMaterial({ color: id === state.selectedId ? 0x69e1db : 0xf4c36f, depthTest: true }));
+      const line = perimeter(feature.polygon, feature.id === mechanicalHall.featureId ? 0.3 : Number(mesh.userData.height) + 0.28, new THREE.LineBasicMaterial({ color: id === state.selectedId ? 0x69e1db : 0xf4c36f, depthTest: true }));
       if (line) highlightLayer.add(line);
     }
   }
 
   function buildCampus(): void {
+    const generation = ++campusGeneration;
+    canvas.dataset.heroModel = data.id === 'yingxi' ? 'loading' : 'none';
     travel = null;
     lastId = 'start';
     tween = null;
@@ -303,6 +307,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const windowMat = new THREE.MeshStandardMaterial({ color: 0x647f82, roughness: 0.38, metalness: 0.12 });
     const buildings = data.features.filter((f) => f.kind === 'building' && cleanPolygon(f.polygon).length >= 3);
     const windowTransforms: THREE.Matrix4[] = [];
+    const modelWindowRanges = new Map<string, [number, number]>();
+    const roofLines = new Map<string, THREE.LineLoop>();
+    let windowInstances: THREE.InstancedMesh | null = null;
     const dummy = new THREE.Object3D();
     const backgroundBuckets = facadeMats.map((): THREE.BufferGeometry[] => []);
     const usedFacadeMats = new Set<THREE.Material>();
@@ -351,7 +358,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         world.add(building);
         buildingMeshes.set(feature.id, building);
         const parapet = perimeter(polygon, height + 0.12, new THREE.LineBasicMaterial({ color: 0x777e77 }));
-        if (parapet) world.add(parapet);
+        if (parapet) { world.add(parapet); roofLines.set(feature.id, parapet); }
+        const firstWindow = windowTransforms.length;
         let area = 0;
         for (let i = 0; i < polygon.length; i++) {
           const a = polygon[i], b = polygon[(i + 1) % polygon.length];
@@ -375,6 +383,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
             windowTransforms.push(dummy.matrix.clone());
           }
         }
+        modelWindowRanges.set(feature.id, [firstWindow, windowTransforms.length]);
       }
     }
     for (let i = 0; i < backgroundBuckets.length; i++) {
@@ -396,6 +405,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (windowTransforms.length) {
       const windows = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), windowMat, windowTransforms.length);
       windowTransforms.forEach((matrix, i) => windows.setMatrixAt(i, matrix));
+      windowInstances = windows;
       windows.instanceMatrix.needsUpdate = true;
       windows.receiveShadow = true;
       world.add(windows);
@@ -491,6 +501,44 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     world.add(pawn);
     renderer.shadowMap.needsUpdate = true;
     updateHighlights();
+    if (data.id === 'yingxi') {
+      const ownerWorld = world;
+      void loadMechanicalHall().then(model => {
+        if (disposed || generation !== campusGeneration || ownerWorld !== world) {
+          disposeObject(model);
+          return;
+        }
+        const fallback = buildingMeshes.get(mechanicalHall.featureId);
+        if (fallback) {
+          fallback.visible = false;
+          pickables = pickables.filter(item => item !== fallback);
+        }
+        const roof = roofLines.get(mechanicalHall.featureId);
+        if (roof) roof.visible = false;
+        const range = modelWindowRanges.get(mechanicalHall.featureId);
+        if (range && windowInstances) {
+          const hidden = new THREE.Matrix4().makeScale(0, 0, 0);
+          for (let i = range[0]; i < range[1]; i++) windowInstances.setMatrixAt(i, hidden);
+          windowInstances.instanceMatrix.needsUpdate = true;
+        }
+        model.traverse(object => {
+          if (object instanceof THREE.Mesh) {
+            object.castShadow = object.receiveShadow = true;
+            object.userData.landmarkId = mechanicalHall.landmarkId;
+            pickables.push(object);
+          }
+        });
+        ownerWorld.add(model);
+        model.updateMatrixWorld(true);
+        renderer.shadowMap.needsUpdate = true;
+        canvas.dataset.heroModel = 'ready';
+        onEvent({ type: 'modelstatus', status: 'ready' });
+      }).catch(() => {
+        if (disposed || generation !== campusGeneration) return;
+        canvas.dataset.heroModel = 'fallback';
+        onEvent({ type: 'modelstatus', status: 'fallback' });
+      });
+    }
   }
 
   function animateView(target: THREE.Vector3, span: number, initial = false): void {

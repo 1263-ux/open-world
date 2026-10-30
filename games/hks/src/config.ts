@@ -5,8 +5,10 @@
 // ---- 地图 ----
 export const MAP_WIDTH = 1920;
 export const MAP_HEIGHT = 1080;
-export const GAME_WIDTH = 1024;
-export const GAME_HEIGHT = 768;
+const portraitViewport = typeof window !== 'undefined' && window.innerWidth < 600 && window.innerHeight > window.innerWidth;
+// Viewport-only adaptation: world geometry, combat values and duration stay unchanged.
+export const GAME_WIDTH = portraitViewport ? 600 : 1024;
+export const GAME_HEIGHT = portraitViewport ? 960 : 768;
 export const GAME_DURATION = 300; // 秒 (5 分钟)
 
 // ---- 速度转换系数 ----
@@ -352,7 +354,7 @@ export const UI_PX = 2;
 export const STRUCT_BAR = { w: 160, h: 14, gap: 10 } as const;
 
 /** 升级卡片尺寸 */
-export const LEVELUP_CARD = { w: 230, h: 250 } as const;
+export const LEVELUP_CARD = { w: 286, h: 340 } as const;
 
 // ============================================================
 // 战斗手感 — 命中点光晕（替代全屏闪白）
@@ -494,6 +496,52 @@ export const SKILL_AUDIO: Record<SkillId, {
   },
 } as const;
 
+// ============================================================
+// Batch 3/4 — 技能反馈映射表（Cast + Hit 音效/特效统一入口）
+// ============================================================
+
+export interface SkillFeedbackProfile {
+  castSound: string;   // SoundManager 方法名
+  castVFX: string;     // VFX 方法名
+  hitSound?: string;   // SoundManager 命中方法名（纯治疗技能无命中）
+  hitVFX?: string;     // VFX 命中方法名
+}
+
+export const SKILL_FEEDBACK_MAP: Record<SkillId, SkillFeedbackProfile> = {
+  wood_reinforce: {
+    castSound: 'skillWood',    castVFX: 'skillWood',
+    hitSound:  'skillWoodHit', hitVFX:   'woodImpact',
+  },
+  stone_repair: {
+    castSound: 'skillStone',   castVFX: 'skillStone',
+    hitSound:  'skillStoneHit',hitVFX:   'stonePulse',
+  },
+  waterproof: {
+    castSound: 'skillWater',   castVFX: 'skillWater',
+    hitSound:  'skillWaterHit',hitVFX:   'waterImpact',
+  },
+  insect_control: {
+    castSound: 'skillInsect',  castVFX: 'skillInsect',
+    hitSound:  'skillInsectHit',hitVFX:  'insectSpore',
+  },
+  painting_restore: {
+    castSound: 'skillPaint',   castVFX: 'skillPaint',
+    hitSound:  'skillPaintHit',hitVFX:   'paintImpact',
+  },
+  repair_field: {
+    castSound: 'skillRepairField', castVFX: 'skillRepairField',
+    // 纯治疗技能，无 hitSound/hitVFX
+  },
+  whirlwind_slash: {
+    castSound: 'skillWhirlwind',   castVFX: 'skillWhirlwind',
+    hitSound:  'skillWhirlwindHit',hitVFX:   'whirlwindHit',
+  },
+  chain_lightning: {
+    castSound: 'skillLightning',    castVFX: 'skillLightningCast',
+    hitSound:  'skillLightningHit', hitVFX:   'lightningImpact',
+  },
+};
+
 export const MONSTER_DEATH_AUDIO: Record<MonsterType, {
   thumpFreq: number; bodyFreq: number; crunchHighpass: number;
   duration: number; volume: number;
@@ -569,7 +617,7 @@ export const DAMAGE_NUMBER_CONFIG = {
   normal:  { color: '#FFFFFF', size: '14px', scale: 1.0 },
   heavy:   { color: '#FFAA44', size: '16px', scale: 1.2 },
   crit:    { color: '#FF6600', size: '20px', scale: 1.5, suffix: '!' },
-  kill:    { color: '#FF4444', size: '18px', scale: 1.3 },
+  kill:    { color: '#FF4444', size: '18px', scale: 1.3, prefix: '击杀 ' },
   boss:    { color: '#CC44FF', size: '22px', scale: 1.4 },
   heal:    { color: '#44FF66', size: '14px', scale: 1.0, prefix: '+' },
 } as const;
@@ -609,3 +657,4 @@ export const COMBAT_FEEL_EXTRA = {
   /** Boss 扩散环倍数 */
   shockwaveBossMult: 3.0,
 } as const;
+

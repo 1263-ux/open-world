@@ -21,6 +21,8 @@ export function createHksGame(container: string) {
   game.events.on(Phaser.Core.Events.POST_STEP, () => {
     if (!game.canvas || performance.now() - lastSnapshot < 250) return;
     lastSnapshot = performance.now();
+    game.canvas.dataset.logicalWidth = String(game.scale.gameSize.width);
+    game.canvas.dataset.logicalHeight = String(game.scale.gameSize.height);
     const scene = game.scene.getScene('GameScene') as unknown as {
       gameTime?: number; isPaused?: boolean; isGameOver?: boolean;
       levelUpPanelActive?: boolean; killCount?: number;

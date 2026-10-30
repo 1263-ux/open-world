@@ -1,0 +1,160 @@
+{
+  "originalBase": "843ecbbae414a403eae350f4f8105cfbb84acf72",
+  "latestMergedSource": "3cb39bc86050edd0a909b7a5c9f56de0670a3d48",
+  "modifiedFiles": [
+    {
+      "path": "src/Building.ts",
+      "parentSha256": "3c8860cf35d988dc82d73a40161c5e08733e5ad3e8cf076336fd85e719a54dfa",
+      "modernizedSha256": "ccb317340fba2ecf807348165cc4d9aa2c7a60627bf45fd04be1925916ecf4da",
+      "bytes": 4923
+    },
+    {
+      "path": "src/GameScene.ts",
+      "parentSha256": "a43b33b00c9b010e746497b2eca2bbaa7ec8e7babbc3d05ca2877fd95403d197",
+      "modernizedSha256": "11e2d39b7ff01c883203231426940e72aeaf334270321cda855edae989639759",
+      "bytes": 42876
+    },
+    {
+      "path": "src/HUD.ts",
+      "parentSha256": "fe29f780ab432195a52913d2c203a20953e892b9c0ba9d8d57a6f0cd2fb75bdd",
+      "modernizedSha256": "271aa414873cec4d8603a5a5231853ed0e7c362f40fec2e319001d330c3e1db9",
+      "bytes": 28861
+    },
+    {
+      "path": "src/Monster.ts",
+      "parentSha256": "6a3d1f740f341a4c45923ad22889355dc29b441518d7651df6d9e2cab02186ee",
+      "modernizedSha256": "5440e1805e762954a74e124891dc6b28d0f48bee87738d3bb207659cbb933ed1",
+      "bytes": 12229
+    },
+    {
+      "path": "src/SkillManager.ts",
+      "parentSha256": "d72e7052acdbd4a2d0711c9be260ade8dd666e4c9fff808f89d0dc005584dfb1",
+      "modernizedSha256": "899c32e1f4054544f1a005ff2f5dfd48e83e02b146ca29868dc5a1c628598ec2",
+      "bytes": 31819
+    },
+    {
+      "path": "src/SoundManager.ts",
+      "parentSha256": "80ae51bd3f67de59c2768f3792adb166b4c8aabb74a3e3824621cd4b4101067f",
+      "modernizedSha256": "2a538b75c3fed90a15a16726fe8ba7ae10c734a57b8d452b0e9cfce2d064d5f6",
+      "bytes": 30364
+    },
+    {
+      "path": "src/VFX.ts",
+      "parentSha256": "159bc376aa9dc13412e9b9ba5c01050ec94ceeb00a4a53e79badf1bfa27d8acc",
+      "modernizedSha256": "7b82a6aa4c6b8944bc906bf30b12cf138430e3b1b0b8714625ebde43c4efc5d3",
+      "bytes": 29041
+    },
+    {
+      "path": "src/config.ts",
+      "parentSha256": "0fb518244d891ffb1ef91e877388b656fddd09bf0765942ecc7d0d1d0b1cdd4c",
+      "modernizedSha256": "a856f58a1b150ccb61fee7ee25abd958fc374b8a8a7d175096be92e231b3b058",
+      "bytes": 25965
+    }
+  ],
+  "parentDrift": [],
+  "assets": [
+    {
+      "path": "public/assets/bg.png",
+      "bytes": 1241217,
+      "width": 2592,
+      "height": 2096,
+      "mode": "RGBA",
+      "gitBlobSha": "1d0865ec75f2be0ef0252039797ab8510c392206",
+      "sha256": "fd1b49d3c5a71d957c17ce9b16d598f890605c0abfc9ff0b6ea671b20f03d7e4",
+      "runtimeKey": "bg",
+      "pixelsViewed": true,
+      "originalBytesUnchanged": true,
+      "usage": "full gameplay background; existing generated background retained as fallback",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/3cb39bc86050edd0a909b7a5c9f56de0670a3d48/public/assets/bg.png",
+      "officialDownloadUrl": "https://raw.githubusercontent.com/ShanEior/Hks/3cb39bc86050edd0a909b7a5c9f56de0670a3d48/public/assets/bg.png",
+      "materialization": "Normal HTTP GET of exact download_url returned by GitHub contents metadata; HTTP 200; original Git blob hash verified"
+    },
+    {
+      "path": "public/assets/building.png",
+      "bytes": 358569,
+      "width": 890,
+      "height": 1176,
+      "mode": "RGBA",
+      "gitBlobSha": "e372a18a2e96d7302fb76117b451ab6dfbdfeed3",
+      "sha256": "25ac26a5eb1f50c817a40cda5efba4aded6d42e10f87e1838ead92cde22cb6b6",
+      "runtimeKey": "gj",
+      "pixelsViewed": true,
+      "originalBytesUnchanged": true,
+      "usage": "building sprite, base anchored at logical building target",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/3cb39bc86050edd0a909b7a5c9f56de0670a3d48/public/assets/building.png"
+    },
+    {
+      "path": "public/assets/monster_acid_rain.png",
+      "bytes": 837812,
+      "width": 960,
+      "height": 1280,
+      "mode": "RGBA",
+      "gitBlobSha": "2c47b6ec3f989eaa00c4fc91c2bbf1faaac2a7a3",
+      "sha256": "55fbcb29c7ff5113ddfd60a8ff37f6889f492322d226368bfd7d87d03e698d92",
+      "runtimeKey": "illus_acid_rain",
+      "pixelsViewed": true,
+      "originalBytesUnchanged": true,
+      "usage": "first-encounter information popup illustration; not the live combat sprite",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/3cb39bc86050edd0a909b7a5c9f56de0670a3d48/public/assets/monster_acid_rain.png"
+    },
+    {
+      "path": "public/assets/monster_fire.png",
+      "bytes": 702501,
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "gitBlobSha": "11d13f3a76ea929555b593006b3adbfdee97cb18",
+      "sha256": "0485c81b868c0b547302eb3820c054d4dbe5bb16f986bd8acac2eb76ab8574ed",
+      "runtimeKey": "illus_fire",
+      "pixelsViewed": true,
+      "originalBytesUnchanged": true,
+      "usage": "first-encounter information popup illustration; not the live combat sprite",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/3cb39bc86050edd0a909b7a5c9f56de0670a3d48/public/assets/monster_fire.png"
+    },
+    {
+      "path": "public/assets/monster_freeze_thaw.png",
+      "bytes": 769089,
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "gitBlobSha": "6e9708755785cb487f576b3d9905cac84f825c2d",
+      "sha256": "826cec60035a7fdf7de3a8516f584fe8ea47701c8eb5b54a8b23a00d4802f6b8",
+      "runtimeKey": "illus_freeze_thaw",
+      "pixelsViewed": true,
+      "originalBytesUnchanged": true,
+      "usage": "first-encounter information popup illustration; not the live combat sprite",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/3cb39bc86050edd0a909b7a5c9f56de0670a3d48/public/assets/monster_freeze_thaw.png"
+    },
+    {
+      "path": "public/assets/monster_termite.png",
+      "bytes": 695165,
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "gitBlobSha": "1c97e2f5e0fc302814a3b24fbffb5341c9bf0033",
+      "sha256": "78c67a3fd1933a808c3656b630178d3ccca5963ec7737b26eee087b041b368a1",
+      "runtimeKey": "illus_termite",
+      "pixelsViewed": true,
+      "originalBytesUnchanged": true,
+      "usage": "first-encounter information popup illustration; not the live combat sprite",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/3cb39bc86050edd0a909b7a5c9f56de0670a3d48/public/assets/monster_termite.png"
+    },
+    {
+      "path": "public/assets/monster_wind.png",
+      "bytes": 765238,
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "gitBlobSha": "c2afa4b1d1213beb64fb1ca6cd2b2be3d99a50f3",
+      "sha256": "8d499f2890b76ef204dd70259fbc23329c0510b8ac1c7b5f4b951ecb7597149e",
+      "runtimeKey": "illus_wind",
+      "pixelsViewed": true,
+      "originalBytesUnchanged": true,
+      "usage": "first-encounter information popup illustration; not the live combat sprite",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/3cb39bc86050edd0a909b7a5c9f56de0670a3d48/public/assets/monster_wind.png"
+    }
+  ],
+  "allAssetGitBlobHashesVerified": true,
+  "staticSemanticTypecheck": "passed with existing parent TypeScript/Phaser/Vite declarations",
+  "runtimeExecuted": false
+}

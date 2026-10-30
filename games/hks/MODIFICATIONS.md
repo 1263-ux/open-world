@@ -39,3 +39,9 @@ Still deliberately unchanged: original development cheat key handler Q/SPACE/R (
 The entry page runs in a lazy same-origin iframe, not in the Vue/Three bundle. The small main entry is adapted to createHksGame, with ready/error/Escape notifications, pagehide disposal and read-only runtime snapshots for real-input QA. Original debug shortcut registration is gated behind Vite DEV; the shipped nested game is built in production mode. Vite output is public/games/hks and generated assets are not committed. Dependency versions remain pinned by the original lock; tarball host was normalized to the official npm registry. Original page CSS stays within its own iframe.
 
 - Boss normal melee now uses its already-computed buildingRange as intended by the existing movement comment, alongside unchanged cooldown. The separately presented global earthquake skill remains global. Pure regression tests distinguish out-of-range, cooling-down and in-range attacks; natural Boss victory has not yet been tested.
+
+## Real-browser feedback and latest source
+
+The first real browser run reached combat, natural defeat, menu replay and Escape return; one assertion incorrectly compared innerText with textContent and was corrected, not an app state-loss fix. Mobile screenshot exposed duplicate centering (CSS flex plus Phaser autoCenter); the container is now block layout. Portrait-only viewport600x960 improves readability while world1920x1080 and combat values stay unchanged. Root QA now uses actual CDP touch input and logical viewport dimensions.
+
+Latest six-file upstream feedback/readability improvements and seven existing project PNGs from3cb39bc8 were subsequently merged; see MODERNIZATION.md and ASSET_INVENTORY.json. All imported PNG bytes are original. Latest visual version still requires fresh browser checks.

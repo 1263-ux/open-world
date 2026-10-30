@@ -21,6 +21,7 @@ jobs:
           python-version: '3.12'
       - run: pip install -r scripts/requirements.txt
       - run: python scripts/test_augment_buildings.py
+      - run: python scripts/landmarks/mechanical-hall/verify.py
       - run: python scripts/build_spatial_data.py
       - run: git diff --exit-code -- src/campus-data/spatial.json public/data/campus-spatial.json
       - run: npm run typecheck

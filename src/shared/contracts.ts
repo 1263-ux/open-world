@@ -10,7 +10,7 @@ export interface SpatialFeature {
 export interface CampusRoad { id: string; points: Point2[]; width: number; source: string; }
 export interface Landmark {
   id: string; name: string; subtitle: string; position: Point2; arrival: Point2;
-  featureId: string | null; facts: string; source: string; clue: string;
+  featureId: string | null; facts: string; source: string; visualSource?: string; clue: string;
   question: string; choices: string[]; answer: number;
 }
 export interface CampusData {
@@ -20,7 +20,7 @@ export interface CampusData {
   questOrder: string[]; start: Point2; routes: Record<string, Point2[]>;
   extentMeters: [number, number]; attribution: string;
 }
-export type SceneEvent = {type:'select';id:string}|{type:'arrive';id:string}|{type:'travel';progress:number}|{type:'error';reason:string};
+export type SceneEvent = {type:'select';id:string}|{type:'arrive';id:string}|{type:'travel';progress:number}|{type:'error';reason:string}|{type:'modelstatus';status:'ready'|'fallback'};
 export interface SceneState {selectedId:string|null;targetId:string|null;}
 export interface CampusSceneHandle {
   setCampus(data:CampusData):void;
