@@ -140,16 +140,45 @@ test('Yingxi chapter: real walking through every arrival and replay', async ({ p
   await page.getByTestId('quest-exit').click(); await expect(page.getByTestId('quest-status')).toContainText('准备出发');
 });
 
-test('desktop: real controls, map toggling, jump, focus and repeated switches', async ({ page }) => {
+test('desktop: real controls, map toggling, jump, focus and repeated switches', async ({ page }, info) => {
   await page.goto('/'); await selectHuyu(page); const canvas = page.getByTestId('campus-canvas'); await expect(canvas).toBeVisible();
   await expect.poll(() => canvas.getAttribute('data-player-x')).not.toBeNull();
   // Switching campus leaves the real button focused; WASD must work without
   // an extra canvas click while Space still activates focused controls.
+  // Controller processes key edges before this observer. Use delivered event
+  // times, not the requested timeout: a busy runner can delay protocol input.
+  await page.evaluate(() => {
+    const edges: {type: string; code: string; time: number; accepted: boolean; trusted: boolean}[] = [];
+    (window as unknown as {__qaKeyEdges: typeof edges}).__qaKeyEdges = edges;
+    for (const type of ['keydown', 'keyup']) window.addEventListener(type, event => {
+      const key = event as KeyboardEvent;
+      if (key.code === 'KeyW') edges.push({type, code: key.code, time: performance.now(), accepted: type === 'keyup' || key.defaultPrevented, trusted: key.isTrusted});
+    });
+  });
   const initial = await position(canvas);
-  await page.keyboard.down('w'); await page.waitForTimeout(1300); await page.keyboard.up('w');
-  const walked = await position(canvas); expect(Math.hypot(walked[0]-initial[0],walked[2]-initial[2])).toBeGreaterThan(1);
-  await page.keyboard.down('Shift'); await page.keyboard.down('w'); await page.waitForTimeout(1300); await page.keyboard.up('w'); await page.keyboard.up('Shift');
-  const ran = await position(canvas); expect(Math.hypot(ran[0]-walked[0],ran[2]-walked[2])).toBeGreaterThan(Math.hypot(walked[0]-initial[0],walked[2]-initial[2])*1.3);
+  async function heldMovement(run: boolean) {
+    if (run) await page.keyboard.down('Shift');
+    await page.keyboard.down('w'); await page.waitForTimeout(1300); await page.keyboard.up('w');
+    if (run) await page.keyboard.up('Shift');
+    // The input-edge advance runs immediately, while canvas telemetry is
+    // published on render. Wait for a subsequent frame before reading it.
+    const frame = Number(await canvas.getAttribute('data-frame'));
+    await expect.poll(async () => Number(await canvas.getAttribute('data-frame')), {timeout: 15000}).toBeGreaterThan(frame);
+    return position(canvas);
+  }
+  const walked = await heldMovement(false);
+  const ran = await heldMovement(true);
+  const edges = await page.evaluate(() => (window as unknown as {__qaKeyEdges: {type:string; time:number; accepted:boolean; trusted:boolean}[]}).__qaKeyEdges);
+  expect(edges.map(edge => edge.type)).toEqual(['keydown','keyup','keydown','keyup']);
+  expect(edges.every(edge => edge.accepted && edge.trusted)).toBe(true);
+  const walkDistance = Math.hypot(walked[0]-initial[0],walked[2]-initial[2]);
+  const runDistance = Math.hypot(ran[0]-walked[0],ran[2]-walked[2]);
+  const walkSeconds = (edges[1]!.time-edges[0]!.time)/1000, runSeconds = (edges[3]!.time-edges[2]!.time)/1000;
+  const walkSpeed = walkDistance/walkSeconds, runSpeed = runDistance/runSeconds;
+  await info.attach('walk-run-input-evidence', {body: JSON.stringify({edges, initial, walked, ran, walkDistance, runDistance, walkSeconds, runSeconds, walkSpeed, runSpeed}, null, 2), contentType:'application/json'});
+  expect(walkSeconds).toBeGreaterThan(1); expect(runSeconds).toBeGreaterThan(1);
+  expect(walkDistance).toBeGreaterThan(1); expect(runDistance).toBeGreaterThan(1);
+  expect(runSpeed).toBeGreaterThan(walkSpeed*1.3);
   // Space on a focused button is reserved for the control; focus the scene
   // as a real keyboard user would before using Space for a jump.
   await canvas.focus(); await page.keyboard.press('Space'); await expect.poll(async () => (await position(canvas))[1], { timeout: 2000, intervals: [50] }).toBeGreaterThan(initial[1] + .1);

@@ -572,7 +572,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       marker.position.set(landmark.position[0], building ? Number(building.userData.height) + 4 : 4, landmark.position[1]);
       marker.userData.landmarkId = landmark.id;
       marker.userData.photoIgnore = true; // UI markers are not physical scenery.
-      marker.castShadow = true;
+      marker.visible = mapMode;
+      marker.castShadow = false;
       markerMeshes.set(landmark.id, marker);
       pickables.push(marker);
       world.add(marker);
@@ -585,6 +586,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       label.center.set(0.5, 1);
       marker.add(label);
     }
+    syncMarkerVisibility();
     if (!markerMeshes.size) { markerGeometry.dispose(); markerNormal.dispose(); markerSelected.dispose(); markerTarget.dispose(); }
     // Materials not currently assigned to a marker are still owned by the world.
     else {
@@ -684,8 +686,20 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     playerShadowX = forMap ? Infinity : x; playerShadowZ = forMap ? Infinity : z;
     renderer.shadowMap.needsUpdate = true;
   }
-  function showMap(): void { mapMode = true; controls.enabled = true; player.setEnabled(false); updateSun(true); canvas.dataset.view = 'map'; }
-  function showPlayer(): void { mapMode = false; controls.enabled = false; player.setEnabled(true); player.updateCamera(true); updateSun(false, true); canvas.dataset.view = 'player'; }
+  function syncMarkerVisibility(): void {
+    for (const marker of markerMeshes.values()) marker.visible = mapMode;
+    canvas.dataset.visibleMarkers = String([...markerMeshes.values()].filter(marker => marker.visible).length);
+  }
+  function showMap(): void {
+    mapMode = true; syncMarkerVisibility();
+    canvas.dataset.mapMarkers = '[]'; // Populated from the next rendered map frame.
+    controls.enabled = true; player.setEnabled(false); updateSun(true); canvas.dataset.view = 'map';
+  }
+  function showPlayer(): void {
+    mapMode = false; syncMarkerVisibility();
+    delete canvas.dataset.mapMarkers;
+    controls.enabled = false; player.setEnabled(true); player.updateCamera(true); updateSun(false, true); canvas.dataset.view = 'player';
+  }
   function overview(): void {
     showMap();
     const points = cleanPolygon(data.boundary || []);
@@ -813,6 +827,20 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     labels.domElement.style.display = mapMode ? '' : 'none';
     labels.render(scene, activeCamera);
     renderer.render(scene, activeCamera);
+    if (mapMode) {
+      const width = canvas.clientWidth, height = canvas.clientHeight;
+      const position = new THREE.Vector3();
+      const projected: { id: string; x: number; y: number }[] = [];
+      for (const [id, marker] of markerMeshes) {
+        if (!marker.visible) continue;
+        marker.getWorldPosition(position).project(camera);
+        if (position.z < -1 || position.z > 1 || Math.abs(position.x) > 1 || Math.abs(position.y) > 1) continue;
+        projected.push({ id, x: (position.x + 1) * width / 2, y: (1 - position.y) * height / 2 });
+      }
+      // Read-only canvas-relative CSS coordinates from the rendered map;
+      // they are not a selection or position-setting interface.
+      canvas.dataset.mapMarkers = JSON.stringify(projected);
+    }
     canvas.dataset.frame = String(++frameCount);
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
     canvas.dataset.triangles = String(renderer.info.render.triangles);

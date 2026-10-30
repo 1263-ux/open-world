@@ -343,3 +343,39 @@ test('a failed mechanical model cannot produce a false clock photo',async({page}
   await expect(page.getByTestId('photo-record')).toBeDisabled();await canvas.focus();await page.keyboard.press('e');
   expect(await stampIds(page)).toEqual([]);await page.screenshot({path:info.outputPath('photo-model-fallback.png')});
 });
+
+test('landmark markers remain map-only across campus rebuilds',async({page},info)=>{
+  const canvas=await ready(page),labels=page.locator('.landmark-label-layer');
+  await expect(canvas).toHaveAttribute('data-view','player');await expect(canvas).toHaveAttribute('data-visible-markers','0');await expect(labels).toBeHidden();
+  await page.getByRole('button',{name:'打开校园地图'}).click();await expect(canvas).toHaveAttribute('data-view','map');
+  await expect(canvas).toHaveAttribute('data-visible-markers',String(campuses.yingxi.landmarks.length));
+  await expect(labels).toBeVisible();await expect(labels.locator('.landmark-label').filter({hasText:'清泽园'})).toHaveCount(1);
+  await page.screenshot({path:info.outputPath('map-yingxi-markers.png')});
+  // Projection is read-only targeting assistance, not evidence of picking:
+  // the actual mouse click must open the correct landmark detail.
+  async function pickGarden() {
+    await expect.poll(async () => {
+      const markers = JSON.parse(await canvas.getAttribute('data-map-markers') || '[]') as {id:string;x:number;y:number}[];
+      return markers.some(marker => marker.id === 'yx-garden');
+    }, {timeout:15000}).toBe(true);
+    const markers = JSON.parse((await canvas.getAttribute('data-map-markers'))!) as {id:string;x:number;y:number}[];
+    const garden = markers.find(marker => marker.id === 'yx-garden')!;
+    const box = await canvas.boundingBox(); if (!box) throw Error('Missing canvas bounds');
+    await page.mouse.click(box.x+garden.x, box.y+garden.y);
+    const detail = page.getByRole('complementary',{name:'地点详情'});
+    await expect(detail.getByRole('heading',{name:'清泽园'})).toBeVisible();
+    await page.getByTestId('landmark-close').click();
+  }
+  await pickGarden();
+  // A rebuild while the map is open must not leak markers into player view.
+  await page.getByTestId('campus-huyu').click();await expect(canvas).toHaveAttribute('data-view','player');
+  await expect(canvas).toHaveAttribute('data-visible-markers','0');await expect(labels).toBeHidden();
+  await page.getByRole('button',{name:'打开校园地图'}).click();await expect(canvas).toHaveAttribute('data-visible-markers',String(campuses.huyu.landmarks.length));
+  await expect(labels).toBeVisible();await page.getByTestId('campus-yingxi').click();
+  await expect(canvas).toHaveAttribute('data-view','player');await expect(canvas).toHaveAttribute('data-visible-markers','0');await expect(labels).toBeHidden();
+  await page.getByRole('button',{name:'打开校园地图'}).click();await expect(canvas).toHaveAttribute('data-visible-markers',String(campuses.yingxi.landmarks.length));
+  await pickGarden();
+  await page.getByRole('button',{name:'返回人物视角'}).click();await expect(canvas).toHaveAttribute('data-visible-markers','0');await expect(labels).toBeHidden();
+  await expect(canvas).not.toHaveAttribute('data-map-markers',/.+/);
+  await page.screenshot({path:info.outputPath('map-marker-return-player.png')});
+});
