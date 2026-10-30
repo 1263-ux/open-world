@@ -7,7 +7,7 @@ import type { CampusData, CampusRoad, CampusSceneHandle, Landmark, Point2, Scene
 
 const noopHandle = (): CampusSceneHandle => ({
   setCampus() {}, setState() {}, navigateTo: () => false, resetJourney() {},
-  focusLandmark() {}, overview() {}, resetView() {}, dispose() {},
+  focusLandmark() {}, overview() {}, resetView() {}, pause() {}, resume() {}, dispose() {},
 });
 
 function validPoint(p: Point2 | undefined): p is Point2 {
@@ -182,6 +182,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   let frameSpan = 500;
   let tween: { fromPosition: THREE.Vector3; toPosition: THREE.Vector3; fromTarget: THREE.Vector3; toTarget: THREE.Vector3; fromSpan: number; toSpan: number; elapsed: number; duration: number } | null = null;
   let disposed = false;
+  let paused = false;
+  let frameCount = 0;
   let raf = 0;
   let previousTime = 0;
   let pointer: { x: number; y: number; id: number; moved: boolean } | null = null;
@@ -571,7 +573,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     pawn.rotation.y = 0;
   }
   function tick(time: number): void {
-    if (disposed) return;
+    if (disposed || paused) return;
     const dt = previousTime ? Math.min(1, Math.max(0, (time - previousTime) / 1000)) : 0;
     previousTime = time;
     if (tween) {
@@ -605,6 +607,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     controls.update();
     labels.render(scene, camera);
     renderer.render(scene, camera);
+    canvas.dataset.frame = String(++frameCount);
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
     canvas.dataset.triangles = String(renderer.info.render.triangles);
     raf = requestAnimationFrame(tick);
@@ -692,6 +695,16 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     focusLandmark,
     overview,
     resetView() { if (!disposed) questView(); },
+    pause() {
+      if (disposed || paused) return;
+      paused = true; controls.enabled = false; previousTime = 0;
+      cancelAnimationFrame(raf); canvas.dataset.paused = 'true';
+    },
+    resume() {
+      if (disposed || !paused) return;
+      paused = false; controls.enabled = true; previousTime = 0;
+      canvas.dataset.paused = 'false'; raf = requestAnimationFrame(tick);
+    },
     dispose,
   };
 }

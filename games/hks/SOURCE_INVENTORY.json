@@ -1,0 +1,199 @@
+{
+  "sourceRepository": "ShanEior/Hks",
+  "sourceCommit": "843ecbbae414a403eae350f4f8105cfbb84acf72",
+  "author": "1263-ux",
+  "commitDate": "2026-05-30T07:53:46Z",
+  "authorization": "User explicitly clarified ownership and requested direct port with minor adaptation; game source reuse authorized. No independent license is inferred for included or excluded third-party assets.",
+  "scope": "Exact text runtime sources/configuration only. No PNG, ZIP, .claude, or old extracted sprite pack downloaded.",
+  "files": [
+    {
+      "path": "index.html",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/index.html",
+      "gitBlobSha": "e2ffad6a3ef9b75ff6e2196076e915806fdf6f51",
+      "expectedBytes": 1934,
+      "actualBytes": 1934,
+      "localSha256": "7c2c74aae959c6a9d3dd7b8c4bf2191cce9f86b1a9cc4bc86ecf183efdb684af",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "package-lock.json",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/package-lock.json",
+      "gitBlobSha": "0d36a1e2d4302cb2371d9fb83a1af523ef965fa7",
+      "expectedBytes": 32182,
+      "actualBytes": 32182,
+      "localSha256": "933319ea842d71e500a9fa933f73ea34ce56265bc66bd9691ac247c80a59dd29",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "package.json",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/package.json",
+      "gitBlobSha": "7942fa151b528b32814aecc359f49cec53df0899",
+      "expectedBytes": 342,
+      "actualBytes": 342,
+      "localSha256": "62508e05ec4e6d78bda613daeb4e91e9892a4ab6bfe53f22ae2fb6ca9b3d74b4",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/ArtGen.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/ArtGen.ts",
+      "gitBlobSha": "a6db244d98bcd3692ebf696a2cfe8d04bcc0e61d",
+      "expectedBytes": 76771,
+      "actualBytes": 76771,
+      "localSha256": "e2c15b420ac0920cb888110392a1b7e1b91f0303dab08e2faa1b0fa93cac77ae",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/Boss.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/Boss.ts",
+      "gitBlobSha": "214297c238a5c6a415663127fe7662128106ba25",
+      "expectedBytes": 8415,
+      "actualBytes": 8415,
+      "localSha256": "2e5440ef69e63d6a836ea705fac805a36450b5be11ff2419bb37fec482b54c99",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/Building.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/Building.ts",
+      "gitBlobSha": "b9aa0b10b961cdad19ff2629a7862cce9b902d2f",
+      "expectedBytes": 4604,
+      "actualBytes": 4604,
+      "localSha256": "3c8860cf35d988dc82d73a40161c5e08733e5ad3e8cf076336fd85e719a54dfa",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/CombatFeel.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/CombatFeel.ts",
+      "gitBlobSha": "58fc470bf6590950d87ec678df57d3f55d73c749",
+      "expectedBytes": 3835,
+      "actualBytes": 3835,
+      "localSha256": "9d02af50f5f1739b217b36b611692256ce1227f4611a316bc176ba389bd4294e",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/GameScene.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/GameScene.ts",
+      "gitBlobSha": "7cbe5481056cc2a81e0a5f9ba6a4f9f48835c4b5",
+      "expectedBytes": 44401,
+      "actualBytes": 44401,
+      "localSha256": "684213bc1858f5c803edf04898a8d8bc437a1bf9f59e2dc9ec9d79a38e07ef8e",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/HUD.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/HUD.ts",
+      "gitBlobSha": "2b9d95d31c70618f11293afa9bc61287a6cb1c15",
+      "expectedBytes": 26599,
+      "actualBytes": 26599,
+      "localSha256": "a39df380835217355aca577e728925acff0d87e85de352833b0c0006eba9f4e5",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/MenuScene.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/MenuScene.ts",
+      "gitBlobSha": "882ceff88ece6dc7001ba613817f97e9a8523098",
+      "expectedBytes": 5754,
+      "actualBytes": 5754,
+      "localSha256": "14c9a016d4f58db27c771591be7a7e0936c3aa3cbe9130bb500fa700c410e061",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/Monster.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/Monster.ts",
+      "gitBlobSha": "afff197df13b4e6c3e458351880ab81b8bc9f79b",
+      "expectedBytes": 12031,
+      "actualBytes": 12031,
+      "localSha256": "6a3d1f740f341a4c45923ad22889355dc29b441518d7651df6d9e2cab02186ee",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/Player.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/Player.ts",
+      "gitBlobSha": "9f253b8c772700d8f46aaf87bf7e02a79cfd6120",
+      "expectedBytes": 3700,
+      "actualBytes": 3700,
+      "localSha256": "9074071c30d1c43dd7a1d1a29dfc0312b681e9fb2b517f45a1a437e03bb0302f",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/SkillManager.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/SkillManager.ts",
+      "gitBlobSha": "31b273244db1a3683da32bf26b223a693043df8a",
+      "expectedBytes": 30294,
+      "actualBytes": 30294,
+      "localSha256": "d72e7052acdbd4a2d0711c9be260ade8dd666e4c9fff808f89d0dc005584dfb1",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/SoundManager.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/SoundManager.ts",
+      "gitBlobSha": "f2ef79b539b21d2cff9d8a6ac334d59e7a4e1620",
+      "expectedBytes": 22031,
+      "actualBytes": 22031,
+      "localSha256": "1d404aa6ea69e5d5cba68a6d1b700bab769a1696bc74cdde2f975b622ef09aee",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/SpriteLoader.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/SpriteLoader.ts",
+      "gitBlobSha": "a2b9db18c5b7631bcd607fca4f19aaa8053c8997",
+      "expectedBytes": 4078,
+      "actualBytes": 4078,
+      "localSha256": "db473956cd145134141f727d1516faad3f79c1f70787b501932c91ea3e5ccc69",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/TutorialScene.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/TutorialScene.ts",
+      "gitBlobSha": "4aba12fb9951ddb5af3fd2b53368ffef5150e032",
+      "expectedBytes": 7264,
+      "actualBytes": 7264,
+      "localSha256": "b4014ca3d53ebec7dc2ecfcc668dff127af166ee682b40144044fe74e7f43877",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/VFX.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/VFX.ts",
+      "gitBlobSha": "fc91939bb637ccbd1f0056be8d7e2ea70045b5f5",
+      "expectedBytes": 26061,
+      "actualBytes": 26061,
+      "localSha256": "5a869666dfca87a4113cb8d4bf713d02edb94ad64b86d00818cfafb59c6b5813",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/config.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/config.ts",
+      "gitBlobSha": "4dd01b16c9c9e9af375c308d75023923a552bf62",
+      "expectedBytes": 24285,
+      "actualBytes": 24285,
+      "localSha256": "0fb518244d891ffb1ef91e877388b656fddd09bf0765942ecc7d0d1d0b1cdd4c",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "src/main.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/main.ts",
+      "gitBlobSha": "d0b5d270b75f27cc64f463a403d6bb540ed2898e",
+      "expectedBytes": 882,
+      "actualBytes": 882,
+      "localSha256": "fdcc73ca5d593deb2358ef11929f88822b294fd0cfb570adf8631d89473a456b",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "tsconfig.json",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/tsconfig.json",
+      "gitBlobSha": "4b0e5ebfc48f20496c9dad20581c669368aaddf1",
+      "expectedBytes": 382,
+      "actualBytes": 382,
+      "localSha256": "630a74b15a1a08560beba04aa4931fd500175dd5ab924173d6b3110799e5e296",
+      "exactGitBlobMatch": true
+    },
+    {
+      "path": "vite.config.ts",
+      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/vite.config.ts",
+      "gitBlobSha": "6bbe24c36d4b72b92a96e227c3a61224582f5d8d",
+      "expectedBytes": 173,
+      "actualBytes": 173,
+      "localSha256": "6b7d7a839bf056c51e2e347890633cd0ee2c0543fa0cb6919f5470164c46457b",
+      "exactGitBlobMatch": true
+    }
+  ]
+}

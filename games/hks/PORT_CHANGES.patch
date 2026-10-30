@@ -1,0 +1,738 @@
+--- a/src/ArtGen.ts
++++ b/src/ArtGen.ts
+@@ -104,7 +104,7 @@
+ // ═══════════════════════════════════════════════
+ 
+ export function generateAllTextures(scene: Phaser.Scene): void {
+-  genBackgroundPNG(scene);
++  genBackground(scene);
+   genPlayer(scene);
+   genTermite(scene);
+   genWind(scene);
+@@ -124,6 +124,7 @@
+ 
+ /** Batch 3: 生成 4×4 白色像素纹理，供 ParticleEmitter 使用 */
+ function genPxWhite(scene: Phaser.Scene): void {
++  if (scene.textures.exists('px_white')) return;
+   const canvas = scene.textures.createCanvas('px_white', 4, 4);
+   const ctx = canvas!.getContext();
+   ctx.fillStyle = '#FFFFFF';
+@@ -1949,36 +1950,3 @@
+   genHPBarMonster(scene);
+ }
+ 
+-function genBackgroundPNG(scene: Phaser.Scene) {
+-  const W=960,H=540;
+-  const {canvas,ctx}=makeCanvas(W*PX,H*PX);
+-  function im(k:string):HTMLImageElement|null{const t=scene.textures.get(k);return t?.source[0]?.image as HTMLImageElement||null;}
+-
+-  // earth.png 铺底
+-  const iE=im('png_earth');
+-  if(iE){const ew=iE.width,eh=iE.height;
+-    for(let y=0;y<H*PX;y+=eh)for(let x=0;x<W*PX;x+=ew)ctx.drawImage(iE,x,y);}
+-  else{ctx.fillStyle='#bca36f';ctx.fillRect(0,0,W*PX,H*PX);}
+-
+-  // 9张草地随机散布（不重叠）
+-  const hash=(x:number,y:number):number=>((x*374761393+y*668265263)^0x5bf03635)>>>0;
+-  const placed:{x:number,y:number,r:number}[]=[];
+-  for(let i=1;i<=9;i++){
+-    const g=im('grass'+i);if(!g)continue;
+-    const gw=g.width,gh=g.height,gr=Math.max(gw,gh)/2;
+-    for(let j=0;j<5;j++){
+-      let nx=0,ny=0,attempts=0,ok=false;
+-      do{
+-        nx=hash(i,j*100+attempts)%(W*PX-gw);ny=hash(j*100+attempts,i)%(H*PX-gh);attempts++;
+-        ok=placed.every(p=>Math.hypot(p.x-nx,p.y-ny)>p.r+gr+20);
+-      }while(!ok&&attempts<50);
+-      if(!ok)continue;
+-      placed.push({x:nx+gw/2,y:ny+gh/2,r:gr});
+-      const flip=hash(j,i*2)%2===0,rot=hash(j,i*3)%4;
+-      ctx.save();ctx.translate(nx+gw/2,ny+gh/2);ctx.rotate(rot*Math.PI/2);
+-      if(flip)ctx.scale(-1,1);ctx.drawImage(g,-gw/2,-gh/2);ctx.restore();
+-    }
+-  }
+-
+-  addTex(scene,'background',canvas);
+-}
+--- a/src/GameScene.ts
++++ b/src/GameScene.ts
+@@ -20,7 +20,6 @@
+ import { VFX } from './VFX';
+ import { CombatFeel } from './CombatFeel';
+ import { generateAllTextures } from './ArtGen';
+-import { preloadSprites, nthKey } from './SpriteLoader';
+ 
+ // ── 水洼 ──
+ interface Puddle {
+@@ -111,20 +110,65 @@
+     super({ key: 'GameScene' });
+   }
+ 
+-  preload(): void {
+-    this.load.image('bg', 'assets/bg.png');
+-    this.load.image('png_earth', 'assets/earth.png');
+-    for(let i=1;i<=9;i++)this.load.image('grass'+i,'assets/精灵-000'+i+'.png');
+-    this.load.image('illus_termite','assets/monster_termite.png');
+-    this.load.image('illus_wind','assets/monster_wind.png');
+-    this.load.image('illus_acid_rain','assets/monster_acid_rain.png');
+-    this.load.image('illus_fire','assets/monster_fire.png');
+-    this.load.image('illus_freeze_thaw','assets/monster_freeze_thaw.png');
+-    this.load.image('gj', 'assets/building.png');
+-    preloadSprites(this);
++  /** Phaser reuses Scene instances; all run state must be initialized again. */
++  init(): void {
++    this.monsters = [];
++    this.puddles = [];
++    this.expOrbs = [];
++    this.repairCrates = [];
++    this.collidables = [];
++    this.collidableRects = [];
++    this.gameTime = GAME_DURATION;
++    this.spawnTimer = 0;
++    this.killCount = 0;
++    this.invincibleTimer = 0;
++    this.spawnInterval = INITIAL_SPAWN_INTERVAL;
++    this.isGameOver = false;
++    this.isPaused = false;
++    this.seenMonsterTypes = new Set<MonsterType>();
++    this.boss = null;
++    this.bossWarningDone = false;
++    this.bossSpawned = false;
++    this.bossKilled = false;
++    this.autoAttackTimer = 0;
++    this.autoBolts = [];
++    this.levelUpPanelActive = false;
++    this.joystickBase = null;
++    this.joystickKnob = null;
++    this.joystickActive = false;
++    this.joystickId = null;
++    this.joystickStartX = 0;
++    this.joystickStartY = 0;
++    this.debugMonsterIndex = 0;
++    VFX.reset();
++  }
++
++  private onBossEarthquake(damage: number): void {
++    if (!this.boss || this.boss.isDead || this.isGameOver) return;
++    const structTypes: StructureType[] = ['wood', 'stone', 'tile', 'painting'];
++    for (const type of structTypes) this.building.damageStructure(type, damage);
++  }
++
++  private shutdownRun(): void {
++    this.events.off('boss-earthquake', this.onBossEarthquake, this);
++    this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.shutdownRun, this);
++    this.events.off(Phaser.Scenes.Events.DESTROY, this.shutdownRun, this);
++    this.hud?.dispose();
++    if (this.player) {
++      this.player.joystickVx = 0;
++      this.player.joystickVy = 0;
++    }
++    this.joystickActive = false;
++    this.joystickId = null;
++    this.isGameOver = true;
++    SoundManager.dispose();
++    VFX.reset();
+   }
+ 
+   create(): void {
++    SoundManager.activate();
++    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdownRun, this);
++    this.events.once(Phaser.Scenes.Events.DESTROY, this.shutdownRun, this);
+     // 生成全部程序化精灵纹理（玩家、怪物、古建、UI等）
+     generateAllTextures(this);
+ 
+@@ -132,19 +176,16 @@
+     this.drawBackground();
+ 
+     this.building = new Building(
+-      this, BUILDING_CONFIG.x, BUILDING_CONFIG.y - 260,
++      this, BUILDING_CONFIG.x, BUILDING_CONFIG.y,
+       BUILDING_CONFIG.structures as any,
+     );
+-    this.building.graphics.setScale(0.45);
+     this.building.onFailure = () => this.endGame(false);
+-    // 古建碰撞体
+-    // 古建碰撞 — 矩形下半部分（890*0.6≈534宽, 1176*0.6≈706高, 下半=353高）
+-    const bw = 280, bh = 220;
+-    this.collidableRects.push({ x: BUILDING_CONFIG.x - bw/2, y: BUILDING_CONFIG.y - 260 + 40, w: bw, h: bh });
++    // Only the low base is solid; keep it inside the monsters' attack radius.
++    this.collidableRects.push({ x: this.building.x - 50, y: this.building.y + 8, w: 100, h: 24 });
+ 
+     this.player = new Player(
+-      this, BUILDING_CONFIG.x,
+-      BUILDING_CONFIG.y + PLAYER_CONFIG.startOffsetY,
++      this, this.building.x,
++      this.building.y + PLAYER_CONFIG.startOffsetY,
+       PLAYER_CONFIG.maxHp, PLAYER_CONFIG.moveSpeed,
+       PLAYER_CONFIG.radius, PLAYER_CONFIG.color,
+     );
+@@ -160,15 +201,7 @@
+     );
+     this.skillManager.addSkill('wood_reinforce');
+ 
+-    // Boss 事件监听
+-    this.events.on('boss-earthquake', (damage: number) => {
+-      if (!this.boss || this.boss.isDead) return;
+-      // 地震波：所有结构扣血
+-      const structTypes: StructureType[] = ['wood', 'stone', 'tile', 'painting'];
+-      for (const type of structTypes) {
+-        this.building.damageStructure(type, damage);
+-      }
+-    });
++    this.events.on('boss-earthquake', this.onBossEarthquake, this);
+ 
+     this.setupDebugControls();
+     this.setupTouchJoystick();
+@@ -234,7 +267,7 @@
+     if (this.boss && this.boss.isActive && !this.boss.isDead) {
+       this.boss.update(time, effectiveDelta);
+       const distToBuilding = Phaser.Math.Distance.Between(
+-        this.boss.x, this.boss.y, BUILDING_CONFIG.x, BUILDING_CONFIG.y,
++        this.boss.x, this.boss.y, this.building.x, this.building.y,
+       );
+       if (distToBuilding < BUILDING_CONFIG.attackRange + 60) {
+         // Boss 接近建筑持续侵蚀
+@@ -315,84 +348,6 @@
+     }
+   }
+ 
+-  // ── 树 + 石头精灵 ──
+-  private placeEnvironmentSprites(): void {
+-    const cx = MAP_WIDTH / 2, cy = MAP_HEIGHT / 2;
+-    const hash = (x: number, y: number): number =>
+-      ((x * 374761393 + y * 668265263) ^ 0x5bf03635) >>> 0;
+-
+-    // ── 石头稀疏散布 ──
+-    let gi = 0;
+-    for (let i = 0; i < 40; i++) {
+-      const gx = hash(i+999, 30) % MAP_WIDTH;
+-      const gy = hash(40, i+999) % MAP_HEIGHT;
+-      if (Math.abs(gy-cy) < 50 && Math.abs(gx-cx) < 50) continue;
+-      if (hash(gx+1, gy+1) % 12 > 0) continue;
+-      const key = nthKey('ground', gi);
+-      if (!this.textures.exists(key)) continue;
+-      this.add.image(gx, gy, key)
+-        .setScale(0.5 + (hash(gx,gy) % 100) / 100 * 0.6)
+-        .setDepth(1);
+-      gi++;
+-    }
+-
+-    // ═══ 第 4 层：树木 ═══
+-    const treeSpots: [number, number, number, number, boolean][] = [
+-      [420,340,0.6,2,false],[1540,330,0.55,2,true],[720,310,0.5,2,false],
+-      [1300,320,0.55,2,true],[900,330,0.5,2,true],[1080,325,0.55,2,false],
+-      [340,480,0.55,2,true],[1600,470,0.5,2,false],
+-      [260,620,0.75,3,true],[1660,600,0.7,3,false],[560,580,0.65,3,false],
+-      [1440,590,0.7,3,true],[760,640,0.65,3,true],[1200,630,0.7,3,false],
+-      [140,700,0.8,3,false],[1760,690,0.75,3,true],
+-      [220,780,0.75,3,false],[1720,770,0.8,3,true],
+-      [180,880,0.95,4,false],[1720,860,0.9,4,true],
+-      [420,900,0.9,4,true],[1560,920,0.85,4,false],
+-      [700,940,0.85,4,false],[1300,930,0.9,4,true],
+-      [100,1000,1.05,4,false],[1820,980,1.0,4,true],
+-      [520,1050,0.95,4,true],[1400,1030,0.9,4,false],
+-      [900,1070,0.85,4,true],[1080,1065,0.9,4,false],
+-    ];
+-    let ti = 0;
+-    for (const [tx, ty, s, d, flip] of treeSpots) {
+-      if (Math.abs(ty-cy)<80 && Math.abs(tx-cx)<80) continue;
+-      const key = nthKey('trees', ti);
+-      if (!this.textures.exists(key)) continue;
+-      const img = this.add.image(tx, ty, key);
+-      img.setScale(s).setDepth(d);
+-      if (flip) img.setFlipX(true);
+-      ti++;
+-    }
+-
+-    // ═══ 第 5 层：竹子 ═══
+-    const bSpot: [number, number, number, number][] = [
+-      [640,720,0.65,3],[1360,710,0.6,3],
+-      [600,960,0.8,4],[1400,950,0.75,4],
+-      [540,1080,0.95,4],[1480,1060,0.9,4],
+-    ];
+-    let bi = 0;
+-    for (const [bx, by, s, d] of bSpot) {
+-      const key = nthKey('bamboo', bi);
+-      if (this.textures.exists(key))
+-        this.add.image(bx, by, key).setScale(s).setDepth(d);
+-      bi++;
+-    }
+-
+-    // ═══ 第 6 层：山脉远景 ═══
+-    const mSpot: [number, number, number, number][] = [
+-      [200,250,0.3,0],[600,240,0.28,0],[1000,250,0.32,0],
+-      [1400,245,0.27,0],[1700,240,0.3,0],
+-      [100,400,0.35,1],[1800,390,0.33,1],
+-      [300,500,0.4,1],[1600,490,0.38,1],
+-    ];
+-    let mi = 0;
+-    for (const [mx, my, s, d] of mSpot) {
+-      const key = nthKey('mountain', mi);
+-      if (this.textures.exists(key))
+-        this.add.image(mx, my, key).setScale(s).setDepth(d);
+-      mi++;
+-    }
+-  }
+-
+   // ── 波次系统 ──
+   private getCurrentStage(): WaveStage | null {
+     const elapsed = GAME_DURATION - this.gameTime;
+@@ -427,7 +382,7 @@
+ 
+     const monster = new Monster(
+       this, sx, sy, template,
+-      BUILDING_CONFIG.x, BUILDING_CONFIG.y,
++      this.building.x, this.building.y,
+       BUILDING_CONFIG.attackRange,
+       scaling,
+     );
+@@ -479,9 +434,9 @@
+     if (!this.seenMonsterTypes.has(type)) {
+       this.seenMonsterTypes.add(type);
+       this.time.delayedCall(300, () => {
+-        if (!this.isGameOver) {
++        if (!this.isGameOver && !this.levelUpPanelActive) {
+           this.isPaused = true;
+-          this.hud.showMonsterPopup(type, () => { this.isPaused = false; });
++          this.hud.showMonsterPopup(type, () => { if (!this.levelUpPanelActive) this.isPaused = false; });
+         }
+       });
+     }
+@@ -552,7 +507,7 @@
+ 
+     this.boss = new Boss(
+       this, bx, by,
+-      BUILDING_CONFIG.x, BUILDING_CONFIG.y,
++      this.building.x, this.building.y,
+       BUILDING_CONFIG.attackRange,
+     );
+ 
+@@ -642,7 +597,7 @@
+       // 小怪以古建为目标
+       const monster = new Monster(
+         this, sx, sy, minionTemplate,
+-        BUILDING_CONFIG.x, BUILDING_CONFIG.y,
++        this.building.x, this.building.y,
+         BUILDING_CONFIG.attackRange,
+       );
+ 
+--- a/src/HUD.ts
++++ b/src/HUD.ts
+@@ -49,6 +49,22 @@
+   private levelUpElements: Phaser.GameObjects.GameObject[] = [];
+   // 技能弹窗
+   private popupElements: Phaser.GameObjects.GameObject[] = [];
++  private popupTimer: Phaser.Time.TimerEvent | null = null;
++  private popupGeneration = 0;
++
++  private clearPopup(): void {
++    this.popupGeneration++;
++    this.popupTimer?.remove(false);
++    this.popupTimer = null;
++    for (const el of this.popupElements) if (el.active) el.destroy();
++    this.popupElements = [];
++  }
++
++  dispose(): void {
++    this.clearPopup();
++    this.hideLevelUpPanel();
++    this.hideBossHpBar();
++  }
+ 
+   constructor(scene: Phaser.Scene) {
+     this.scene = scene;
+@@ -308,6 +324,8 @@
+     onSelect: (id: SkillId, isUpgrade: boolean) => void,
+   ): void {
+     this.hideLevelUpPanel();
++    this.clearPopup();
++    let selected = false;
+ 
+     const cardW = LEVELUP_CARD.w, cardH = LEVELUP_CARD.h;
+     const cardGap = 24;
+@@ -397,7 +415,11 @@
+       btnImg.on('pointerdown', () => btnImg.setTexture(btnKey + '_press'));
+ 
+       // 选择动作
+-      const handler = () => onSelect(opt.id, opt.isUpgrade);
++      const handler = () => {
++        if (selected) return;
++        selected = true;
++        onSelect(opt.id, opt.isUpgrade);
++      };
+       bg.on('pointerdown', handler);
+       btnImg.on('pointerup', handler);
+     });
+@@ -472,8 +494,8 @@
+     const info = data[monsterType];
+     if (!info) return;
+ 
+-    for (const el of this.popupElements) el.destroy();
+-    this.popupElements = [];
++    this.clearPopup();
++    const generation = this.popupGeneration;
+ 
+     const depth = 350;
+     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
+@@ -497,11 +519,12 @@
+ 
+     // ═══ 左侧：怪物图标 ═══
+     const illX = leftX + padding + illW / 2, illY = topY + padding + illH / 2 + 20;
+-    if (this.scene.textures.exists(info.illusKey)) {
++    const illusKey = this.scene.textures.exists(info.illusKey) ? info.illusKey : monsterType;
++    if (this.scene.textures.exists(illusKey)) {
+       const illBg = this.scene.add.rectangle(illX, illY, illW + 12, illH + 12, 0x0a0806, 0.8)
+         .setScrollFactor(0).setDepth(depth + 2);
+       this.popupElements.push(illBg);
+-      const ill = this.scene.add.image(illX, illY, info.illusKey)
++      const ill = this.scene.add.image(illX, illY, illusKey)
+         .setScrollFactor(0).setDepth(depth + 3)
+         .setDisplaySize(illW, illH);
+       this.popupElements.push(ill);
+@@ -556,19 +579,21 @@
+     this.popupElements.push(closeHint);
+ 
+     // ── 关闭逻辑 ──
++    let closed = false;
+     const close = () => {
+-      for (const el of this.popupElements) { if (el.active) el.destroy(); }
+-      this.popupElements = [];
++      if (closed || generation !== this.popupGeneration) return;
++      closed = true;
++      this.clearPopup();
+       onClose?.();
+     };
+-    this.scene.time.delayedCall(8000, close);
++    this.popupTimer = this.scene.time.delayedCall(8000, close);
+     overlay.on('pointerdown', close);
+   }
+ 
+   // ── 技能提示弹窗（像素风） ──
+   showSkillPopup(skillId: SkillId, level: number): void {
+-    for (const el of this.popupElements) el.destroy();
+-    this.popupElements = [];
++    this.clearPopup();
++    const generation = this.popupGeneration;
+ 
+     const cfg = SKILL_CONFIGS[skillId][level - 1];
+     const depth = 350;
+@@ -638,16 +663,11 @@
+     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(depth + 1);
+     this.popupElements.push(closeHint);
+ 
+-    // 2 秒自动关闭
+-    this.scene.time.delayedCall(2500, () => {
+-      for (const el of this.popupElements) { if (el.active) el.destroy(); }
+-      this.popupElements = [];
+-    });
+-
+-    // 点击关闭
+-    bg.on('pointerdown', () => {
+-      for (const el of this.popupElements) { if (el.active) el.destroy(); }
+-      this.popupElements = [];
+-    });
++    // Cancel this timer on manual close or when a different popup opens.
++    const close = () => {
++      if (generation === this.popupGeneration) this.clearPopup();
++    };
++    this.popupTimer = this.scene.time.delayedCall(2500, close);
++    bg.on('pointerdown', close);
+   }
+ }
+--- a/src/Player.ts
++++ b/src/Player.ts
+@@ -26,6 +26,10 @@
+     A: Phaser.Input.Keyboard.Key;
+     S: Phaser.Input.Keyboard.Key;
+     D: Phaser.Input.Keyboard.Key;
++    UP: Phaser.Input.Keyboard.Key;
++    LEFT: Phaser.Input.Keyboard.Key;
++    DOWN: Phaser.Input.Keyboard.Key;
++    RIGHT: Phaser.Input.Keyboard.Key;
+   };
+ 
+   constructor(
+@@ -48,9 +52,14 @@
+         A: kb.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+         S: kb.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+         D: kb.addKey(Phaser.Input.Keyboard.KeyCodes.D),
++        UP: kb.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
++        LEFT: kb.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
++        DOWN: kb.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
++        RIGHT: kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
+       };
+     } else {
+-      this.keys = { W: {} as any, A: {} as any, S: {} as any, D: {} as any };
++      this.keys = { W: {} as any, A: {} as any, S: {} as any, D: {} as any,
++        UP: {} as any, LEFT: {} as any, DOWN: {} as any, RIGHT: {} as any };
+     }
+   }
+ 
+@@ -84,10 +93,10 @@
+     const dt = delta / 1000;
+ 
+     let vx = this.joystickVx, vy = this.joystickVy;
+-    if (this.keys.A.isDown) vx -= 1;
+-    if (this.keys.D.isDown) vx += 1;
+-    if (this.keys.W.isDown) vy -= 1;
+-    if (this.keys.S.isDown) vy += 1;
++    if (this.keys.A.isDown || this.keys.LEFT.isDown) vx -= 1;
++    if (this.keys.D.isDown || this.keys.RIGHT.isDown) vx += 1;
++    if (this.keys.W.isDown || this.keys.UP.isDown) vy -= 1;
++    if (this.keys.S.isDown || this.keys.DOWN.isDown) vy += 1;
+ 
+     const len = Math.sqrt(vx * vx + vy * vy);
+     if (len > 0) { vx /= len; vy /= len; }
+--- a/src/SoundManager.ts
++++ b/src/SoundManager.ts
+@@ -14,6 +14,40 @@
+ 
+ export class SoundManager {
+   private static ctx: AudioContext | null = null;
++  private static active = false;
++  private static generation = 0;
++  private static timers = new Set<ReturnType<typeof setTimeout>>();
++
++  /** Begin one game run without retaining an older run's audio or callbacks. */
++  static activate(): void {
++    this.dispose();
++    this.active = true;
++  }
++
++  /** Also call this from the embedding factory before destroying Phaser. */
++  static dispose(): void {
++    this.active = false;
++    this.generation++;
++    for (const timer of this.timers) clearTimeout(timer);
++    this.timers.clear();
++    const context = this.ctx;
++    this.ctx = null;
++    this.masterCompressor?.disconnect();
++    this.masterCompressor = null;
++    this.voiceCount = 0;
++    this.lastPlayed.clear();
++    if (context && context.state !== 'closed') void context.close().catch(() => {});
++  }
++
++  private static schedule(callback: () => void, delay: number): void {
++    if (!this.active) return;
++    const generation = this.generation;
++    const timer = setTimeout(() => {
++      this.timers.delete(timer);
++      if (this.active && generation === this.generation) callback();
++    }, delay);
++    this.timers.add(timer);
++  }
+ 
+   // ── 主压缩器 ──
+   private static masterCompressor: DynamicsCompressorNode | null = null;
+@@ -34,7 +68,7 @@
+       this.ctx = new AudioContext();
+     }
+     if (this.ctx.state === 'suspended') {
+-      this.ctx.resume();
++      void this.ctx.resume().catch(() => {});
+     }
+     return this.ctx;
+   }
+@@ -57,6 +91,7 @@
+ 
+   /** 语音池准入 */
+   private static reserveVoice(priority: number, _durationMs: number): boolean {
++    if (!this.active) return false;
+     if (this.voiceCount < SOUND_CONFIG.voicePool.maxVoices) {
+       this.voiceCount++;
+       return true;
+@@ -67,13 +102,14 @@
+ 
+   /** 语音释放（由 setTimeout 触发） */
+   private static scheduleRelease(durationMs: number): void {
+-    setTimeout(() => {
++    this.schedule(() => {
+       this.voiceCount = Math.max(0, this.voiceCount - 1);
+     }, durationMs + 100);
+   }
+ 
+   /** 音效去重：同一 key 在 DEDUP_MS 内只播一次 */
+   private static dedup(key: string): boolean {
++    if (!this.active) return false;
+     const now = performance.now();
+     const last = this.lastPlayed.get(key) ?? 0;
+     if (now - last < this.DEDUP_MS) return false;
+@@ -89,7 +125,7 @@
+ 
+   /** 简易延迟混响（无外部文件） */
+   private static connectReverb(src: AudioNode, wetLevel: number): void {
+-    if (wetLevel <= 0) return;
++    if (!this.active || wetLevel <= 0) return;
+     const ctx = this.getCtx();
+     const delay = ctx.createDelay(0.3);
+     delay.delayTime.value = 0.12;
+@@ -257,6 +293,7 @@
+     pitchVar?: number; pan?: number; priority: number;
+     reverbWet?: number;
+   }): void {
++    if (!this.active) return;
+     const pv = cfg.pitchVar ?? SOUND_CONFIG.pitchVar.impact;
+     const pan = cfg.pan ?? 0;
+     const pri = cfg.priority;
+@@ -465,9 +502,9 @@
+ 
+   static victory(): void {
+     const pri = SOUND_CONFIG.voicePool.PRI_AMBIENT;
+-    setTimeout(() => this.playTone(523, 0.15, 'triangle', 0.12, 659, 0.03, -0.4, 'highpass', 300, 1, pri), 0);
+-    setTimeout(() => this.playTone(659, 0.15, 'triangle', 0.12, 784, 0.03, 0, 'highpass', 400, 1, pri), 150);
+-    setTimeout(() => this.playTone(784, 0.3, 'triangle', 0.15, 1047, 0.03, 0.4, 'highpass', 500, 1, pri), 300);
++    this.schedule(() => this.playTone(523, 0.15, 'triangle', 0.12, 659, 0.03, -0.4, 'highpass', 300, 1, pri), 0);
++    this.schedule(() => this.playTone(659, 0.15, 'triangle', 0.12, 784, 0.03, 0, 'highpass', 400, 1, pri), 150);
++    this.schedule(() => this.playTone(784, 0.3, 'triangle', 0.15, 1047, 0.03, 0.4, 'highpass', 500, 1, pri), 300);
+   }
+ 
+   static defeat(): void {
+@@ -525,7 +562,7 @@
+   static bossAlert(): void {
+     const pri = SOUND_CONFIG.voicePool.PRI_CRITICAL;
+     for (let i = 0; i < 3; i++) {
+-      setTimeout(() => {
++      this.schedule(() => {
+         this.playTone(200, 0.2, 'square', 0.12, 400, undefined, undefined, undefined, undefined, undefined, pri);
+         this.playTone(300, 0.15, 'square', 0.1, 500, undefined, undefined, undefined, undefined, undefined, pri);
+       }, i * 500);
+@@ -536,8 +573,8 @@
+   static bossAppear(): void {
+     const pri = SOUND_CONFIG.voicePool.PRI_CRITICAL;
+     this.playTone(120, 0.5, 'sawtooth', 0.15, 60, undefined, undefined, undefined, undefined, undefined, pri);
+-    setTimeout(() => this.playTone(200, 0.4, 'sawtooth', 0.12, 80, undefined, undefined, undefined, undefined, undefined, pri), 200);
+-    setTimeout(() => this.playTone(300, 0.3, 'sawtooth', 0.1, 100, undefined, undefined, undefined, undefined, undefined, pri), 400);
++    this.schedule(() => this.playTone(200, 0.4, 'sawtooth', 0.12, 80, undefined, undefined, undefined, undefined, undefined, pri), 200);
++    this.schedule(() => this.playTone(300, 0.3, 'sawtooth', 0.1, 100, undefined, undefined, undefined, undefined, undefined, pri), 400);
+   }
+ 
+   /** Boss 地震波 */
+@@ -566,7 +603,7 @@
+   static bossDeath(): void {
+     const pri = SOUND_CONFIG.voicePool.PRI_CRITICAL;
+     this.playTone(80, 0.4, 'sawtooth', 0.18, 30, undefined, undefined, undefined, undefined, undefined, pri);
+-    setTimeout(() => this.playTone(200, 0.3, 'sawtooth', 0.12, 60, undefined, undefined, undefined, undefined, undefined, pri), 300);
+-    setTimeout(() => this.playTone(500, 0.5, 'triangle', 0.15, 800, undefined, undefined, undefined, undefined, undefined, pri), 600);
++    this.schedule(() => this.playTone(200, 0.3, 'sawtooth', 0.12, 60, undefined, undefined, undefined, undefined, undefined, pri), 300);
++    this.schedule(() => this.playTone(500, 0.5, 'triangle', 0.15, 800, undefined, undefined, undefined, undefined, undefined, pri), 600);
+   }
+ }
+--- a/src/SpriteLoader.ts
++++ /dev/null
+@@ -1,99 +0,0 @@
+-/**
+- * SpriteLoader — 外部 PNG 素材加载器
+- * 素材来源：东方夜雀食堂解包精灵
+- */
+-import Phaser from 'phaser';
+-
+-const PREFIX: Record<string, string> = {
+-  trees: 'tree', bamboo: 'bamboo', mountain: 'mtn',
+-  ground: 'gnd', plants: 'plant', ground_tex: 'gtex',
+-  atlas: 'atlas', grass_tiles: 'grass',
+-  fx_ghost: 'fxghost', fx_crack: 'fxcrack', fx_particle: 'fxpart',
+-};
+-
+-const MANIFEST: Record<string, string[]> = {
+-  trees: [
+-    'Trees01_0','Trees01_10','Trees01_11','Trees01_12','Trees01_13',
+-    'Trees01_14','Trees01_15','Trees01_16','Trees01_18','Trees01_19',
+-    'Trees01_25','Trees01_5','Trees01_6','Trees01_7',
+-  ],
+-  bamboo: [
+-    'Garden_Bamboo_15','Garden_Bamboo_4',
+-    'Trees_Bamboo_0','Trees_Bamboo_1','Trees_Bamboo_11',
+-    'Trees_Bamboo_2','Trees_Bamboo_3','Trees_Bamboo_7','Trees_Bamboo_8',
+-  ],
+-  mountain: [
+-    'Mountain01_0','Mountain01_1','Mountain01_2',
+-    'Moutain01_0','Moutain01_1','Moutain01_100','Moutain01_108','Moutain01_109',
+-    'Moutain01_11','Moutain01_117','Moutain01_119','Moutain01_12',
+-  ],
+-  ground: ['site_15','site_16','site_17','site_18','site_21','site_22'],
+-  plants: [
+-    'collection_0','collection_1','collection_2','collection_3','collection_4',
+-    'collection_5','collection_6','collection_7','collection_8','collection_9',
+-    'collection_10','collection_11','collection_12','collection_13','collection_14',
+-    'collection_15','collection_16','collection_17','collection_18','collection_19',
+-    'collection_20','collection_21','collection_22','collection_23','collection_24',
+-    'collection_25','collection_26','collection_27','collection_28','collection_29',
+-    'collection_30','collection_31','collection_32','collection_33','collection_34',
+-    'collection_35','collection_36','collection_37','collection_38','collection_39',
+-    'collection_40','collection_41','collection_42','collection_43','collection_44',
+-    'collection_45','collection_46','collection_47','collection_48','collection_49',
+-    'collection_50','collection_51','collection_52','collection_53','collection_54',
+-    'collection_55','collection_56','collection_57','collection_58','collection_59',
+-    '钓鱼水箱',
+-  ],
+-  ground_tex: [
+-    '2048x2048-BC7-Map_HumanVillage_Atlas_Main',
+-    '2048x2048-BC7-Map_HumanVillage_Atlas_Other',
+-    '2048x2048-BC7-Map_ScarletMansion_Atlas_Other',
+-    '2048x2048-BC7-Map_HakureiShrine_Atlas_Other',
+-    '1024x1024-BC7-Map_HumanVillage_Atlas_Other',
+-    '512x1024-BC7-Map_HumanVillage_Atlas_Main',
+-  ],
+-  atlas: [
+-    'CommonSite_Seg_256x256','CommonMountain_Seg_1024x1024',
+-    'CommonMountain_Seg_2048x2048','CommonMountain_Seg_2048x2048_1',
+-    'CommonResourcePoints_Atlas_512x512',
+-  ],
+-  grass_tiles: ['grass_large_0','grass_large_1','grass_large_2'],
+-  fx_ghost: ['幽灵_0','幽灵_1','幽灵_2','幽灵_3','幽灵_4'],
+-  fx_crack: ['TableCrack'],
+-  fx_particle: [
+-    'Goldcoin_0','Mood_0','Mood_1',
+-    'UI_night_addup_0','UI_night_addup_1','UI_night_addup_2','UI_night_addup_3',
+-    'UI_night_addup_4','UI_night_addup_5','UI_night_addup_6','UI_night_addup_7',
+-  ],
+-};
+-
+-const BASE = 'assets/sprites';
+-const FX_BASE = 'assets/sprites/fx'; // FX 素材在子目录
+-
+-function mkey(cat: string, name: string): string {
+-  return `${PREFIX[cat]}_${name}`;
+-}
+-
+-export function preloadSprites(scene: Phaser.Scene): void {
+-  for (const [cat, names] of Object.entries(MANIFEST)) {
+-    // FX 素材用不同路径
+-    const base = cat.startsWith('fx_') ? FX_BASE : BASE;
+-    const folder = cat.startsWith('fx_')
+-      ? { fx_ghost: 'Ghost_Shared_Atlas', fx_crack: 'TableCrack_Atlas', fx_particle: 'Work_Atlas' }[cat] || cat
+-      : cat;
+-    for (const name of names) {
+-      scene.load.image(mkey(cat, name), `${base}/${folder}/${name}.png`);
+-    }
+-  }
+-}
+-
+-export function nthKey(cat: string, n: number): string {
+-  const names = MANIFEST[cat];
+-  if (!names) return '';
+-  return mkey(cat, names[n % names.length]);
+-}
+-
+-export function randKey(cat: string): string {
+-  const names = MANIFEST[cat];
+-  if (!names) return '';
+-  return mkey(cat, names[Math.floor(Math.random() * names.length)]);
+-}
+--- a/src/VFX.ts
++++ b/src/VFX.ts
+@@ -12,6 +12,12 @@
+ 
+   private static trauma = 0;
+   private static traumaScene: Phaser.Scene | null = null;
++
++  /** Release per-run state when leaving or replaying the game. */
++  static reset(): void {
++    VFX.trauma = 0;
++    VFX.traumaScene = null;
++  }
+ 
+   /** 每帧调用：衰减创伤并应用屏震 */
+   static updateTrauma(scene: Phaser.Scene, delta: number): void {

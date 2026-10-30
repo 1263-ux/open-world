@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import HksOverlay from '../components/HksOverlay.vue';
 import { campuses } from '../campus-data/campuses';
 import { emptyQuest, startQuest, visitQuest } from '../games/quest';
 import { loadProgress, saveProgress } from '../games/storage';
@@ -30,6 +31,11 @@ const selected = computed(() => campus.value.landmarks.find(item => item.id === 
 const displayed = computed(() => panel.value === 'detail' ? selected.value : target.value);
 const displayedFeature = computed(() => campus.value.features.find(item => item.id === displayed.value?.featureId) ?? null);
 const visitedNames = computed(() => quest.value.visited.map(id => campus.value.landmarks.find(item => item.id === id)?.name).filter(Boolean));
+
+const hksOpen = ref(false);
+const hksButton = ref<HTMLButtonElement | null>(null);
+function openHks() { scene?.pause(); hksOpen.value = true; }
+function closeHks() { hksOpen.value = false; scene?.resume(); nextTick(() => hksButton.value?.focus()); }
 
 const panel = ref<Panel>('quest');
 const panelOpen = ref(typeof window === 'undefined' || window.innerWidth > 700);
@@ -182,6 +188,7 @@ function heightLabel(status: string) {
   return status === 'osm-tag' ? 'OSM 标注（非实测保证）' : status === 'level-estimate' ? '按层数估算' : status === 'ml-estimate' ? '2020 年模型预测（非实测）' : '展示用估算，待核实';
 }
 function onKeydown(event: KeyboardEvent) {
+  if (hksOpen.value) return;
   if (event.key === 'Escape' && panelOpen.value) closePanel();
 }
 onMounted(() => {
@@ -206,7 +213,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :inert="hksOpen" :aria-hidden="hksOpen ? 'true' : undefined">
     <header class="masthead">
       <div class="brand"><span class="brand-mark" aria-hidden="true">太</span><span>太理 <i>·</i> 时光漫游</span></div>
       <nav class="campus-switch" aria-label="选择校区">
@@ -238,6 +245,7 @@ onBeforeUnmount(() => {
         <button type="button" data-testid="reset-view" aria-label="重置视角" title="重置视角" :disabled="!!sceneError" @click="scene?.resetView()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2 6M4 4v7h7"/></svg></button>
       </div>
       <div class="panel-launchers">
+        <button ref="hksButton" type="button" data-testid="open-hks" @click="openHks">古建守护</button>
         <button ref="questButton" type="button" data-testid="open-quest" :aria-expanded="panelOpen && panel === 'quest'" @click="showPanel('quest', $event.currentTarget)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16l-7-4-7 4z"/></svg> 漫游</button>
         <button type="button" data-testid="open-directory" :aria-expanded="panelOpen && panel === 'directory'" @click="showPanel('directory', $event.currentTarget)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg> 地点</button>
       </div>
@@ -317,4 +325,5 @@ onBeforeUnmount(() => {
     </footer>
     <div class="sr-only" aria-live="polite">{{ notice }}</div>
   </div>
+  <HksOverlay v-if="hksOpen" @close="closeHks" />
 </template>

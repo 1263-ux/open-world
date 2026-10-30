@@ -10,6 +10,7 @@ Node.js 24；依赖版本由 package-lock.json 锁定。
 
 ```bash
 npm ci
+npm --prefix games/hks ci --ignore-scripts
 npm run dev
 npm run typecheck
 npm run lint
@@ -20,6 +21,10 @@ npm run test:e2e
 ```
 
 默认开发服务仅监听 127.0.0.1。本机预览地址由 Vite 输出。若已有适配的 Chromium，可通过 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH 指定；默认使用 Playwright 管理的浏览器。
+
+## Hks 小游戏
+
+用户授权的《山西古建保卫战》直接移植在 games/hks，保留技能、Boss和五分钟守护规则。通过“古建守护”入口按需打开；返回校园后继续原旅程。独立 iframe 避免游戏样式与校园冲突，退出回收音频及计时器。对应来源和最小修改记录见 games/hks/README.md。当前是否通过试玩以相应提交的 CI 和报告为准。
 
 ## 当前功能
 

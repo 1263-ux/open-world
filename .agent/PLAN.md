@@ -1,27 +1,27 @@
-# Dense source-backed campus integration
+# Hks 直接移植与校园联动
 
-C2 + R-data + R-ui + R-architecture + A2. Research before plan completed2026-10-30: originalplans/AGENTS/currentstate read, officialdataset/MCP research, actualbbox extraction and pixelinspection. Sol API plan completed, adapted below to actualfiles/no unnecessaryfeatureflags.
+C2 + R-ui + R-runtime + R-protocol + A2。每轮先读计划并调研；本轮已重读根规则、三份原始计划及当前状态，审查固定版本源码和 Phaser 3.90 生命周期。
 
 ## G0
-Product core: browser exploration of recognizable TYUT campuses with a coherent playable journey.
-Primary user: campus visitors/students exploring and recognizing landmarks.
-Role ownership: source datasets retain provenance; deterministic offline code transforms; runtime renders; user judges major visual outcomes.
-Non-goals: surveying, exactnavigation, backend/multiplayer, publicdeployment, newMCPcredentials or paidservices.
-Forbidden claims: candidatecount is realbuildingcount; MLheight is survey; officialphotos supply unknown dimensions; allcampusmodeling done.
+- 产品核心：校园探索与一个可实际玩的古建守护小游戏形成连贯体验。
+- 使用者：浏览校园、进入游戏、完成或退出后继续校园任务的玩家。
+- 职责：用户确认 Hks 为其项目并授权直接搬入和微调；保留原游戏代码及来源，主控负责集成、验收和推送。
+- 非目标：重写替代游戏、改变核心玩法、公开部署、增加收费服务或权限。
+- 禁止声称：未试玩就说玩过；复制素材等于拥有额外开源许可；浏览器测试等于最终美术验收。
 
-## Evidence and reuse
-Overture2026-10-21 actual100Huyu143Yingxi candidates,15oldOSMfootprints IoU1.0. ODbL. GloBFP2020 MLheight CC BY4.0,119/200candidates withtinyfragments and contradictions; retainonlyhigh-IoU heightmatches withnoconflictingOSMheight/floors. Primarysources: https://docs.overturemaps.org/guides/buildings/ ; https://docs.overturemaps.org/attribution/ ; https://doi.org/10.5281/zenodo.15487006 . ThreeofficialBufferGeometryUtils mergeGeometries reuse checked https://threejs.org/docs/pages/module-BufferGeometryUtils.html . Actualinstalled Three0.186.1 addon supports compatibleattribute merge.
+## 资料与选择
+固定用户贡献版本 ShanEior/Hks@843ecbbae414a403eae350f4f8105cfbb84acf72，用户自己提交移除冗余旧图包。直接保留原 Phaser 类、技能、Boss、菜单、教程及程序化美术；只修复该提交遗留的已删除图片引用和生命周期缺陷，不重写玩法。源文件 Git blob 已逐项核验。Phaser 3.90.0 MIT 依赖不等于项目素材另获许可；保留来源，不伪造 LICENSE。
 
-## Files and ownership
-Parent owns sharedcontracts.ts, App.vue,heightlabels, build_spatial_data.py integration, sourcefiles/manifest/licenses, tests and finalpublication. Terra writes scripts/augment_buildings.py and proposes targeted CampusScene.ts backgroundbatching patch; no concurrentwrites. OriginalknownlandmarkIDs/order remain. Source snapshots under public/data/sources, audit under public/data; no68MBtile orschoolphotos committed.
+用户最新明确所有权及集成授权，早先“等待代码所有权确认”的假设已失效，不再询问。原始资源与文字授权范围如有真正新问题再独立处理，不能把常规排错推给用户。
 
-## Rules and sequence
-1.FreezeoptionalheightSource{dataset,year,method,matchIoU,sourceId} and heightStatus ml-estimate.
-2.Preserve15OSMnamedfootprints/heights/floors. SupplementOverture polygons area>=20m2; rejectinvalid/holes(unexpectedinthisrelease)/duplicates/overlaps withacceptedfeatures. No silentgeometryrepair.
-3.Forunknownheight only, unique MLmatch IoU>=.65, runnerupambiguity check, predictedheight3..60m; otherwiseexplicitdisplayfallback, preserveexistingfallbackvalue. Neveroverwrite13floormainwith9mML. Audit everyaccept/reject.
-4.Recompute allroutes againstallacceptedbuildingbuffers. No straightline fallback. Failifrequiredstation unreachable orrouteinvalid.
-5.Batchbackgroundmeshesby4materials viaofficialmergeGeometries. Keepknownlandmarksmesh/picking independent; limitbackgroundwindowdensity, sharedinstances; deterministicdisposal.
-6.Typecheck/lint/unit/build, Pythonmatcher regression+deterministicgeneration+geometryroutevalidation, realbrowser fulljourney/pinch/switch/fallback, inspectbothcampusdesktop/mobilepixels. Recordactualrenderer drawcalls/trianglecounts; no unmeasured30FPSclaim.
-7.Pushdev, CIthenmain onlyaftertests. Rollbackgenerateddata+routes together via priorcommit4ee33f; revertbatching separately ifneeded.
+## 文件边界与集成
+- 独立预处理仅改 /tmp/hks-port-source；完成后主控取入 games/hks，保持单写者。
+- 主控负责依赖、构建与 src/shared/contracts.ts / App.vue 集成。Terra API 生成独立 HksOverlay.vue。
+- 小游戏单独 Vite 构建到 public/games/hks（生成物不入 Git），通过同源 iframe 进入。这样保留原 CSS/Phaser 生命周期，退出删除 iframe 回收音频和计时器。
+- Three 场景新增 pause/resume，仅暂停 RAF/控制器，保留校区、镜头、旅程当前位置和进度。返回按钮始终可见；Escape 从子页发送经过来源和窗口校验的退出消息。
+- 不自动修改或同步用户 Hks fork；只在 open-world 内集成固定来源。
 
-Completionofthisslice meansdenserprovenance-awaretechnicalscene, notfinalaestheticrelease. Nextslice usesofficialphotos forrecognizablelandmarkasset, noinventeddimensions.
+## 验收与回退
+先独立编译 Hks，再真实浏览器试玩菜单/教程/移动/升级/战斗/结算/重玩/退出；检查缺图、控制台、音频退出和连续进出。校园任务在小游戏进出后继续，手机基础操作通过。截图只补充画面判断，不替代实际输入。对未覆盖路径明确记录。
+
+密集校园提交7cdc04a另在 dev/dense-campus-data 验证，先完成其 CI/画面检查，再合入小游戏。出错时深入调研、实验和修复，不等待用户处理常规技术问题。只有新增收费、权限、公开部署等授权边界才停下询问。

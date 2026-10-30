@@ -1,25 +1,20 @@
-# Current state
+# 当前状态
 
-Updated2026-10-30 00:24 UTC. Latestuser asked to research alternatives/MCP instead of waiting for documents.
+更新：2026-10-30 01:40 UTC。
 
-## Goal / authority
-Complete recognizable playable TYUTcampus world with credible scale/aesthetics/coherentgameplay. Mainwritesaftertests authorized, onlymajoroutcome review. Readplans+boundedresearchbeforenewplan. No publicdeployment/newpaidservices/credentialexpansion. Selective relevant source toofficialOpenAIAPIallowed, notwhole-repo/auth/unrelateddata. Backend/multiplayer later.
+## 目标与授权
+持续交付有审美、可信比例和连贯玩法的太理校园世界。每轮先读原计划并做有界调研，遇到问题主动实验，不把常规排错转交用户。用户只验证重大成果，允许检查后直接推 main；未授权公开部署、额外付费或扩大凭据权限。用户明确 Hks 是自己制作，授权直接移植并微调，不再询问其代码所有权。
 
-## Main verified baseline
-4ee33f834f25a6e1b51e8e6cad317406663dc951 main/devCI bothpassed24unit+5browser; actualscreenshots inspected. Technicalcheckpoint only, notfinalvisualacceptance.
+## 已验证主线
+main=7cdc04a4d0d9eb258e7fa40aef27a8fffef3eb5f，远端已核对。密集数据在开发分支CI40985308888通过：26TS单测、6Python回归、确定性重建、typecheck/lint/build、5浏览器流程。实际桌面/手机/迎西画面已取得并检查。主线重复CI仍需查看。94+129个建筑多边形，207ML高度，8展示估计、7按楼层估算、1OSM标高；不是现场测量或最终美术验收。
 
-## Active dense-source slice
-Plan .agent/PLAN.md. Actualresearchdiscovered243Overturecampuscandidates and319GloBFPcandidates. Properlicense/sourceaudit and geometryfiltering produced223buildingpolygons (94Huyu129Yingxi).207high-IoUMLheightpredictions2020,8displayfallbacks,7floor-derived,1OSMtag. Known15OSMfootprints retained. Originalmain13floors preserved overconflicting9mML.
+## 正在做
+1.Hks：固定用户提交843ecbba，原程序美术、8技能、Boss、300秒规则保留。games/hks独立构建，通过同源iframe进入；校园pause/resume保留旅程与镜头，退出回收iframe/音频。最小修复失效图片引用、每局状态、箭头键、弹窗计时器等。已编译及根typecheck/lint通过；新增真实浏览器试玩、自然失败/重玩、退出和失败恢复测试尚未跑。
+2.机械馆：独立任务在landmark-model-work生成自制细节GLB及多角度预览，参考官方照片与原米制footprint；15m总高度仍是明确标注的展示估计，不冒充测绘。未合入主线。
+3.对标：已研究Bruno Simon、Townscaper、Vampire Survivors官方资料，提取目标提示、空间层次、输入恢复、结构反馈和暂停规则；没有声称实际玩过工具未能打开的第三方demo。
 
-TerraAPI implemented augmentation helper andbackgroundbatching; SolAPIplanned. Parentintegratedtypedprovenance/UI, recomputedallroutes avoidingallbuildingbuffers, added6Pythonregressions and26TSunits. Localtypecheck/lint/build/unitpassed; regenerationbyteidentical. CI/newactualbrowser/visual validation pending. Newfiles notyetmain.
+## 当前检查与边界
+最新小游戏代码在本地，未推送。密集数据主线已通过旧路径，但不能把该结果当小游戏验收。Hks胜利自然通关尚未验证；自然失败和重玩测试即将运行。所有实际试玩由真实浏览器输入与运行状态/截图记录证明，不用代码阅读冒充。原始学校图片仅仓库外参考，不分发。
 
-No newMCPinstalled: mapMCPmostlyPOI/routes, cannotprovideprecisecampusmodels. Blender4.3.2CLI alreadyavailable. OfficialMeihua2020andmechanicalhallphotos actuallydownloaded/viewed outside repo forreferenceonly; notredistributed. Nextindependentstep afterdensityvalidation is recognizablelandmarkmodelingusingthosephotos. Realheight/footprintuncertaintyremains, but no longerblockedsolelyonuserphotos.
-
-## Evidence / limits
-Sources public/data/sources; matchingreportpublic/data/augmentation-*-audit.json; originalcomparison docs/resources/geodata. Heightpredictions aren'tsurvey, oldfootprints maynotreflect2026changes. Sparsefacadequalitynotresolvedjustbyaddingbuildings. No genericphoto-freefullfidelityclaim.
-
-## Runtime / budget
-APIcap$90, accountinvoicebalanceunknown; localpilotreserveceiling$5isnotinvoice. Actualmodeltokenledgeroutside repo. NoAPIsecretinclient/repo/logs. CLIhostsandboxcannotstart; authorizeddirectResponsesgeneration+parentsandboxintegration. BrowserQA viaGitHubActions, localbrowserrestricted. Target-deviceFPSnotverified.
-
-## 00:46 UTC publication interruption
-Local integration now passes26 TypeScript unit tests,6 Python regressions,typecheck/lint/build,and deterministicregeneration. Freshreview found instancebuffer disposal and backgroundpicking occlusion defects; bothfixed, plusvisibleattributionlink. Devbranch dev/dense-campus-data created from4ee33f. The publication tool run was interrupted (reported aborted by user); no new commit/ref update confirmed. Read-only remotecheck00:45 shows devbranch still4ee33f. Main also remains previousverifiedbaseline. No new browserCI has run for densecode. Keep localfiles; do not claim uploaded or accepted. Latestuser informed00:46. Sourcefiles/rendererpatches remainlocal. Uncertain danglingtree write, if any, does not constitute a pushedcommit; reconcile before future writes.
+## 额度和运行环境
+API总预算上限90美元，账单余额未知；本地5美元保守预留门槛不是实际账单。Terra/Sol直接Responses调用记录在仓库外，选择性传必要片段，不传密钥或全仓。嵌套CLI沙箱不可用，主控正常沙箱集成，GitHub Actions做真实浏览器测试。未改变安全隔离。

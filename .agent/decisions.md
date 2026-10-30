@@ -80,3 +80,9 @@ User explicitly permits selective sharing for this project. Only subtask-require
 ## 2026-10-29 15:04 quality correction
 
 The first visual was rejected. Full campus geographic meter coordinates and faithful feature footprints replace arbitrary toy sizes. Aesthetic/gameplay plan is round03;complete release remains target, not another placeholder screenshot. Actual heights/unknown footprints are explicitly unverified;source gaps cannot be hidden behind generic models.
+
+## 2026-10-30 最新用户确认
+
+用户明确 Hks 是其自己制作的项目，要求直接搬入、允许微调。早先“等待代码所有权确认”的假设不再成立。采用用户贡献的固定提交843ecbbae414a403eae350f4f8105cfbb84acf72，保留原玩法和源码来源；仅修失效资源引用、生命周期与校园接入，不重写替代游戏。无新增统一开源许可声明，不自动修改原fork。
+
+用户再次要求遇到问题主动深入调研、读计划、持续推进，完成后自己试玩并与成熟产品对比。常规排错、调研和实现不再要求逐次确认；新增收费、权限扩大、公开部署等仍按授权边界处理。

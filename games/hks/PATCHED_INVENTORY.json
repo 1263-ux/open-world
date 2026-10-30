@@ -1,0 +1,57 @@
+{
+  "baseCommit": "843ecbbae414a403eae350f4f8105cfbb84acf72",
+  "changes": [
+    {
+      "path": "src/ArtGen.ts",
+      "status": "modified",
+      "originalGitBlobSha": "a6db244d98bcd3692ebf696a2cfe8d04bcc0e61d",
+      "patchedSha256": "7c73663b8250378a5f549940fdb94c50e67cd26fb0277ba22b26d23a73049857",
+      "bytes": 75451
+    },
+    {
+      "path": "src/GameScene.ts",
+      "status": "modified",
+      "originalGitBlobSha": "7cbe5481056cc2a81e0a5f9ba6a4f9f48835c4b5",
+      "patchedSha256": "844eed67fb230165147856a474b60a1e36d97e16814c918a392c750514ae3694",
+      "bytes": 42301
+    },
+    {
+      "path": "src/HUD.ts",
+      "status": "modified",
+      "originalGitBlobSha": "2b9d95d31c70618f11293afa9bc61287a6cb1c15",
+      "patchedSha256": "fe29f780ab432195a52913d2c203a20953e892b9c0ba9d8d57a6f0cd2fb75bdd",
+      "bytes": 27156
+    },
+    {
+      "path": "src/Player.ts",
+      "status": "modified",
+      "originalGitBlobSha": "9f253b8c772700d8f46aaf87bf7e02a79cfd6120",
+      "patchedSha256": "d4f49b7c8a3152f629d18320dc3bafb2f3ee04d3070fdd10c698f8d6444d08c7",
+      "bytes": 4267
+    },
+    {
+      "path": "src/SoundManager.ts",
+      "status": "modified",
+      "originalGitBlobSha": "f2ef79b539b21d2cff9d8a6ac334d59e7a4e1620",
+      "patchedSha256": "80ae51bd3f67de59c2768f3792adb166b4c8aabb74a3e3824621cd4b4101067f",
+      "bytes": 23322
+    },
+    {
+      "path": "src/SpriteLoader.ts",
+      "status": "removed",
+      "originalGitBlobSha": "a2b9db18c5b7631bcd607fca4f19aaa8053c8997",
+      "patchedSha256": null,
+      "bytes": 0
+    },
+    {
+      "path": "src/VFX.ts",
+      "status": "modified",
+      "originalGitBlobSha": "fc91939bb637ccbd1f0056be8d7e2ea70045b5f5",
+      "patchedSha256": "159bc376aa9dc13412e9b9ba5c01050ec94ceeb00a4a53e79badf1bfa27d8acc",
+      "bytes": 26206
+    }
+  ],
+  "originalGitBlobMismatches": [],
+  "unresolvedLocalImports": [],
+  "runtimeExecuted": false
+}

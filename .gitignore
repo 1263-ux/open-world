@@ -30,3 +30,7 @@ test-results/
 # .agent/ is intentionally versioned: plans contain no credentials.
 
 .venv/
+
+games/hks/node_modules/
+public/games/hks/
+games/hks/dist/

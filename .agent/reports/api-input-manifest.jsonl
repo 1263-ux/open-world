@@ -4,3 +4,4 @@
 {"task": "round03-ground-travel-fix", "model": "gpt-6.1-terra", "selected_inputs": ["CampusScene.ts: strips, road mesh block, animateView/questView, navigateTo/reset/tick only"], "excluded": "other source, credentials/auth, unrelated data"}
 {"task": "round05-augment", "model": "gpt-6.1-terra", "selected_inputs": ["Publicdataset schema, explicitlyselected featurecontract and augmentationrequirements only"], "excluded": "other source,auth/credentials,unrelated data"}
 {"task": "round05-batch", "model": "gpt-6.1-terra", "selected_inputs": ["CampusScene.ts building/park renderblock only"], "excluded": "other source,auth/credentials,unrelated data"}
+{"task":"hks-overlay","model":"gpt-6.1-terra","selected_inputs":["New standalone Vue overlay requirements only"],"excluded":"credentials,other source,whole repository"}

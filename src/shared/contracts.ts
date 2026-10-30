@@ -30,5 +30,7 @@ export interface CampusSceneHandle {
   focusLandmark(id:string):void;
   overview():void;
   resetView():void;
+  pause():void;
+  resume():void;
   dispose():void;
 }
