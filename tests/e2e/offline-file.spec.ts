@@ -99,14 +99,41 @@ test.describe('file:// touch-capable phone', () => {
     await page.getByTestId('campus-yingxi').click();
     await expect(campus).toHaveAttribute('data-hero-model','ready',{timeout:30000});
     const canvas=await launch(page); await start(page,canvas); const before=await snapshot(canvas);
+    // Wait for the real first-encounter knowledge card; capture it before dismissing it.
+    await expect.poll(async()=> { const state=await snapshot(canvas); return state.paused && !state.levelUp; },{timeout:30000}).toBe(true);
+    await page.screenshot({path:info.outputPath('offline-mobile-knowledge.png'),fullPage:true});
+    // A natural auto-close during screenshot capture is valid; the loop observes current state.
     const touch=await page.context().newCDPSession(page), box=await canvas.boundingBox();
-    if(!box) throw Error('No game canvas');
-    const x=box.x+box.width*.2, y=box.y+box.height*.75;
-    await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});
-    await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+60,y,id:1}]});
-    await page.waitForTimeout(900);
-    await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-    await expect.poll(async()=> (await snapshot(canvas)).x).toBeGreaterThan(before.x+20);
+    if(!box || typeof before.x !== 'number') throw Error('No game canvas or player position');
+    const x=box.x+box.width*.2, y=box.y+box.height*.75, deadline=Date.now()+30000;
+    const observations: { elapsedMs: number; x: number | null; paused: boolean; levelUp: boolean }[] = [];
+    const started=Date.now(); let held=false, moved=false;
+    try {
+      while (Date.now()<deadline) {
+        const state=await snapshot(canvas);
+        observations.push({elapsedMs:Date.now()-started,x:state.x ?? null,paused:!!state.paused,levelUp:!!state.levelUp});
+        if(typeof state.x === 'number' && state.x>before.x+20) { moved=true; break; }
+        if(state.ended) throw Error('Game ended before touch movement could be verified');
+        if(state.paused) {
+          if(held) { await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]}); held=false; }
+          if(state.levelUp) throw Error('Unexpected level-up interruption while checking early movement');
+          // First-encounter knowledge card explicitly closes on a real tap anywhere.
+          const closeX=box.x+box.width*.8, closeY=box.y+box.height*.8;
+          await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:closeX,y:closeY,id:1}]});
+          await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+          await expect.poll(async()=> (await snapshot(canvas)).paused,{timeout:10000}).toBe(false);
+        } else if(!held) {
+          await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]}); held=true;
+          await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+60,y,id:1}]});
+        }
+        // Keep the actual touch held across game frames until movement or an interruption is observed.
+        await page.waitForTimeout(300);
+      }
+    } finally {
+      if(held) await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      await info.attach('offline-touch-observations',{body:JSON.stringify({baselineX:before.x,moved,observations},null,2),contentType:'application/json'});
+    }
+    expect(moved,'Real held touch should move the player after any first-encounter popup is dismissed').toBe(true);
     await page.screenshot({path:info.outputPath('offline-mobile-play.png'),fullPage:true});
     await page.getByTestId('hks-return').click(); await expect(campus).toHaveAttribute('data-paused','false');
     expect([...blocked],'Unexpected automatic requests').toEqual([]); expect(errors).toEqual([]);

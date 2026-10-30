@@ -51,3 +51,7 @@ Latest six-file upstream feedback/readability improvements and seven existing pr
 ## Candidate telemetry / offline delivery round
 
 Natural-play QA reads player, XP, Boss, upgrade-card locations and structure HP through canvas data attributes. Terminal outcome/HP snapshots are latched only for reporting, not used to change combat, timer or victory conditions. Tests drive ordinary keys and canvas clicks. Offline mode embeds the same game in srcdoc; child messages use a wildcard target only for the null file origin, while the parent still verifies both origin and exact iframe source. The HTTP path keeps its explicit same-origin target. The original seven PNGs remain byte-identical.
+
+## Portrait dialog correction
+
+Actual 390px phone screenshot revealed the 780-logical-pixel knowledge card exceeded the600px portrait viewport. HUD now stacks its unchanged illustration and complete text inside a552×640 panel; desktop remains780×430. Portrait-only upgrade cards gain vertical space for existing wrapped skill descriptions; desktop card height stays unchanged. No timer, content, control callback or gameplay values changed. Real-input QA waits for the natural first-encounter popup, records it, dismisses by real touch and holds the joystick until observed movement within a bounded deadline. It does not fake game state or retry the entire test.

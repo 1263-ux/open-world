@@ -331,7 +331,8 @@ export class HUD {
     const maxPanelW = GAME_WIDTH - 120;
     const fitCardW = Math.floor((maxPanelW - cardGap * (options.length - 1)) / Math.max(options.length, 1));
     const cardW = Math.min(LEVELUP_CARD.w, fitCardW);
-    const cardH = LEVELUP_CARD.h;
+    // Narrow cards need vertical room for the original wrapped skill details.
+    const cardH = GAME_HEIGHT > GAME_WIDTH ? Math.min(600, GAME_HEIGHT - 160) : LEVELUP_CARD.h;
     const totalW = cardW * options.length + cardGap * (options.length - 1);
     const startX = (GAME_WIDTH - totalW) / 2;
     const centerY = GAME_HEIGHT / 2 - 8;
@@ -523,7 +524,10 @@ export class HUD {
 
     const depth = 350;
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
-    const w = 780, h = 430;
+    const portrait = GAME_HEIGHT > GAME_WIDTH;
+    // Keep the desktop composition; portrait stacks the art above full-width text.
+    const w = portrait ? GAME_WIDTH - 48 : 780;
+    const h = portrait ? Math.min(640, GAME_HEIGHT - 96) : 430;
     const illW = 148, illH = 148;
     const padding = 24;
     const leftX = cx - w / 2, topY = cy - h / 2;
@@ -542,7 +546,8 @@ export class HUD {
     this.popupElements.push(panel);
 
     // ═══ 左侧：怪物图标 ═══
-    const illX = leftX + padding + illW / 2, illY = topY + padding + illH / 2 + 28;
+    const illX = portrait ? cx : leftX + padding + illW / 2;
+    const illY = topY + padding + illH / 2 + (portrait ? 0 : 28);
     const illusKey = this.scene.textures.exists(info.illusKey) ? info.illusKey : monsterType;
     if (this.scene.textures.exists(illusKey)) {
       const illBg = this.scene.add.rectangle(illX, illY, illW + 12, illH + 12, 0x0a0806, 0.8)
@@ -555,17 +560,17 @@ export class HUD {
     }
 
     // ═══ 右侧：标题 + 描述 ═══
-    const rightX = leftX + illW + padding * 2 + 8;
-    const rightW = w - illW - padding * 3 - 12;
-    const textTop = topY + padding + 14;
+    const rightX = portrait ? leftX + padding : leftX + illW + padding * 2 + 8;
+    const rightW = portrait ? w - padding * 2 : w - illW - padding * 3 - 12;
+    const textTop = portrait ? topY + padding + illH + 24 : topY + padding + 14;
     const descTop = textTop + 52;
-    const descBoxH = h - padding * 2 - 92;
+    const descBoxH = portrait ? topY + h - padding - 32 - descTop : h - padding * 2 - 92;
 
     // 怪物名称
-    const title = this.scene.add.text(rightX, textTop, info.name, {
+    const title = this.scene.add.text(portrait ? cx : rightX, textTop, info.name, {
       ...FONT.title, color: info.dangerColor,
       stroke: '#000', strokeThickness: 4,
-    }).setScrollFactor(0).setDepth(depth + 2);
+    }).setOrigin(portrait ? 0.5 : 0, 0).setScrollFactor(0).setDepth(depth + 2);
     this.popupElements.push(title);
 
     // 分隔线
@@ -582,11 +587,11 @@ export class HUD {
     this.popupElements.push(descBg);
 
     // 描述文字：优先保持阅读性，再按内容缩字号
-    let descFontSize = 14;
+    let descFontSize = portrait ? 18 : 14;
     let descFont = `${descFontSize}px`;
     let wrappedDesc = this.wrapCJK(info.desc, descFont, rightW - 24);
     let estimatedLines = this.estimateWrappedLineCount(info.desc, descFont, rightW - 24);
-    while (descFontSize > 11 && estimatedLines * (descFontSize + 7) > descBoxH - 16) {
+    while (descFontSize > (portrait ? 16 : 11) && estimatedLines * (descFontSize + 7) > descBoxH - 16) {
       descFontSize -= 1;
       descFont = `${descFontSize}px`;
       wrappedDesc = this.wrapCJK(info.desc, descFont, rightW - 24);
@@ -606,7 +611,7 @@ export class HUD {
 
     // ── 底部关闭提示 ──
     const closeHint = this.scene.add.text(cx, cy + h / 2 - 18, '— 点击任意处关闭 —', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#666666',
+      fontSize: portrait ? '16px' : '11px', fontFamily: 'monospace', color: portrait ? '#999999' : '#666666',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 2);
     this.popupElements.push(closeHint);
