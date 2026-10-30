@@ -42,6 +42,8 @@ import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 
 const emit = defineEmits<{ close: [] }>()
 const offlineHtml = import.meta.env.VITE_OFFLINE_BUILD === 'true' ? (window as Window & { __HKS_OFFLINE_HTML__?: string }).__HKS_OFFLINE_HTML__ : undefined
+// file:// srcdoc messages serialize their inherited opaque origin as null.
+const expectedOrigin = offlineHtml && location.protocol === 'file:' ? 'null' : location.origin
 const gameUrl = `${import.meta.env.BASE_URL}games/hks/index.html`
 const frame = ref<HTMLIFrameElement | null>(null)
 const returnButton = ref<HTMLButtonElement | null>(null)
@@ -79,7 +81,7 @@ async function retry() {
 }
 
 function onMessage(event: MessageEvent) {
-  if (!accepting || event.origin !== location.origin || event.source !== frame.value?.contentWindow) return
+  if (!accepting || event.origin !== expectedOrigin || event.source !== frame.value?.contentWindow) return
   if (event.data?.type === 'hks:return') emit('close')
   else if (event.data?.type === 'hks:ready') {
     clearTimer()

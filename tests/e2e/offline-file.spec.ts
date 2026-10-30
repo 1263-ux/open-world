@@ -5,7 +5,31 @@ import { pathToFileURL } from 'node:url';
 const file = process.env.OFFLINE_HTML;
 const target = file ? pathToFileURL(file).href : '';
 test.skip(!file, 'Set OFFLINE_HTML to the absolute extracted offline index.html');
+type MessageEvidence = { type: string; origin: string; parentLocationOrigin: string; parentWindowOrigin: string; sourceMatchesFrame: boolean };
+declare global { interface Window { __recordOfflineMessage: (e: MessageEvidence) => Promise<void> } }
+const messageEvidence = new WeakMap<Page, MessageEvidence[]>();
+test.afterEach(async ({ page }, info) => {
+  const parent = await page.evaluate(() => ({ locationOrigin: location.origin, windowOrigin: window.origin,
+    protocol: location.protocol })).catch(() => null);
+  const frame = page.frames().find(item => item.url() === 'about:srcdoc');
+  const child = frame ? await frame.evaluate(() => ({ locationOrigin: location.origin, windowOrigin: window.origin,
+    canvasState: document.querySelector('canvas')?.getAttribute('data-hks-state') ?? null })).catch(() => null) : null;
+  await info.attach('offline-origin-evidence', { body: JSON.stringify({ parent, child, messages: messageEvidence.get(page) ?? [] }, null, 2), contentType: 'application/json' });
+});
 async function guard(page: Page) {
+  // Read-only diagnostics retained across reloads and attached on success or failure.
+  const evidence: MessageEvidence[] = []; messageEvidence.set(page, evidence);
+  await page.exposeBinding('__recordOfflineMessage', (_source, item: MessageEvidence) => { evidence.push(item); });
+  await page.addInitScript(() => {
+    if (window !== window.top) return;
+    window.addEventListener('message', event => {
+      const type = event.data?.type;
+      if (!['hks:ready', 'hks:error', 'hks:return'].includes(type)) return;
+      const iframe = document.querySelector<HTMLIFrameElement>('[data-testid="hks-frame"]');
+      void window.__recordOfflineMessage({ type, origin: event.origin, parentLocationOrigin: location.origin,
+        parentWindowOrigin: window.origin, sourceMatchesFrame: event.source === iframe?.contentWindow });
+    });
+  });
   const blocked = new Set<string>();
   const allowed = (url: string) => url === target || /^(data:|blob:|about:)/.test(url);
   page.on('request', request => { if (!allowed(request.url())) blocked.add(request.url()); });
@@ -22,9 +46,12 @@ async function clickGame(page: Page, c: Locator, x: number, y: number) {
   await page.mouse.click(box.x+box.width*x/w,box.y+box.height*y/h);
 }
 async function launch(page: Page) {
+  const before = messageEvidence.get(page)?.length ?? 0;
   await page.getByTestId('open-hks').click();
   await expect(page.getByTestId('hks-loading')).toHaveCount(0,{timeout:30000});
   await expect(page.getByTestId('hks-error')).toHaveCount(0);
+  await expect.poll(() => (messageEvidence.get(page) ?? []).slice(before).some(m =>
+    m.type === 'hks:ready' && m.origin === 'null' && m.sourceMatchesFrame), { timeout: 5000 }).toBe(true);
   const canvas=page.frameLocator('[data-testid="hks-frame"]').locator('canvas');
   await expect(canvas).toBeVisible();
   await expect.poll(async()=> (await snapshot(canvas)).scene).toContain('MenuScene');
