@@ -36,7 +36,7 @@ npm run test:e2e
 
 ## 验证状态
 
-已验证运行提交 `dff65feebe674502fb062875b94c95effcf56ce9`：37项TS、8项Python、3个GLB检查及11条HTTP、2条file://真实浏览器流程通过。[验证记录](https://github.com/1263-ux/open-world/actions/runs/41001949551)。该运行提交已推送main。
+已验证运行提交 `1ec3130e34690fbdd2948efc661e4c0d770d932a`：37项TS、8项Python、3个GLB检查及11条HTTP、2条file://真实浏览器流程通过。[验证记录](https://github.com/1263-ux/open-world/actions/runs/41004752367)。该运行提交已推送main；竖屏科普弹窗与升级卡已适配，离线job另独立复验通过。
 
 测试通过不代表实测建筑高度、物理真机性能或最终美术验收。自然试玩已验证升级和失败；Boss与自然胜利尚未验证。
 
