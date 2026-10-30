@@ -672,7 +672,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const z = forMap ? mapShadow.z : Math.round(pawn.position.z / grid) * grid;
     if (!forMap && !force && x === playerShadowX && z === playerShadowZ) return;
     const extent = forMap ? mapShadow.extent : 400;
-    sun.position.set(x - extent * .7, extent * 1.15, z + extent * .55);
+    // Warm key light reaches the +X-facing mechanical-hall facade; keep other light parameters unchanged.
+    sun.position.set(x + extent * .7, extent * 1.15, z + extent * .55);
     sun.target.position.set(x, 0, z);
     const shadowCamera = sun.shadow.camera;
     const shadowExtent = forMap ? extent * .95 + 100 : 100;

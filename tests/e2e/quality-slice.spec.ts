@@ -32,25 +32,33 @@ async function rotateTo(page: Page, canvas: Locator, targetYaw: number, targetPi
   const turn=Math.atan2(Math.sin(targetYaw-yaw),Math.cos(targetYaw-yaw));
   await dragLook(page,canvas,-turn/.005,(targetPitch-pitch)/.004);
 }
-/** Estimate a genuine camera gesture from read-only pose and the published clock target.
- * Camera smoothing/collision and real framing/occlusion remain checked by the UI. */
-async function aimAtClock(page: Page, canvas: Locator, pointIndex: number, touch=false) {
-  const [x,y,z]=await position(canvas), target=PHOTO_POINTS[pointIndex]!.target;
-  const yaw=Number(await canvas.getAttribute('data-camera-yaw')),pitch=Number(await canvas.getAttribute('data-camera-pitch'));
-  if (![x,y,z,yaw,pitch,...target].every(Number.isFinite)) throw Error('Missing camera/player/clock coordinates');
-  const desiredYaw=Math.atan2(target[0]-x,target[2]-z);
-  const turn=Math.atan2(Math.sin(desiredYaw-yaw),Math.cos(desiredYaw-yaw));
-  const groundDistance=Math.hypot(target[0]-x,target[2]-z);
-  let desiredPitch=-.7, best=Infinity;
-  for(let i=0;i<=1500;i++) {
-    const p=-.7+i*.001, horizontal=Math.cos(p)*6;
-    const cameraY=y+1.4+Math.sin(p)*6+1.1;
-    const lookAngle=Math.atan2(-Math.sin(p)*6-1.1,horizontal);
-    const targetAngle=Math.atan2(target[1]-cameraY,groundDistance+horizontal);
-    const error=Math.abs(lookAngle-targetAngle);
-    if(error<best){best=error;desiredPitch=p;}
+/** Bounded real-input search. Yaw points toward the published clock, while
+ * each pitch is tried by a mouse/touch gesture and judged by live read-only
+ * framing/occlusion feedback after the camera has rendered and settled. */
+async function aimAtClock(page: Page, canvas: Locator, pointIndex: number, touch=false, info?: TestInfo) {
+  const guide=page.getByTestId('photo-guide'),target=PHOTO_POINTS[pointIndex]!.target;
+  await expect(guide).toHaveAttribute('data-photo-in-range','true',{timeout:15000});
+  const attempts:Array<{pitchTarget:number;yaw:number;pitch:number;framed:string|null;obstructed:string|null}> = [];
+  try {
+    for(const pitchTarget of [-.15,-.20,-.25,-.30,-.35,-.40,-.45,-.50,-.55,-.60,-.65,-.70]) {
+      const [x,,z]=await position(canvas),yaw=Number(await canvas.getAttribute('data-camera-yaw')),pitch=Number(await canvas.getAttribute('data-camera-pitch'));
+      if (![x,z,yaw,pitch,...target].every(Number.isFinite)) throw Error('Missing camera/player/clock coordinates');
+      const desiredYaw=Math.atan2(target[0]-x,target[2]-z);
+      const turn=Math.atan2(Math.sin(desiredYaw-yaw),Math.cos(desiredYaw-yaw));
+      const frame=Number(await canvas.getAttribute('data-frame'));
+      await dragLook(page,canvas,-turn/.005,(pitchTarget-pitch)/.004,touch);
+      // Inspect after genuine rendered frames, not stale pre-drag state; this
+      // also allows camera damping and the UI's 250ms status update to settle.
+      await expect.poll(async()=>Number(await canvas.getAttribute('data-frame')),{timeout:15000,intervals:[100]}).toBeGreaterThanOrEqual(frame+6);
+      await page.waitForTimeout(300);
+      const framed=await guide.getAttribute('data-photo-framed'),obstructed=await guide.getAttribute('data-photo-obstructed');
+      attempts.push({pitchTarget,yaw:Number(await canvas.getAttribute('data-camera-yaw')),pitch:Number(await canvas.getAttribute('data-camera-pitch')),framed,obstructed});
+      if(framed==='true' && obstructed==='false') return;
+    }
+    throw Error(`No unobstructed full clock/tower composition found in 12 real input pitches for point ${pointIndex}`);
+  } finally {
+    if(info)await info.attach(`photo-aim-${pointIndex}-${touch?'touch':'mouse'}`,{body:JSON.stringify({target,attempts},null,2),contentType:'application/json'});
   }
-  await dragLook(page,canvas,-turn/.005,(desiredPitch-pitch)/.004,touch);
 }
 /** Feedback-controlled real key pulses on the first photo site's north/south axis. */
 async function steerPhotoZ(page: Page, canvas: Locator, target: number, info: TestInfo, label: string) {
@@ -110,7 +118,7 @@ test('scenic diary: genuine walk, framing, two captures, Hks round-trip and loca
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   const canvas=await ready(page), guide=page.getByTestId('photo-guide'), hint=page.getByTestId('photo-hint');
   await expect(guide).toContainText('0 / 2');
-  await aimAtClock(page,canvas,0);await expect(hint).toContainText('构图就绪', {timeout:30000});
+  await aimAtClock(page,canvas,0,false,info);await expect(hint).toContainText('构图就绪', {timeout:30000});
   await page.screenshot({path:info.outputPath('photo-hall-ready.png')});
   await page.getByRole('button',{name:'打开校园地图'}).click(); await expect(canvas).toHaveAttribute('data-view','map');
   await page.keyboard.press('e'); await expect(hint).toContainText('返回人物视角'); expect(await stampIds(page)).toEqual([]);
@@ -128,7 +136,7 @@ test('scenic diary: genuine walk, framing, two captures, Hks round-trip and loca
   await expect(hint).toContainText('被景物遮住',{timeout:10000});expect(await stampIds(page)).toEqual([]);
   await page.screenshot({path:info.outputPath('photo-real-tree-obstruction.png')});
   await rotateTo(page,canvas,-Math.PI/2,-.15);await canvas.focus();await steerPhotoZ(page,canvas,175.5,info,'photo-obstruction-return');
-  await aimAtClock(page,canvas,0);await expect(hint).toContainText('构图就绪',{timeout:15000});
+  await aimAtClock(page,canvas,0,false,info);await expect(hint).toContainText('构图就绪',{timeout:15000});
   // A shallow pitch leaves the clock near the top of the viewport while the
   // tower's upper edge is cut off in the source geometry. The UI must reject;
   // preserve a screenshot so the visible clipping is independently reviewed.
@@ -136,7 +144,7 @@ test('scenic diary: genuine walk, framing, two captures, Hks round-trip and loca
   await rotateTo(page,canvas,towardClock,0);await canvas.focus();await page.keyboard.press('e');
   await expect(hint).toContainText('调整视角',{timeout:10000});expect(await stampIds(page)).toEqual([]);
   await page.screenshot({path:info.outputPath('photo-clipped-tower-rejected.png')});
-  await aimAtClock(page,canvas,0);await expect(hint).toContainText('构图就绪',{timeout:15000});
+  await aimAtClock(page,canvas,0,false,info);await expect(hint).toContainText('构图就绪',{timeout:15000});
   // A real rightward camera drag puts the target outside the frame. The game
   // must reject E instead of granting progress. Restore the view by dragging back.
   await dragLook(page,canvas,300); await canvas.focus(); await page.keyboard.press('e');
@@ -158,7 +166,7 @@ test('scenic diary: genuine walk, framing, two captures, Hks round-trip and loca
   // Walk the ~53m connection using keys, not a position/state injection.
   await walkTo(page,canvas,campuses.yingxi,PHOTO_POINTS[1]!.position);
   const there=await position(canvas);expect(Math.hypot(there[0]-PHOTO_POINTS[1]!.position[0],there[2]-PHOTO_POINTS[1]!.position[1])).toBeLessThan(PHOTO_POINTS[1]!.radius);
-  await aimAtClock(page,canvas,1);await expect(hint).toContainText('构图就绪',{timeout:30000}); await page.screenshot({path:info.outputPath('photo-garden-ready.png')});
+  await aimAtClock(page,canvas,1,false,info);await expect(hint).toContainText('构图就绪',{timeout:30000}); await page.screenshot({path:info.outputPath('photo-garden-ready.png')});
   // Exercise the actual visible shutter as a pointer action for the second capture.
   await page.getByTestId('photo-record').click();
   const complete=page.getByTestId('photo-complete');await expect(complete).toBeVisible();expect(await stampIds(page)).toEqual(['hall','garden']);
@@ -194,7 +202,7 @@ test('scenic diary: genuine walk, framing, two captures, Hks round-trip and loca
   await guide.getByRole('button',{name:/查看手记/}).click();await expect(complete).toBeVisible();
   await complete.getByRole('button',{name:/机械馆 · 初见/}).click();await expect(complete).toHaveCount(0);
   await walkTo(page,canvas,campuses.yingxi,PHOTO_POINTS[0]!.position);
-  await aimAtClock(page,canvas,0);await expect(hint).toContainText('构图就绪',{timeout:30000});await canvas.focus();await page.keyboard.press('e');
+  await aimAtClock(page,canvas,0,false,info);await expect(hint).toContainText('构图就绪',{timeout:30000});await canvas.focus();await page.keyboard.press('e');
   await expect(complete).toBeVisible();expect(await stampIds(page)).toEqual(['hall','garden']);
   await complete.getByRole('button',{name:'关闭手记'}).click();await expect(complete).toHaveCount(0);
   await guide.getByRole('button',{name:/查看手记/}).click();await expect(complete).toBeVisible();
@@ -273,14 +281,14 @@ test.describe('landscape touch diary',()=>{
   test.use({hasTouch:true,isMobile:true,viewport:{width:844,height:390}});
   test('real left joystick and right-look visit both photo points, then return from Hks',async({page},info)=>{
     const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
-    const canvas=await ready(page);await aimAtClock(page,canvas,0,true);
+    const canvas=await ready(page);await aimAtClock(page,canvas,0,true,info);
     await expect(page.getByTestId('photo-hint')).toContainText('构图就绪',{timeout:30000});
     await page.screenshot({path:info.outputPath('photo-touch-first-ready.png')});
     await page.getByTestId('photo-record').tap();
     const guide=page.getByTestId('photo-guide');await expect(guide).toContainText('1 / 2');expect(await stampIds(page)).toEqual(['hall']);
     await touchWalkTo(page,canvas,PHOTO_POINTS[1]!.position,info);
     const atGarden=await position(canvas);expect(Math.hypot(atGarden[0]-PHOTO_POINTS[1]!.position[0],atGarden[2]-PHOTO_POINTS[1]!.position[1])).toBeLessThan(PHOTO_POINTS[1]!.radius);
-    await aimAtClock(page,canvas,1,true);await expect(page.getByTestId('photo-hint')).toContainText('构图就绪',{timeout:30000});
+    await aimAtClock(page,canvas,1,true,info);await expect(page.getByTestId('photo-hint')).toContainText('构图就绪',{timeout:30000});
     await page.screenshot({path:info.outputPath('photo-touch-second-ready.png')});await page.getByTestId('photo-record').tap();
     const complete=page.getByTestId('photo-complete');await expect(complete).toBeVisible();expect(await stampIds(page)).toEqual(['hall','garden']);
     await expect(canvas).toHaveAttribute('data-paused','true');await page.screenshot({path:info.outputPath('photo-touch-completion.png')});

@@ -84,7 +84,7 @@ async function downloadPostcard() {
 </script>
 
 <template>
-  <div class="photo-guide" data-testid="photo-guide">
+  <div class="photo-guide" data-testid="photo-guide" :data-photo-in-range="String(status?.inRange ?? false)" :data-photo-framed="String(status?.framed ?? false)" :data-photo-obstructed="String(status?.obstructed ?? false)">
     <div class="photo-guide-copy">
       <span class="photo-kicker">晴日 · 取景手记 <b>{{ count }} / 2</b></span>
       <strong>{{ point.title }}</strong>

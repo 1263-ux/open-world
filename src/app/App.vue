@@ -463,7 +463,7 @@ onBeforeUnmount(() => {
     <div class="sr-only" aria-live="polite">{{ notice }}</div>
   </div>
   <div v-if="!orientationDismissed && !photoCompleteOpen && !hksOpen" class="orientation-prompt" role="status" data-testid="orientation-prompt">
-    <span aria-hidden="true">↻</span><strong>建议横屏漫游</strong><small>{{ orientationMessage }}</small>
+    <svg class="orientation-icon" viewBox="0 0 64 64" aria-hidden="true"><rect x="22" y="13" width="20" height="34" rx="3" transform="rotate(-18 32 30)"/><path d="M47 17a22 22 0 0 1 6 20M53 37l4-6M53 37l-7-2M17 47a22 22 0 0 1-6-20M11 27l-4 6M11 27l7 2"/></svg><strong>建议横屏漫游</strong><small>{{ orientationMessage }}</small>
     <button type="button" data-testid="orientation-fullscreen" :disabled="orientationBusy" @click="tryLandscape">尝试全屏横屏</button>
     <button type="button" data-testid="orientation-dismiss" @click="dismissOrientation">继续竖屏浏览</button>
   </div>

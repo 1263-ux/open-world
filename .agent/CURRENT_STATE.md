@@ -1,6 +1,6 @@
 # 当前状态
 
-2026-10-30 14:46 UTC。C2 + R-ui + R-runtime + R-architecture + A3。
+2026-10-30 15:11 UTC。C2 + R-ui + R-runtime + R-architecture + A3。
 
 ## Goal / Product core
 真实人尺度、横屏第三人称校园漫游，统一晴日校园美术；先打磨机械馆—清泽园连续样板及两站自主取景，再扩展。完整 Hks 保留，后端/多人后置。
@@ -9,7 +9,7 @@
 已授权持续开发/自验收、适用检查后直推1263-ux/open-world/main、公开游戏链接；不含额外付费或超预算。用户13:40明确不再要零碎进度，要求深度调研/自行试玩/迭代到实质高质量；不得自称已达市场一流。必要问题/阻塞仍应说明。
 
 ## Phase / 当前身份
-VERIFY/TRIAL，修复候选待推。远端dev/campus-thirdperson=`3affbdbf8c27c76f8aa80669dcd88ce14dbfb7b0`，tree=`7c554d215fbb846cef494815ba84f536003bfe4c`，CI41070054665。main仍`3d531d47068280751cf7094c88de013e6badad13`，公开站点保持旧版，未发布新候选。
+VERIFY/TRIAL，修复候选待推。远端dev/campus-thirdperson=`960d7e7a2f71455caeaf29fe2a75e43baa396063`，tree=`aa26a783ba3cbb7deff8a9e2907bdb58471c5498`，CI41075070647。main仍`3d531d47068280751cf7094c88de013e6badad13`，公开站点保持旧版，未发布新候选。
 
 ## Implemented
 - 真正键鼠/触屏移动、跑跳、建筑/台阶/边界碰撞、避障与近镜人物淡隐；原有双校区任务/Hks往返。
@@ -32,3 +32,10 @@ VERIFY/TRIAL，修复候选待推。远端dev/campus-thirdperson=`3affbdbf8c27c7
 1. 将本地定点修复推新dev候选。CI分开legacy explore、quality-slice全移动双站、Hks、offline、真实headedfocus，便于分别收集证据。
 2. 下载同身份截图/trace，亲看钟楼、沿路、园旁、人物动作、移动界面、明信片；由QA/产品作者复核。失败修根因，不改状态造PASS。
 3. 满足该连续切片的行为与画面标准后核对最终身份、直接main、同一既有公开站点更新与外部检查。当前不发布、不作完成通知。
+
+## 最新定点迭代
+960d7e：legacy validate/focus/offline/Hks均通过；quality6通过2失败，均在首站测试瞄准。trace截图是天空过多/钟楼在底部；测试 helper 仍复制旧固定胸部相机公式，未计新地面clamp/仰视aim，现换有界真实手势+已渲染帧+UI只读构图反馈，绝不写相机状态或放宽框。双站拍摄/导出仍未通过。
+
+视觉研究核实实际GLB138个正面石材三角法线≈(+.9995,0,-.0316)，旧主光方向点积−.493，正立面背光；下一候选只改sun X偏移为正，点积+.469，保持强度/曝光/其他色不变，必须同机位图片比较后才接受。依据Three官方DirectionalLight/HemisphereLight语义与GLB数值，不声称实地光照。
+
+下一身份包括该定点光向、真实反馈瞄准测试、只读构图DOM标记和原创SVG旋转图标。未开始扩新场景或菜单。
