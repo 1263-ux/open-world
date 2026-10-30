@@ -1,27 +1,30 @@
-# 本轮结果 · 规划与验收交接
+# 当前候选结果：尚未完成交付
 
-## State
+2026-10-30 UTC。用户已授权持续推进、自行验收、对比参考与独特优美风格；不得把构建通过等同游戏体验完成。
 
-**Planning delivered; implementation/verification in progress.** 本文件不是新游戏完成或上线报告。
+## 已验证身份
 
-## Changed
+候选 `9138a0bee08d019137deee24bb9d3e900bf5de68`，CI [41061329770](https://github.com/1263-ux/open-world/actions/runs/41061329770)。
 
-仅修改 `AGENTS.md`、`.agent/DESIGN.md`、`.agent/PLAN.md`、`.agent/CURRENT_STATE.md`、本文件。纠正旧“角色未定/公开未授权/Hks许可待确认/竖屏300秒”状态；明确真实第三人称横屏、机械馆→清泽园品质样板、暖清自有美术、完整上游main7199cae原生1280×720/420秒、Agent自行验收/参考比较和验证后既有公开站点升级。
+- 两校区通过真实输入逐站行走、观察记录、完成和重玩；HTTP校园7通过2失败。
+- 手机横屏Hks画布底部裁切和提示遮挡已修复。844×390模拟设备：画布底384位于iframe底390内，提示14px、估算对比7.38:1；首个自然知识卡真实滚动38px未关闭。非实体手机验证。
+- 离线file://两条真实浏览器旅程通过，无外部游戏资源请求。
+- 仍失败：极低帧率跳跃全程在帧间结束；headless不产生真实window blur；Hks本局未升级即自然死亡。
+- SwiftShader后窗实测2.76FPS、86drawcalls、65167tris、内部渲染比例0.5；较前候选1.23FPS有改善，但没有达到30FPS目标，不泛化至真实设备。
 
-已定义真实输入/碰撞/连续步行/触控/同身份美术/任务存档/Hks完整来源与自然试玩/异常/发布回滚的可执行验收。三份原计划、src、games/hks 与历史decisions/progress未修改。
+## 当前未提交改进
 
-## Verification / Runtime evidence
+- 极低帧垂直物理节奏、零dt跳跃队列修复，水平真实时间与碰撞子步不变。
+- 真实window blur改用独立headed Xvfb测试，不能以headless跳过冒充通过。
+- Hks经验球吸附与普通弹低帧穿透的具体复现和修复；吸附速度/半径/XP、普攻速度/伤害/半径均未调平衡。自然测试最多3局，必须真实升级及结算重玩，不注入时钟、RNG、经验或状态。
+- 轻量原创米制地面纹理和多团树冠进一步细化；需新身份截图与性能验证。
 
-- 已读取三份完整原计划、AGENTS、历史decisions/progress、当前场景/UI/Hks实现与配置。
-- 本轮在计划前读取 [Three OrbitControls官方文档](https://threejs.org/docs/pages/OrbitControls.html) 与 [Phaser Scale Manager官方文档](https://docs.phaser.io/phaser/concepts/scale-manager)；可复用点、不确定项见DESIGN。
-- 参考原URL与jlu.online的web打开失败；Firecrawl live fetch `ERR_TUNNEL_CONNECTION_FAILED`。历史主控DOM观察有地图/信息/天气/视图设置，参考WebGL/真实玩法未验证；没有编造试玩结论。
-- **游戏运行验证本轮由实施/集成/QA继续执行，规划者未将源码/文档检查冒充E2E。** 本轮未commit/push/deploy。
+## 参考与审美
 
-## Known issues / Evidence identity
+参考仅成功查看首页地图：密集地标、灰色外围/绿色校园、蓝水和彩色球场、细顶底栏与黄色进入按钮。参考游戏内WebGL未成功，不声称已玩过或优于其操控。
 
-- 工作区初查无本地HEAD、文件未跟踪；最终候选须建立fingerprint/commit。历史SHA/CI不能拼成当前实现证据。
-- 新角色、美术、完整Hks、候选与现网升级均待最终同身份TRIAL；现网保留直到通过。
-- 实际模型路由/计费未由工具提供，未知；不记$0。
+本项目采用真实校园占地尺度、暖石色建筑、冷蓝天空、低饱和绿植、克制深绿UI，默认第三人称、辅助地图和校园任务/Hks往返。钟楼完整入镜与人物朝向已从真实截图核对；大片近景简化与低分辨率效果仍需改进，不能标记全校美术验收。
 
-`code_identity`：本交接仅为未提交文档工作树；不声称任何运行代码身份。
-`plan_ref`：`.agent/PLAN.md`；详细验收/研究：`.agent/DESIGN.md`。
+## 发布状态与已知限制
+
+main 与既有公开站点保持旧版；候选不得部署直到适用检查、真实试玩和截图复核完成。楼高和装饰多为明确估计，不是测绘/BIM；没有后端或多人。API真实费用未知，未进行额外批量API计费推理。

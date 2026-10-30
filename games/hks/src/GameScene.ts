@@ -22,6 +22,8 @@ import { VFX } from './VFX';
 import { CombatFeel } from './CombatFeel';
 import { generateAllTextures } from './ArtGen';
 import { saveRecord } from './SaveData';
+import { resolveAttractionStep } from './pickupRules';
+import { segmentIntersectsCircle } from './projectileRules';
 
 // ── 水洼 ──
 interface Puddle {
@@ -919,16 +921,18 @@ export class GameScene extends Phaser.Scene {
       if (dist < PICKUP_RANGE) {
         // 吸附
         const a = Math.atan2(this.player.y - orb.y, this.player.x - orb.x);
-        orb.x += Math.cos(a) * EXP_ORB_CONFIG.attractSpeed * dt;
-        orb.y += Math.sin(a) * EXP_ORB_CONFIG.attractSpeed * dt;
+        const { step, collected } = resolveAttractionStep(dist, EXP_ORB_CONFIG.attractSpeed, dt, EXP_ORB_CONFIG.collectDist);
+        orb.x += Math.cos(a) * step;
+        orb.y += Math.sin(a) * step;
         orb.graphic.x = orb.x;
         orb.graphic.y = orb.y;
 
         // 收集
-        if (dist < EXP_ORB_CONFIG.collectDist) {
+        if (collected) {
           this.player.exp += orb.value;
           SoundManager.expPickup();
           orb.graphic.destroy();
+          continue;
         }
       }
 
@@ -1285,11 +1289,12 @@ export class GameScene extends Phaser.Scene {
       }
       const a = Math.atan2(bolt.target.y - bolt.graphic.y, bolt.target.x - bolt.graphic.x);
       bolt.graphic.setRotation(a + Math.PI / 2);
+      const previousX = bolt.graphic.x, previousY = bolt.graphic.y;
       bolt.graphic.x += Math.cos(a) * bolt.speed * dt;
       bolt.graphic.y += Math.sin(a) * bolt.speed * dt;
-      if (Phaser.Math.Distance.Between(bolt.graphic.x, bolt.graphic.y, bolt.target.x, bolt.target.y) < 12) {
+      if (segmentIntersectsCircle(previousX, previousY, bolt.graphic.x, bolt.graphic.y, bolt.target.x, bolt.target.y, 12)) {
         bolt.target.takeDamage(bolt.damage);
-        VFX.boltHit(this, bolt.graphic.x, bolt.graphic.y);
+        VFX.boltHit(this, bolt.target.x, bolt.target.y);
         bolt.graphic.destroy();
       }
     }

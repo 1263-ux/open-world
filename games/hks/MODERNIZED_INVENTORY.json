@@ -23,8 +23,8 @@
     },
     {
       "path": "src/GameScene.ts",
-      "sha256": "84a21b9cb5205824812e5a151d30b66510b0fc5c49293f8a07e981cf69176178",
-      "bytes": 63592
+      "sha256": "f93a1d525f69e642093e91f67b2277e11f3728f31b5fb7862c99d143206cc3e1",
+      "bytes": 63856
     },
     {
       "path": "src/HUD.ts",
@@ -85,6 +85,16 @@
       "path": "src/main.ts",
       "sha256": "eaa90f8263b0a0af1fc89142e1a551edb786c81741c114470c5d65f69c388e86",
       "bytes": 5246
+    },
+    {
+      "path": "src/pickupRules.ts",
+      "sha256": "438c4ab46a2d9cff53f240b1e5062f9a01646261fcebd298b4dd886b5cfd483f",
+      "bytes": 527
+    },
+    {
+      "path": "src/projectileRules.ts",
+      "sha256": "26757e9559f2d15e4b5172f8a09cbe66bc023d43165b8fb815c821dd4ac3b479",
+      "bytes": 582
     },
     {
       "path": "src/vite-env.d.ts",

@@ -75,8 +75,11 @@ export function crossesBase(from: Point, to: Point, base: Point): boolean {
 export function chooseMovement(s: SurvivalState): Movement {
   const player = { x: s.x, y: s.y }, base = s.building;
   const xp = s.nearestXP;
-  const reachableXP = xp && Math.hypot(xp.x - s.x, xp.y - s.y) <= 270
-    && Math.hypot(xp.x - base.x, xp.y - base.y) <= 310 && !crossesBase(player, xp, base);
+  const xpDistance = xp ? Math.hypot(xp.x - s.x, xp.y - s.y) : Infinity;
+  // Do not abandon an orb already within the actual pickup radius just
+  // because it lies a few pixels outside our preferred base-defense ring.
+  const reachableXP = xp && xpDistance <= 270
+    && (xpDistance < 120 || Math.hypot(xp.x - base.x, xp.y - base.y) <= 310) && !crossesBase(player, xp, base);
   const angle = Math.atan2(s.y - base.y, s.x - base.x) + 0.55;
   const target = reachableXP ? xp : { x: base.x + Math.cos(angle) * 240, y: base.y + Math.sin(angle) * 240 };
   const dx = target.x - s.x, dy = target.y - s.y, distance = Math.hypot(dx, dy);

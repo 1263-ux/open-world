@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { landmarkModels, loadLandmarkModel } from './LandmarkModels';
 import { PlayerController } from './PlayerController';
+import { createFoliageGeometry, createSurfaceMaterial } from './SurfaceStyle';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
@@ -103,6 +104,9 @@ export function strips(roads: CampusRoad[], extra: number): THREE.BufferGeometry
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  const uv: number[] = [];
+  for (let i = 0; i < vertices.length; i += 3) uv.push(vertices[i], -vertices[i + 2]);
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   geometry.computeVertexNormals();
   return geometry;
 }
@@ -143,14 +147,14 @@ function addCorridor(world: THREE.Group, colliders: THREE.Group): void {
     add(new THREE.SphereGeometry(.2, 10, 8), light, x, 3.48, 155.5);
   }
   const bark = new THREE.MeshStandardMaterial({ color: 0x746c55, roughness: 1 });
-  const leaves = new THREE.MeshStandardMaterial({ color: 0x829c77, roughness: 1 });
+  const leaves = new THREE.MeshStandardMaterial({ color: 0x829c77, roughness: 1, vertexColors: true });
   const treeSites: Point2[] = [[-48, 151], [-24, 151], [0, 151], [-43, 170], [-19, 170], [5, 170]];
   const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(.22, .3, 3.4, 8), bark, treeSites.length);
-  const canopies = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), leaves, treeSites.length);
+  const canopies = new THREE.InstancedMesh(createFoliageGeometry(), leaves, treeSites.length);
   const treeTransform = new THREE.Object3D();
   treeSites.forEach(([x, z], i) => {
     treeTransform.position.set(x, 1.7, z); treeTransform.scale.set(1, 1, 1); treeTransform.updateMatrix(); trunks.setMatrixAt(i, treeTransform.matrix);
-    treeTransform.position.set(x, 4.2, z); treeTransform.scale.set(2.1, 2.4, 2.1); treeTransform.updateMatrix(); canopies.setMatrixAt(i, treeTransform.matrix);
+    treeTransform.position.set(x, 4.2 + (i % 3) * .18, z); treeTransform.scale.set(2.1, 2.4, 2.1); treeTransform.updateMatrix(); canopies.setMatrixAt(i, treeTransform.matrix);
     const proxy = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, 3.4, 8), new THREE.MeshBasicMaterial());
     proxy.position.set(x, 1.7, z); colliders.add(proxy);
   });
@@ -337,12 +341,16 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const [minX, minZ, maxX, maxZ] = boundsOf(allPoints);
     const centerX = (minX + maxX) / 2, centerZ = (minZ + maxZ) / 2;
     const extent = Math.max(maxX - minX, maxZ - minZ, 500);
-    const landscape = new THREE.Mesh(new THREE.PlaneGeometry(maxX - minX + 800, maxZ - minZ + 800), material(0x96b298));
+    const landscapeGeometry = new THREE.PlaneGeometry(maxX - minX + 800, maxZ - minZ + 800);
+    const terrainPositions = landscapeGeometry.getAttribute('position'), terrainUV = landscapeGeometry.getAttribute('uv');
+    for (let i = 0; i < terrainPositions.count; i++) terrainUV.setXY(i, terrainPositions.getX(i) + centerX, terrainPositions.getY(i) - centerZ);
+    terrainUV.needsUpdate = true;
+    const landscape = new THREE.Mesh(landscapeGeometry, createSurfaceMaterial('grass', 0x96b298));
     landscape.rotation.x = -Math.PI / 2;
     landscape.position.set(centerX, -0.12, centerZ);
     landscape.receiveShadow = true;
     world.add(landscape);
-    addSurface(world, boundary, -0.025, material(0xa6c19e));
+    if (boundary.length >= 3) addSurface(world, boundary, -0.025, createSurfaceMaterial('grass', 0xa6c19e));
     const curb = perimeter(boundary, 0.015, new THREE.LineBasicMaterial({ color: 0x8b9684 }));
     if (curb) world.add(curb);
     sun.position.set(centerX - extent * 0.7, extent * 1.15, centerZ + extent * 0.55);
@@ -354,8 +362,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     shadowCamera.near = 1; shadowCamera.far = extent * 3.5 + 500;
     shadowCamera.updateProjectionMatrix();
 
-    const roadEdge = new THREE.Mesh(strips(data.roads, 1.15), material(0xd7d0bb));
-    const roads = new THREE.Mesh(strips(data.roads, 0), material(0xa4a79c));
+    const roadEdge = new THREE.Mesh(strips(data.roads, 1.15), createSurfaceMaterial('paving', 0xd7d0bb));
+    const roads = new THREE.Mesh(strips(data.roads, 0), createSurfaceMaterial('asphalt', 0xa4a79c));
     roadEdge.receiveShadow = roads.receiveShadow = true;
     world.add(roadEdge, roads);
 
@@ -365,12 +373,12 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       return points && points.length >= 2 && points.every(validPoint)
         ? [{ id: `game-${i}-${id}`, points, width: 2.4, source: 'Designed game path, not a mapped road' }] : [];
     });
-    const paths = new THREE.Mesh(strips(gamePaths, 0), material(0xd5d0bf));
+    const paths = new THREE.Mesh(strips(gamePaths, 0), createSurfaceMaterial('paving', 0xd5d0bf));
     paths.position.y = 0.02; // Keep the paths above existing road surfaces.
     paths.receiveShadow = true;
     world.add(paths);
 
-    const parkMat = material(0x879f82);
+    const parkMat = data.features.some(f => f.kind === 'park' && cleanPolygon(f.polygon).length >= 3) ? createSurfaceMaterial('grass', 0x879f82) : null;
     const trackMat = material(0xb5795f);
     const fieldMat = material(0x829d77);
     const facadeMats = [material(0xd4cbb8), material(0xb6b8aa), material(0xb59580), material(0xc3bba9)];
@@ -390,7 +398,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       const polygon = cleanPolygon(feature.polygon || []);
       if (polygon.length < 3) continue;
       if (feature.kind === 'park') {
-        addSurface(world, polygon, 0.025, parkMat);
+        if (parkMat) addSurface(world, polygon, 0.025, parkMat);
       } else if (feature.kind === 'sports') {
         addSurface(world, polygon, 0.035, trackMat);
         const [x0, z0, x1, z1] = boundsOf(polygon);
@@ -533,8 +541,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         const indices = chunks.get(key) ?? []; indices.push(i); chunks.set(key, indices);
       });
       const trunkGeometry = new THREE.CylinderGeometry(0.3, 0.45, 3.8, 6);
-      const crownGeometry = new THREE.IcosahedronGeometry(1, 1);
-      const trunkMaterial = material(0x79765e), crownMaterial = material(0x718d70);
+      const crownGeometry = createFoliageGeometry();
+      const trunkMaterial = material(0x79765e), crownMaterial = new THREE.MeshStandardMaterial({ color: 0x718d70, roughness: 1, vertexColors: true });
       for (const indices of chunks.values()) {
         const trunks = new THREE.InstancedMesh(trunkGeometry, trunkMaterial, indices.length);
         const crowns = new THREE.InstancedMesh(crownGeometry, crownMaterial, indices.length);

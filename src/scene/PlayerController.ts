@@ -191,7 +191,7 @@ export class PlayerController {
     this.update(dt);
   }
   update(dt: number) {
-    if (!this.enabled || this.paused) return;
+    if (!this.enabled || this.paused || dt <= 0) return;
     const x = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft')) + this.joystick.x;
     const y = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown')) - this.joystick.y;
     const input = new THREE.Vector2(x, y).clampLength(0, 1);
@@ -201,14 +201,18 @@ export class PlayerController {
     const movement = new THREE.Vector3((input.x * cos + input.y * sin) * speed, 0, (-input.x * sin + input.y * cos) * speed);
     if (this.jumpQueued && this.grounded) { this.velocityY = 5.5; this.grounded = false; }
     this.jumpQueued = false;
+    // At very low rendering rates a whole jump can fit between two frames and
+    // be invisible. Slow only the airborne vertical simulation in that case;
+    // horizontal movement still uses elapsed time and remains collision-tested.
+    const verticalDt = this.grounded ? dt : Math.min(dt, .25);
     // Small fixed substeps limit tunnelling at low frame rates, then project out of collision for wall sliding.
     const steps = Math.max(1, Math.ceil(dt / (1 / 60)));
-    const sub = dt / steps;
+    const sub = dt / steps, verticalSub = verticalDt / steps;
     for (let i = 0; i < steps; i++) {
       const wasGrounded = this.grounded;
       this.grounded = false;
-      this.velocityY -= 15 * sub;
-      this.collider.translate(new THREE.Vector3(movement.x * sub, this.velocityY * sub, movement.z * sub));
+      this.velocityY -= 15 * verticalSub;
+      this.collider.translate(new THREE.Vector3(movement.x * sub, this.velocityY * verticalSub, movement.z * sub));
       for (let n = 0; n < 3; n++) {
         const hit = this.octree.capsuleIntersect(this.collider);
         if (!hit) break;

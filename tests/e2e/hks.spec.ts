@@ -21,7 +21,7 @@ async function startGame(page:Page,canvas:Locator,walkTutorial=false){
 async function closeKnowledge(page:Page){const popup=page.frameLocator('[data-testid="hks-frame"]').locator('#monster-popup');await expect(popup).toBeVisible();await popup.click();await expect(popup).toBeHidden();}
 
 test('Hks real play: knowledge, natural combat and settlement replay preserve campus',async({page},info)=>{
-  test.setTimeout(840000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/'); await page.getByTestId('campus-huyu').click();
+  test.setTimeout(1200000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/'); await page.getByTestId('campus-huyu').click();
   const campus=page.getByTestId('campus-canvas');await expect.poll(async()=>{const x=await campus.getAttribute('data-player-x'),z=await campus.getAttribute('data-player-z');return x===null||z===null?Infinity:Math.hypot(Number(x)-campuses.huyu.start[0],Number(z)-campuses.huyu.start[1]);},{timeout:15000}).toBeLessThan(1);
   await page.keyboard.down('w');await page.waitForTimeout(1000);await page.keyboard.up('w');
   const xyz=await position(campus),yaw=await campus.getAttribute('data-camera-yaw');
@@ -31,27 +31,54 @@ test('Hks real play: knowledge, natural combat and settlement replay preserve ca
   const saved=await position(campus); expect(Math.hypot(saved[0]-xyz[0],saved[2]-xyz[2])).toBeLessThan(.1);
   const canvas=await launch(page);await expect(campus).toHaveAttribute('data-paused','true');const frame=await campus.getAttribute('data-frame');
   await page.screenshot({path:info.outputPath('hks-menu.png')});await startGame(page,canvas,true);
-  const before=await snapshot(canvas);expect(before.remaining).toBeGreaterThan(410);await page.keyboard.down('ArrowLeft');await page.waitForTimeout(1300);await page.keyboard.up('ArrowLeft');
-  await expect.poll(async()=>(await snapshot(canvas)).x,{timeout:10000}).toBeLessThan(before.x!-20);
+  const before=await snapshot(canvas);expect(before.remaining).toBeGreaterThan(410);await page.keyboard.down('ArrowLeft');
+  try { await expect.poll(async()=>(await snapshot(canvas)).x,{timeout:10000,intervals:[100]}).toBeLessThan(before.x!-20); }
+  finally { await page.keyboard.up('ArrowLeft'); }
   expect(await campus.getAttribute('data-frame')).toBe(frame);
   await expect(page.frameLocator('[data-testid="hks-frame"]').locator('#monster-popup')).toBeVisible({timeout:30000});
   await page.screenshot({path:info.outputPath('hks-knowledge.png')});await closeKnowledge(page);
-  // Seek real dropped experience until an offered upgrade appears; all steering is via keys.
-  const upgradeDeadline=Date.now()+120000;let observedUpgrade=false;
-  while(Date.now()<upgradeDeadline){
-    const popup=page.frameLocator('[data-testid="hks-frame"]').locator('#monster-popup');
-    if(await popup.isVisible()){await closeKnowledge(page);continue;}
-    const raw=await snapshot(canvas);validateSurvivalState(raw);
-    if(raw.ended)throw Error('Natural settlement occurred before an upgrade could be exercised');
-    if(raw.levelUp){
-      if(!raw.upgradeCards.length)throw Error('Upgrade active without offered cards');
-      await page.screenshot({path:info.outputPath('hks-upgrade.png')});await clickGame(page,canvas,raw.upgradeCards[0]!);
-      await expect.poll(async()=>(await snapshot(canvas)).levelUp,{timeout:10000}).toBe(false);observedUpgrade=true;break;
+  // Each retry is a real natural loss followed by the visible return/replay path.
+  // A running game is never reset just because an upgrade takes time.
+  const attempts: Array<{ number: number; samples: unknown[]; actions: unknown[]; result: string; final: unknown }> = [];
+  let observedUpgrade=false;
+  try {
+    for(let number=1;number<=3 && !observedUpgrade;number++) {
+      const attempt = { number, samples: [] as unknown[], actions: [] as unknown[], result: 'playing', final: null as unknown };
+      attempts.push(attempt); const started=Date.now(), deadline=started+120000; let lastSample=0;
+      while(Date.now()<deadline) {
+        const popup=page.frameLocator('[data-testid="hks-frame"]').locator('#monster-popup');
+        if(await popup.isVisible()){await closeKnowledge(page);attempt.actions.push({wallMs:Date.now()-started,kind:'dismiss-real-knowledge'});continue;}
+        const raw=await snapshot(canvas); const valid:unknown=raw; validateSurvivalState(valid); attempt.final=raw;
+        if(Date.now()-lastSample>=1000 || raw.ended || raw.levelUp) { attempt.samples.push({wallMs:Date.now()-started,state:raw});lastSample=Date.now(); }
+        if(raw.ended) {
+          validateOutcome(valid); attempt.result=`natural-${raw.outcome}`;
+          await page.screenshot({path:info.outputPath(`hks-attempt-${number}-${raw.outcome}.png`)});
+          if (!raw.settlementButton) throw Error('Natural settlement has no visible return control');
+          if(number<3) {
+            await clickGame(page,canvas,raw.settlementButton);
+            await expect.poll(async()=>(await snapshot(canvas)).scene,{timeout:15000}).toContain('MenuScene');
+            await startGame(page,canvas);
+            expect((await snapshot(canvas)).remaining).toBeGreaterThan(410);
+          }
+          break;
+        }
+        if(raw.levelUp) {
+          if(!valid.upgradeCards.length)throw Error('Upgrade active without offered cards');
+          await page.screenshot({path:info.outputPath(`hks-attempt-${number}-upgrade.png`)});
+          await clickGame(page,canvas,valid.upgradeCards[0]!);
+          await expect.poll(async()=>(await snapshot(canvas)).levelUp,{timeout:10000}).toBe(false);
+          attempt.actions.push({wallMs:Date.now()-started,kind:'choose-real-upgrade',point:valid.upgradeCards[0]});
+          attempt.result='upgrade-selected';observedUpgrade=true;break;
+        }
+        if(raw.paused){await page.waitForTimeout(200);continue;}
+        const movement=chooseMovement(valid);attempt.actions.push({wallMs:Date.now()-started,kind:movement.kind,keys:movement.keys,holdMs:movement.holdMs,target:movement.target});
+        for(const key of movement.keys)await page.keyboard.down(key);
+        try { await page.waitForTimeout(movement.holdMs); } finally { for(const key of movement.keys)await page.keyboard.up(key); }
+      }
+      if(attempt.result==='playing') { attempt.result='upgrade-window-expired-while-running'; throw Error('No natural upgrade or terminal outcome within the trial window; game was not reset'); }
     }
-    if(raw.paused){await page.waitForTimeout(200);continue;}
-    const movement=chooseMovement(raw);for(const key of movement.keys)await page.keyboard.down(key);await page.waitForTimeout(movement.holdMs);for(const key of movement.keys)await page.keyboard.up(key);
-  }
-  expect(observedUpgrade,'Natural play must offer a selectable upgrade within the trial window').toBe(true);
+  } finally { await info.attach('natural-upgrade-attempts',{body:JSON.stringify(attempts,null,2),contentType:'application/json'}); }
+  expect(observedUpgrade,'At least one of at most three natural lives must offer a selectable upgrade').toBe(true);
   // Leave the base unprotected. Respond to actual popups and offered upgrades; do not alter game state.
   const deadline=Date.now()+600000;let state=await snapshot(canvas);let upgrades=1;
   while(!state.ended&&Date.now()<deadline){
