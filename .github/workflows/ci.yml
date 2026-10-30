@@ -147,3 +147,27 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  garden-render-diagnostic:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[renderdiag]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix games/hks ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Controlled garden shadow diagnosis, not gameplay acceptance
+        run: RUN_GARDEN_RENDER_DIAGNOSTIC=1 npm run test:e2e -- tests/e2e/garden-render-diagnostic.spec.ts --output=test-results/garden-render-diagnostic
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: campus-garden-render-diagnostic
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
