@@ -75,13 +75,13 @@ export function waypointKeys(dx: number, dz: number, yaw: number): string[] {
   if (Math.abs(y) > .6) keys.push(y > 0 ? 'KeyW' : 'KeyS');
   return keys;
 }
-export async function walkTo(page: Page, canvas: Locator, campus: CampusData, target: Point2) {
+export async function walkTo(page: Page, canvas: Locator, campus: CampusData, target: Point2, targetTolerance = 4.5) {
   const [x,,z] = await position(canvas), route = walkRoute(campus, [x,z], [target[0], target[1]]);
   let last = [x,z], stagnant = 0;
   for (const waypoint of route) {
     for (let attempt = 0; attempt < 30; attempt++) {
       const [px,,pz] = await position(canvas), dx = waypoint[0] - px, dz = waypoint[1] - pz;
-      if (Math.hypot(dx,dz) < .9 || Math.hypot(target[0] - px, target[1] - pz) < 4.5) break;
+      if (Math.hypot(dx,dz) < .9 || Math.hypot(target[0] - px, target[1] - pz) < targetTolerance) break;
       // The axis threshold is below .9 / sqrt(2), so every point outside
       // the waypoint tolerance has at least one direction to steer.
       const yaw = Number(await canvas.getAttribute('data-camera-yaw'));

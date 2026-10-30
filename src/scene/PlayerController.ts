@@ -246,15 +246,38 @@ export class PlayerController {
     const sub = dt / steps, verticalSub = verticalDt / steps;
     for (let i = 0; i < steps; i++) {
       const wasGrounded = this.grounded;
+      const previousFoot = this.collider.start.y - this.collider.radius;
       this.grounded = false;
       this.velocityY -= 15 * verticalSub;
       this.collider.translate(new THREE.Vector3(movement.x * sub, this.velocityY * verticalSub, movement.z * sub));
       for (let n = 0; n < 3; n++) {
         const hit = this.octree.capsuleIntersect(this.collider);
         if (!hit) break;
-        if (wasGrounded && this.velocityY <= 0 && hit.normal.y < .5 && movement.lengthSq() > 0) {
-          const raised = this.collider.clone().translate(new THREE.Vector3(0, .24, 0));
-          if (!this.octree.capsuleIntersect(raised)) { this.collider.copy(raised); this.grounded = false; break; }
+        if (wasGrounded && this.velocityY <= 0 && movement.lengthSq() > 0) {
+          // Rounded capsule contact at a ledge can otherwise lift the player
+          // up its edge over many frames. Probe the surface just ahead before
+          // allowing the .24m step; resolve taller contacts horizontally.
+          const horizontalSpeed = Math.hypot(movement.x, movement.z);
+          const probe = new THREE.Vector3(this.collider.start.x + movement.x / horizontalSpeed * (this.collider.radius + .05), previousFoot + .75, this.collider.start.z + movement.z / horizontalSpeed * (this.collider.radius + .05));
+          const top = this.octree.rayIntersect(new THREE.Ray(probe, new THREE.Vector3(0, -1, 0)));
+          const tooHigh = !!top && top.position.y > previousFoot + .24 + .005 && top.position.y <= previousFoot + .75;
+          const horizontalNormal = new THREE.Vector3(hit.normal.x, 0, hit.normal.z);
+          const normalLength = horizontalNormal.length();
+          if (tooHigh && normalLength > .01) {
+            const correction = Math.min(.15, (hit.depth + .001) / normalLength);
+            horizontalNormal.divideScalar(normalLength);
+            // Nearly head-on contact at a polygon vertex should not create a
+            // sideways force that slowly walks the player around the planter.
+            if (horizontalNormal.x * movement.x / horizontalSpeed + horizontalNormal.z * movement.z / horizontalSpeed < -.98) {
+              horizontalNormal.set(-movement.x / horizontalSpeed, 0, -movement.z / horizontalSpeed);
+            }
+            this.collider.translate(horizontalNormal.multiplyScalar(correction));
+            continue;
+          }
+          if (hit.normal.y < .5 && !tooHigh) {
+            const raised = this.collider.clone().translate(new THREE.Vector3(0, .24, 0));
+            if (!this.octree.capsuleIntersect(raised)) { this.collider.copy(raised); this.grounded = false; break; }
+          }
         }
         if (hit.normal.y > .5 && this.velocityY <= 0) { this.velocityY = 0; this.grounded = true; }
         this.collider.translate(hit.normal.multiplyScalar(hit.depth + .001));

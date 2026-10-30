@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { landmarkModels, loadLandmarkModel } from './LandmarkModels';
 import { PlayerController } from './PlayerController';
+import { createQingzeFallback, QINGZE_DECORATION_BOUNDS } from './QingzeGarden';
 import { createFoliageGeometry, createSurfaceMaterial } from './SurfaceStyle';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -370,10 +371,20 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       return points && points.length >= 2 && points.every(validPoint)
         ? [{ id: `game-${i}-${id}`, points, width: 2.4, source: 'Designed game path, not a mapped road' }] : [];
     });
-    const paths = new THREE.Mesh(strips(gamePaths, 0), createSurfaceMaterial('paving', 0xd5d0bf));
+    const pathMaterial = createSurfaceMaterial('paving', 0xd5d0bf);
+    const paths = new THREE.Mesh(strips(gamePaths, 0), pathMaterial);
     paths.position.y = 0.02; // Keep the paths above existing road surfaces.
     paths.receiveShadow = true;
     world.add(paths);
+    if (data.id === 'yingxi') {
+      // Designed link only: bridge the grass gap from the existing route to
+      // the new garden approach without changing mapped roads or quest IDs.
+      const linkGeometry = strips([{ id: 'qingze-designed-link', points: [[35, 173], [35, 188.4]], width: 3.4, source: 'Designed game path, not a mapped road' }], 0);
+      const positions = linkGeometry.getAttribute('position');
+      for (let i = 0; i < positions.count; i++) positions.setY(i, THREE.MathUtils.lerp(.11, .05, THREE.MathUtils.clamp((positions.getZ(i) - 173) / 15.4, 0, 1)));
+      positions.needsUpdate = true; linkGeometry.computeVertexNormals();
+      const link = new THREE.Mesh(linkGeometry, pathMaterial); link.receiveShadow = true; world.add(link);
+    }
 
     const parkMat = data.features.some(f => f.kind === 'park' && cleanPolygon(f.polygon).length >= 3) ? createSurfaceMaterial('grass', 0x879f82) : null;
     const trackMat = material(0xb5795f);
@@ -526,7 +537,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
           const offsets: Point2[] = [[0, 0], [5, 3], [-4, 6], [3, -5]];
           for (const [ox, oz] of offsets) {
             const tx = x + ox, tz = z + oz;
-            if (Math.abs(tz - midZ) > 3 && isClear(tx, tz, polygon, 2.6)) treePositions.push([tx, tz]);
+            const gardenConflict = data.id === 'yingxi' && tx >= QINGZE_DECORATION_BOUNDS.minX && tx <= QINGZE_DECORATION_BOUNDS.maxX && tz >= QINGZE_DECORATION_BOUNDS.minZ && tz <= QINGZE_DECORATION_BOUNDS.maxZ;
+            if (!gardenConflict && Math.abs(tz - midZ) > 3 && isClear(tx, tz, polygon, 2.6)) treePositions.push([tx, tz]);
           }
         }
       }
@@ -595,7 +607,12 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       world.add(owner);
     }
 
-    if (data.id === 'yingxi') addCorridor(world, collisionProps);
+    let gardenFallback: THREE.Group | null = null;
+    if (data.id === 'yingxi') {
+      addCorridor(world, collisionProps);
+      const garden = createQingzeFallback();
+      gardenFallback = garden.visual; world.add(garden.visual); collisionProps.add(garden.colliders);
+    }
     player.setCampus(data, collisionProps);
     disposeObject(collisionProps);
     world.add(pawn, player.shadow);
@@ -625,11 +642,12 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         model.traverse(object => {
           if (object instanceof THREE.Mesh) {
             object.castShadow = object.receiveShadow = true;
-            object.userData.landmarkId = config.landmarkId;
+            object.userData.landmarkId = config.selectionId ?? config.landmarkId;
             pickables.push(object);
           }
         });
         model.userData.landmarkId = config.landmarkId;
+        if (config.landmarkId === 'yx-garden-setting' && gardenFallback) gardenFallback.visible = false;
         ownerWorld.add(model);
         model.updateMatrixWorld(true);
         const marker = markerMeshes.get(config.landmarkId);

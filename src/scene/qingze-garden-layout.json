@@ -1,0 +1,542 @@
+{
+  "sourceSha256": "c052ab3c24ae259b875dbd91e05a4e202f544f83db1cc5ddba0e4855e7916e76",
+  "designStatus": "Original estimated game scenery; not a surveyed layout, not a reconstruction of the actual public sculpture. No sculpture, reliefs, text, or source-photo texture.",
+  "solidColliders": [
+    {
+      "id": "reading-garden-planter",
+      "kind": "planter",
+      "height": 0.4,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          38.5,
+          205.4
+        ],
+        [
+          38.14497,
+          206.06
+        ],
+        [
+          37.175,
+          206.54315
+        ],
+        [
+          35.85,
+          206.72
+        ],
+        [
+          34.525,
+          206.54315
+        ],
+        [
+          33.55503,
+          206.06
+        ],
+        [
+          33.2,
+          205.4
+        ],
+        [
+          33.55503,
+          204.74
+        ],
+        [
+          34.525,
+          204.25685
+        ],
+        [
+          35.85,
+          204.08
+        ],
+        [
+          37.175,
+          204.25685
+        ],
+        [
+          38.14497,
+          204.74
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-1-1",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          28.67319,
+          206.69526
+        ],
+        [
+          27.51407,
+          207.00585
+        ],
+        [
+          27.89819,
+          208.10271
+        ],
+        [
+          28.99782,
+          207.62229
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-1-2",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          28.99782,
+          207.62229
+        ],
+        [
+          27.89819,
+          208.10271
+        ],
+        [
+          28.442,
+          209.12979
+        ],
+        [
+          29.45743,
+          208.49034
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-1-3",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          29.45743,
+          208.49034
+        ],
+        [
+          28.442,
+          209.12979
+        ],
+        [
+          29.13329,
+          210.06401
+        ],
+        [
+          30.04168,
+          209.2799
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-1-4",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          30.04168,
+          209.2799
+        ],
+        [
+          29.13329,
+          210.06401
+        ],
+        [
+          29.9565,
+          210.88435
+        ],
+        [
+          30.73743,
+          209.97323
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-1-5",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          30.73743,
+          209.97323
+        ],
+        [
+          29.9565,
+          210.88435
+        ],
+        [
+          30.89313,
+          211.57237
+        ],
+        [
+          31.52903,
+          210.55472
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-2-1",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          32.54633,
+          211.07305
+        ],
+        [
+          32.0968,
+          212.18567
+        ],
+        [
+          33.23028,
+          212.54524
+        ],
+        [
+          33.5043,
+          211.37694
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-2-2",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          33.5043,
+          211.37694
+        ],
+        [
+          33.23028,
+          212.54524
+        ],
+        [
+          34.40543,
+          212.72716
+        ],
+        [
+          34.49749,
+          211.5307
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-2-3",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          34.49749,
+          211.5307
+        ],
+        [
+          34.40543,
+          212.72716
+        ],
+        [
+          35.59457,
+          212.72716
+        ],
+        [
+          35.50251,
+          211.5307
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-2-4",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          35.50251,
+          211.5307
+        ],
+        [
+          35.59457,
+          212.72716
+        ],
+        [
+          36.76972,
+          212.54524
+        ],
+        [
+          36.4957,
+          211.37694
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-2-5",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          36.4957,
+          211.37694
+        ],
+        [
+          36.76972,
+          212.54524
+        ],
+        [
+          37.9032,
+          212.18567
+        ],
+        [
+          37.45367,
+          211.07305
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-3-1",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          38.47097,
+          210.55472
+        ],
+        [
+          39.10687,
+          211.57237
+        ],
+        [
+          40.0435,
+          210.88435
+        ],
+        [
+          39.26257,
+          209.97323
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-3-2",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          39.26257,
+          209.97323
+        ],
+        [
+          40.0435,
+          210.88435
+        ],
+        [
+          40.86671,
+          210.06401
+        ],
+        [
+          39.95832,
+          209.2799
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-3-3",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          39.95832,
+          209.2799
+        ],
+        [
+          40.86671,
+          210.06401
+        ],
+        [
+          41.558,
+          209.12979
+        ],
+        [
+          40.54257,
+          208.49034
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-3-4",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          40.54257,
+          208.49034
+        ],
+        [
+          41.558,
+          209.12979
+        ],
+        [
+          42.10181,
+          208.10271
+        ],
+        [
+          41.00218,
+          207.62229
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-seat-3-5",
+      "kind": "curved-seat-and-coping",
+      "height": 0.65,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          41.00218,
+          207.62229
+        ],
+        [
+          42.10181,
+          208.10271
+        ],
+        [
+          42.48593,
+          207.00585
+        ],
+        [
+          41.32681,
+          206.69526
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-trunk-1",
+      "kind": "tree-trunk",
+      "height": 4.3,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          28.84,
+          211.5
+        ],
+        [
+          28.74042,
+          211.74042
+        ],
+        [
+          28.5,
+          211.84
+        ],
+        [
+          28.25958,
+          211.74042
+        ],
+        [
+          28.16,
+          211.5
+        ],
+        [
+          28.25958,
+          211.25958
+        ],
+        [
+          28.5,
+          211.16
+        ],
+        [
+          28.74042,
+          211.25958
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-trunk-2",
+      "kind": "tree-trunk",
+      "height": 4.8,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          33.24,
+          213.1
+        ],
+        [
+          33.14042,
+          213.34042
+        ],
+        [
+          32.9,
+          213.44
+        ],
+        [
+          32.65958,
+          213.34042
+        ],
+        [
+          32.56,
+          213.1
+        ],
+        [
+          32.65958,
+          212.85958
+        ],
+        [
+          32.9,
+          212.76
+        ],
+        [
+          33.14042,
+          212.85958
+        ]
+      ]
+    },
+    {
+      "id": "reading-garden-trunk-3",
+      "kind": "tree-trunk",
+      "height": 4.1,
+      "status": "model-design-only",
+      "polygon": [
+        [
+          41.54,
+          210.9
+        ],
+        [
+          41.44042,
+          211.14042
+        ],
+        [
+          41.2,
+          211.24
+        ],
+        [
+          40.95958,
+          211.14042
+        ],
+        [
+          40.86,
+          210.9
+        ],
+        [
+          40.95958,
+          210.65958
+        ],
+        [
+          41.2,
+          210.56
+        ],
+        [
+          41.44042,
+          210.65958
+        ]
+      ]
+    }
+  ]
+}

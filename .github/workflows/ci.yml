@@ -22,6 +22,7 @@ jobs:
       - run: pip install -r scripts/requirements.txt
       - run: python scripts/test_augment_buildings.py
       - run: python scripts/art/verify_mechanical_hall.py public/assets/campuses/yingxi
+      - run: python scripts/art/qingze-garden/verify.py
       - run: python scripts/landmarks/meihua/verify.py
       - run: python scripts/landmarks/gate/verify_portable.py
       - run: python scripts/test_spatial_models.py

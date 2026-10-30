@@ -69,7 +69,9 @@ const photoPoint = computed(() => PHOTO_POINTS.find(point => point.id === photoP
 const photoStatus = ref<{ inRange: boolean; framed: boolean; obstructed: boolean; distance: number } | null>(null);
 const photoFeedback = ref('');
 const photoViewAvailable = ref(true);
-const photoModelStatus = ref<'loading' | 'ready' | 'fallback'>('loading');
+type PhotoModelStatus = 'loading' | 'ready' | 'fallback';
+const photoModelStatuses = ref<Record<string, PhotoModelStatus>>({});
+const photoModelStatus = computed(() => photoModelStatuses.value[photoPoint.value.landmarkId] ?? 'loading');
 const photoCompleteOpen = ref(false);
 let photoReturnFocus: HTMLElement | null = null;
 function syncScenePause() {
@@ -135,7 +137,14 @@ let feedbackTimer: number | undefined;
 function updatePhotoStatus() {
   if (campusId.value !== 'yingxi' || hksOpen.value || sceneError.value || !scene) { photoStatus.value = null; return; }
   photoViewAvailable.value = sceneElement.value?.querySelector('canvas')?.dataset.view === 'player';
-  photoStatus.value = photoViewAvailable.value ? scene.inspectPhoto(photoPoint.value) : null;
+  if (!photoViewAvailable.value) { photoStatus.value = null; return; }
+  // Free exploration: if an unphotographed station is reached first, offer it
+  // without moving the player or skipping a missing model's readiness gate.
+  if (!panelOpen.value && !photoCompleteOpen.value) {
+    const nearby = PHOTO_POINTS.find(point => point.id !== photoPointId.value && !photoImages.value[point.id] && scene!.inspectPhoto(point).inRange);
+    if (nearby) { photoPointId.value = nearby.id; photoFeedback.value = ''; }
+  }
+  photoStatus.value = scene.inspectPhoto(photoPoint.value);
 }
 function photoMessage(message: string) {
   photoFeedback.value = message;
@@ -144,13 +153,13 @@ function photoMessage(message: string) {
 }
 function recordPhoto() {
   if (campusId.value !== 'yingxi' || hksOpen.value || panelOpen.value || photoCompleteOpen.value || sceneError.value) return;
-  if (photoModelStatus.value !== 'ready') { photoMessage(photoModelStatus.value === 'fallback' ? '机械馆细节未能加载，暂无法记录钟楼。' : '机械馆细节正在加载，稍候即可取景。'); return; }
   updatePhotoStatus();
+  if (photoModelStatus.value !== 'ready') { photoMessage(photoModelStatus.value === 'fallback' ? `${photoPoint.value.modelLabel}未能加载，暂无法记录${photoPoint.value.subject}。` : `${photoPoint.value.modelLabel}正在加载，稍候即可取景。`); return; }
   const status = photoStatus.value;
   if (!status) { photoMessage('请先返回人物视角，再继续取景。'); return; }
   if (!status.inRange) { photoMessage(`还未到观察处，继续靠近 · 约 ${Math.round(status.distance)} 米`); return; }
-  if (status.obstructed) { photoMessage('钟楼被景物遮住了，换个位置看看。'); return; }
-  if (!status.framed) { photoMessage('调整视角：钟面放进框内，塔顶完整入画。'); return; }
+  if (status.obstructed) { photoMessage(`${photoPoint.value.subject}被景物遮住了，换个位置看看。`); return; }
+  if (!status.framed) { photoMessage(`${photoPoint.value.frameHint}。`); return; }
   const image = scene?.capturePhoto();
   if (!image) { photoMessage('未能保存当前画面，请返回人物视角再试。'); return; }
   const id = photoPoint.value.id;
@@ -195,7 +204,7 @@ function closePanel() {
 function switchCampus(id: CampusId) {
   if (id === campusId.value) return;
   modelErrors.value = {};
-  photoModelStatus.value = 'loading';
+  photoModelStatuses.value = {};
   scene?.resetJourney();
   clearJourneyView();
   selectedId.value = null;
@@ -276,7 +285,7 @@ function checkIn() {
 }
 function onSceneEvent(event: SceneEvent) {
   if (event.type === 'modelstatus') {
-    if (event.id === 'yx-mechanical') photoModelStatus.value = event.status;
+    if (PHOTO_POINTS.some(point => point.landmarkId === event.id)) photoModelStatuses.value = { ...photoModelStatuses.value, [event.id]: event.status };
     if (event.status === 'fallback') modelErrors.value = { ...modelErrors.value, [event.id]: `${event.name}细节暂未加载；保留基础体块或标记，漫游仍可继续。` };
     else { const next = { ...modelErrors.value }; delete next[event.id]; modelErrors.value = next; }
     return;

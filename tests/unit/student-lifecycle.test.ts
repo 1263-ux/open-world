@@ -3,18 +3,8 @@ import { Group } from 'three';
 import { PlayerController } from '../../src/scene/PlayerController';
 import { StudentModel } from '../../src/scene/StudentModel';
 
-// Minimal DOM doubles are for an isolated asynchronous lifetime unit test,
-// not a simulated gameplay or rendering acceptance.
-class ElementDouble extends EventTarget {
-  dataset: Record<string,string> = {};
-  style: Record<string,string> = {};
-  innerHTML = '';
-  hidden = false;
-  appendChild() { return new ElementDouble(); }
-  querySelector() { return new ElementDouble(); }
-  remove() {}
-  setPointerCapture() {}
-}
+import { ElementDouble } from './controller-harness';
+
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 it('disposes a model that resolves after its controller was disposed, without attaching it', async () => {
   const doc = Object.assign(new EventTarget(), { createElement: () => new ElementDouble() });

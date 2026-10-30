@@ -35,12 +35,12 @@ const hint = computed(() => {
   if (props.disabled) return '三维场景不可用，取景手记暂不可用';
   if (props.panelOpen) return '关闭地点面板后继续取景';
   if (!props.viewAvailable) return '请先返回人物视角，再继续取景';
-  if (props.modelStatus === 'fallback') return '机械馆细节未能加载，暂无法记录钟楼';
-  if (props.modelStatus === 'loading') return '机械馆细节正在加载，稍候即可取景';
+  if (props.modelStatus === 'fallback') return `${props.point.modelLabel}未能加载，暂无法记录${props.point.subject}`;
+  if (props.modelStatus === 'loading') return `${props.point.modelLabel}正在加载，稍候即可取景`;
   if (!props.status) return '正在寻找观察位置…';
   if (!props.status.inRange) return `向观察处靠近 · 约 ${Math.round(props.status.distance)} 米`;
-  if (props.status.obstructed) return '钟楼被景物遮住了，换个位置看看';
-  if (!props.status.framed) return '调整视角：钟面放进框内，塔顶完整入画';
+  if (props.status.obstructed) return `${props.point.subject}被景物遮住了，换个位置看看`;
+  if (!props.status.framed) return props.point.frameHint;
   return '构图就绪 · 按 E 或轻触记录';
 });
 function imageFor(url: string): Promise<HTMLImageElement> {
@@ -87,7 +87,7 @@ async function downloadPostcard() {
   <div class="photo-guide" data-testid="photo-guide" :data-photo-in-range="String(status?.inRange ?? false)" :data-photo-framed="String(status?.framed ?? false)" :data-photo-obstructed="String(status?.obstructed ?? false)">
     <div class="photo-guide-copy">
       <span class="photo-kicker">晴日 · 取景手记 <b>{{ count }} / 2</b></span>
-      <strong>{{ point.title }}</strong>
+      <strong>{{ point.title }} <span v-if="point.designNote" class="photo-design-note">{{ point.designNote }}</span></strong>
       <small>{{ point.instruction }}</small>
       <span class="photo-hint" data-testid="photo-hint">{{ feedback || hint }}</span><span class="sr-only" aria-live="polite">{{ feedback }}</span>
     </div>
