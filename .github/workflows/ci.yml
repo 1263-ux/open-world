@@ -36,6 +36,28 @@ jobs:
       - name: Natural Hks play trial
         if: contains(github.event.head_commit.message, '[playtrial]')
         run: PLAYWRIGHT_HTML_OUTPUT_DIR=survival-playwright-report RUN_HKS_SURVIVAL=1 HKS_TRIAL_CODE_IDENTITY="$GITHUB_SHA" npm run test:e2e -- tests/e2e/hks-survival.spec.ts --workers=1 --retries=0 --output=test-results/survival
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: campus-browser-report
+          path: |
+            playwright-report/
+            test-results/
+            survival-playwright-report/
+          retention-days: 7
+
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix games/hks ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
       - name: Build self-contained offline delivery
         run: bash scripts/offline/package.sh "$PWD" "$RUNNER_TEMP/campus-offline-work"
       - name: Verify real file protocol delivery
@@ -49,10 +71,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: campus-browser-report
+          name: campus-offline-browser-report
           path: |
-            playwright-report/
-            test-results/
             offline-playwright-report/
-            survival-playwright-report/
+            test-results/offline/
           retention-days: 7

@@ -72,7 +72,7 @@ fs.writeFileSync(modelSource,modelCode);
 console.log('Embedded GLBs:',models.join(', '));
 const rootReq=createRequire(path.join(src,'package.json')); 
 const vite8=await import(pathToFileURL(rootReq.resolve('vite')).href), vite5=await import(pathToFileURL(path.join(src,'games/hks/node_modules/vite/dist/node/index.js')).href), vue=(await import(pathToFileURL(rootReq.resolve('@vitejs/plugin-vue')).href)).default;
-const buildOne=async(vite,root,entry,output,plugins=[])=>vite.build({configFile:false,root,publicDir:false,cacheDir:path.join(work,'cache',output),plugins,define:{'import.meta.env.VITE_OFFLINE_BUILD':JSON.stringify('true')},build:{outDir:path.join(out,output),emptyOutDir:true,target:'es2020',minify:false,cssCodeSplit:false,lib:{entry:path.join(root,entry),name:output==='hks'?'HksOffline':'CampusOffline',formats:['iife'],fileName:()=> 'bundle.js'},rollupOptions:{output:{inlineDynamicImports:true}}}});
+const buildOne=async(vite,root,entry,output,plugins=[])=>vite.build({configFile:false,root,publicDir:false,cacheDir:path.join(work,'cache',output),plugins,define:{'import.meta.env.VITE_OFFLINE_BUILD':JSON.stringify('true'),'process.env.NODE_ENV':JSON.stringify('production')},build:{outDir:path.join(out,output),emptyOutDir:true,target:'es2020',minify:false,cssCodeSplit:false,lib:{entry:path.join(root,entry),name:output==='hks'?'HksOffline':'CampusOffline',formats:['iife'],fileName:()=> 'bundle.js'},rollupOptions:{output:{inlineDynamicImports:true}}}});
 await buildOne(vite5,path.join(stage,'games/hks'),'src/main.ts','hks');
 await buildOne(vite8,stage,'src/main.ts','campus',[vue()]);
 const read=(p)=>fs.readFileSync(p,'utf8'), safeJs=s=>s.replace(/<\/script/gi,'<\\/script');

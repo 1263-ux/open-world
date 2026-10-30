@@ -6,8 +6,20 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 if(!process.argv[2] || !process.argv[3]) throw Error('Usage: node check.mjs <source> <work-dir>');
 const root=path.resolve(process.argv[2]), work=path.resolve(process.argv[3]), stage=path.join(work,'snapshot'), out=path.join(work,'out');
-const req=createRequire(path.join(root,'package.json')), {init,parse}=await import(pathToFileURL(req.resolve('es-module-lexer')).href); await init;
-for(const name of ['campus','hks']) {const js=fs.readFileSync(path.join(out,name,'bundle.js'),'utf8'); new vm.Script(js); const [imports,exports]=parse(js); if(imports.length||exports.length) throw Error(`${name} contains ESM`); console.log(`${name}: classic JS parses, no import/export`);}
+const req=createRequire(path.join(root,'package.json')), {init,parse}=await import(pathToFileURL(req.resolve('es-module-lexer')).href);
+const espree=req('espree'), scopes=req('eslint-scope'); await init;
+for(const name of ['campus','hks']) {
+  const js=fs.readFileSync(path.join(out,name,'bundle.js'),'utf8'); new vm.Script(js);
+  const [imports,exports]=parse(js); if(imports.length||exports.length) throw Error(`${name} contains ESM`);
+  if(/\bprocess\s*(?:\.\s*env|\[\s*['"]env['"]\s*\])/.test(js)) throw Error(`${name} contains unresolved process.env`);
+  // Identify actual free identifiers, not occurrences in strings/comments or locally bound names.
+  const ast=espree.parse(js,{ecmaVersion:'latest',sourceType:'script',range:true});
+  const free=scopes.analyze(ast,{ecmaVersion:2022,sourceType:'script'}).globalScope.through.filter(r=>r.identifier.name==='process');
+  // Phaser's browser-safe, node-only OS detection checks typeof before any use; fail closed on changes.
+  const guarded=/if \(typeof process !== "undefined" && process\.versions && process\.versions\.node\) \{\s*OS\.node = true;\s*\}\s*if \(OS\.node && typeof process\.versions === "object"\) \{\s*OS\.nodeWebkit = !!process\.versions\["node-webkit"\];\s*OS\.electron = !!process\.versions\.electron;\s*\}/.exec(js);
+  if(free.length && (name!=='hks' || !guarded || !/node:\s*false/.test(js) || (js.match(/\bOS\.node\s*=/g)||[]).length!==1 || free.length!==6 || free.some(r=>r.identifier.range[0]<guarded.index || r.identifier.range[1]>guarded.index+guarded[0].length))) throw Error(`${name} contains unreviewed unbound process identifiers`);
+  console.log(`${name}: classic JS parses, no import/export or unresolved process.env; ${free.length} reviewed guarded process references`);
+}
 const html=fs.readFileSync(path.join(out,'campus-offline.html'),'utf8');
 if(/sk-(?:proj-)?[A-Za-z0-9_-]{20,}|OPENAI_API_KEY|api\.openai\.com/i.test(html)) throw Error('Unexpected credential/API marker in output');
 if(!html.includes('window.__HKS_OFFLINE_HTML__=')||/<script\b[^>]*\bsrc\s*=/i.test(html)||/<link\b[^>]*\bhref\s*=/i.test(html)) throw Error('External HTML resource reference');
