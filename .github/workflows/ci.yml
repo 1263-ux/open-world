@@ -23,7 +23,7 @@ jobs:
       - run: python scripts/test_augment_buildings.py
       - run: python scripts/landmarks/mechanical-hall/verify.py
       - run: python scripts/build_spatial_data.py
-      - run: git diff --exit-code -- src/campus-data/spatial.json public/data/campus-spatial.json
+      - run: git diff --exit-code -- src/campus-data/spatial.json src/campus-data/mechanical-hall-model.json public/data/campus-spatial.json
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test

@@ -103,3 +103,6 @@ for cid in ['huyu','yingxi']:
 (ROOT/'public/data/campus-spatial.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
 (ROOT/'public/data/osm-source.geojson').write_text(json.dumps(geo,ensure_ascii=False,indent=2)+'\n')
 print('Validated all game-route segments against campus bounds and buffered building footprints.')
+
+model_meta=json.loads((ROOT/'public/assets/campuses/yingxi/mechanical-hall.metadata.json').read_text())
+(ROOT/'src/campus-data/mechanical-hall-model.json').write_text(json.dumps({'centerX':model_meta['centerX'],'centerZ':model_meta['centerZ']},separators=(',',':'))+'\n')

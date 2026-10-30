@@ -45,3 +45,5 @@ The entry page runs in a lazy same-origin iframe, not in the Vue/Three bundle. T
 The first real browser run reached combat, natural defeat, menu replay and Escape return; one assertion incorrectly compared innerText with textContent and was corrected, not an app state-loss fix. Mobile screenshot exposed duplicate centering (CSS flex plus Phaser autoCenter); the container is now block layout. Portrait-only viewport600x960 improves readability while world1920x1080 and combat values stay unchanged. Root QA now uses actual CDP touch input and logical viewport dimensions.
 
 Latest six-file upstream feedback/readability improvements and seven existing project PNGs from3cb39bc8 were subsequently merged; see MODERNIZATION.md and ASSET_INVENTORY.json. All imported PNG bytes are original. Latest visual version still requires fresh browser checks.
+
+- The phone trial now creates a touch-capable mobile browser context before Phaser boots; merely changing viewport width did not enable Phaser TouchManager. Input windowEvents is disabled so Phaser does not retain parent-window listeners after iframe removal. Joystick release also handles leaving the canvas.

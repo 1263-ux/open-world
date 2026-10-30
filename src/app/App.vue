@@ -85,7 +85,7 @@ function switchCampus(id: CampusId) {
   selectedId.value = null;
   campusId.value = id;
   panel.value = 'quest';
-  panelOpen.value = true;
+  panelOpen.value = window.innerWidth > 700;
   notice.value = '已切换校区，两个章节的印记分别保留。返回后可继续前往下一站。';
   try {
     scene?.setCampus(campus.value);

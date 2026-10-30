@@ -1,5 +1,5 @@
 import type { Group } from 'three';
-import metadata from '../../public/assets/campuses/yingxi/mechanical-hall.metadata.json' with { type: 'json' };
+import metadata from '../campus-data/mechanical-hall-model.json' with { type: 'json' };
 
 export const mechanicalHall = {
   featureId: '182055474',

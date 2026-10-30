@@ -34,6 +34,11 @@ test('real canvas picking, drag suppression and repeated campus switching',async
  await page.reload();await page.getByTestId('landmark-close').click();
  await page.mouse.click(x,y);await expect(page.locator('.panel-scroll')).toContainText('训练馆');await page.getByTestId('landmark-close').click();await page.mouse.move(r.x+r.width*.48,r.y+r.height*.6);await page.mouse.down();await page.mouse.move(r.x+r.width*.52,r.y+r.height*.65,{steps:8});await page.mouse.up();await expect(page.getByTestId('landmark-close')).toHaveCount(0);
  for(let i=0;i<3;i++){await page.getByTestId('campus-yingxi').click();await expect(page.locator('.landmark-label')).toHaveCount(4);await page.getByTestId('campus-huyu').click();await expect(page.locator('.landmark-label')).toHaveCount(3);}await expect(page.getByTestId('scene-error')).toHaveCount(0);
+ await expect(canvas).toHaveAttribute('data-hero-model','none');
+ await page.getByTestId('campus-yingxi').click();await expect(canvas).toHaveAttribute('data-hero-model','ready',{timeout:30000});
+ await page.getByTestId('open-directory').click();await page.getByTestId('landmark-yx-mechanical').click();
+ await page.getByTestId('landmark-close').click();await page.waitForTimeout(1100);
+ await page.screenshot({path:'test-results/mechanical-hall-focus.png',fullPage:true});
 });
 test('mobile: scene-first viewport and complete second campus chapter',async({page})=>{
  await page.setViewportSize({width:390,height:844});await page.goto('/');await expect(page.getByTestId('campus-canvas')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);

@@ -78,6 +78,8 @@ test('Hks real play: movement, natural defeat, menu replay, exit and campus rest
   expect(errors).toEqual([]);
 });
 
+test.describe('touch-capable phone', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
 test('Hks mobile launch and failed-load return always leave campus usable', async ({ page }) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -105,4 +107,6 @@ test('Hks mobile launch and failed-load return always leave campus usable', asyn
   await page.getByTestId('hks-return').click();
   await expect(page.getByTestId('hks-overlay')).toHaveCount(0);
   await expect(page.getByTestId('campus-canvas')).toHaveAttribute('data-paused', 'false');
+});
+
 });

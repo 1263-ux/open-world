@@ -14,6 +14,8 @@ export function createHksGame(container: string) {
     type: Phaser.AUTO, width: GAME_WIDTH, height: GAME_HEIGHT,
     parent: container, backgroundColor: '#1a1a2e', pixelArt: true, roundPixels: true,
     scene: [MenuScene, TutorialScene, GameScene],
+    // Keep input listeners in this iframe, never on window.top after it is removed.
+    input: { windowEvents: false },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   });
   game.events.once(Phaser.Core.Events.READY, () => notify('hks:ready'));

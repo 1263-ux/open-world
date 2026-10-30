@@ -1153,15 +1153,18 @@ export class GameScene extends Phaser.Scene {
       this.player.joystickVy = clampDist > 5 ? ny / this.joystickMaxDist : 0;
     });
 
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.id !== this.joystickId) return;
+    const releaseJoystick = () => {
       this.joystickActive = false;
       this.joystickId = null;
       this.player.joystickVx = 0;
       this.player.joystickVy = 0;
       if (this.joystickBase) { this.joystickBase.destroy(); this.joystickBase = null; }
       if (this.joystickKnob) { this.joystickKnob.destroy(); this.joystickKnob = null; }
+    };
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id === this.joystickId) releaseJoystick();
     });
+    this.input.on('gameout', releaseJoystick);
   }
 
   // ── 调试 ──

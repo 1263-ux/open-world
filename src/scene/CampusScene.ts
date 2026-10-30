@@ -573,7 +573,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (!landmark || !validPoint(landmark.position)) return;
     const feature = data.features.find((f) => f.id === landmark.featureId);
     const [x0, z0, x1, z1] = feature ? boundsOf(feature.polygon) : [0, 0, 0, 0];
-    const span = Math.max(180, (x1 - x0) * 2.5, (z1 - z0) * 2.5);
+    const span = Math.max(110, (x1 - x0) * 1.35, (z1 - z0) * 1.35);
     animateView(new THREE.Vector3(landmark.position[0], 0, landmark.position[1]), span);
   }
   function drawRoute(points: Point2[]): void {
