@@ -1,199 +1,375 @@
 {
-  "sourceRepository": "ShanEior/Hks",
-  "sourceCommit": "843ecbbae414a403eae350f4f8105cfbb84acf72",
-  "author": "1263-ux",
-  "commitDate": "2026-05-30T07:53:46Z",
-  "authorization": "User explicitly clarified ownership and requested direct port with minor adaptation; game source reuse authorized. No independent license is inferred for included or excluded third-party assets.",
-  "scope": "Exact text runtime sources/configuration only. No PNG, ZIP, .claude, or old extracted sprite pack downloaded.",
+  "repository": "https://github.com/1263-ux/Hks",
+  "ref": "7199caebe6f5dbbe22e40c0bc0dbd85cdfb71cf1",
+  "retrieved_utc": "2026-10-30",
+  "meaning": "Historical upstream source hashes before integration; this is an inventory, not a claim all files are shipped unchanged. See replacements and MODIFICATIONS.md.",
   "files": [
     {
-      "path": "index.html",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/index.html",
-      "gitBlobSha": "e2ffad6a3ef9b75ff6e2196076e915806fdf6f51",
-      "expectedBytes": 1934,
-      "actualBytes": 1934,
-      "localSha256": "7c2c74aae959c6a9d3dd7b8c4bf2191cce9f86b1a9cc4bc86ecf183efdb684af",
-      "exactGitBlobMatch": true
+      "path": "public/assets/arrow.png",
+      "sha256": "d6d810c780dcb6bce6a851cb7959fc4b879a12f926cfa8cc6df873a929878d6f",
+      "git_blob": "c22adee0b79598e0c18575d647b789f8a762146f"
     },
     {
-      "path": "package-lock.json",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/package-lock.json",
-      "gitBlobSha": "0d36a1e2d4302cb2371d9fb83a1af523ef965fa7",
-      "expectedBytes": 32182,
-      "actualBytes": 32182,
-      "localSha256": "933319ea842d71e500a9fa933f73ea34ce56265bc66bd9691ac247c80a59dd29",
-      "exactGitBlobMatch": true
+      "path": "public/assets/bg.png",
+      "sha256": "c90db4198a2a6b9eb85eee87a44c21ffb5fe564927070ffcfb07cc474742cff2",
+      "git_blob": "24b1030cbc9c6859e436f7c59f7665c7307b9c52"
     },
     {
-      "path": "package.json",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/package.json",
-      "gitBlobSha": "7942fa151b528b32814aecc359f49cec53df0899",
-      "expectedBytes": 342,
-      "actualBytes": 342,
-      "localSha256": "62508e05ec4e6d78bda613daeb4e91e9892a4ab6bfe53f22ae2fb6ca9b3d74b4",
-      "exactGitBlobMatch": true
+      "path": "public/assets/boss.png",
+      "sha256": "c4c024378b1f1d9d9a10a6c5f9267083d75ce897dca8e1194bcd83526a5a9ec9",
+      "git_blob": "3fde4bff0d013ecc270a4a779f12a11437ae145e"
+    },
+    {
+      "path": "public/assets/building.png",
+      "sha256": "b4d8bbb2896255ac27764e6e87559ca578fa180da885da0366996ef5462c6aa0",
+      "git_blob": "30d8837e2b508c04add687265c99729a0dbb7379"
+    },
+    {
+      "path": "public/assets/effects/extra_46.png",
+      "sha256": "2278f5a69a92540908f3a4a7791848ae3e053eaed512fb548b20bf6ec42c5eaf",
+      "git_blob": "02aaffcf1cf59b927c73b5b25549d6ad45d2241a"
+    },
+    {
+      "path": "public/assets/effects/extra_Extra_148.png",
+      "sha256": "a7dcee8c30b4100d27e2eba6a1294fb32c2560fd06aa653213bd632db42a2c10",
+      "git_blob": "a269938e5b7afe2dae2488a7930e54bcb75ef92d"
+    },
+    {
+      "path": "public/assets/effects/extra_Extra_196.png",
+      "sha256": "df68bba6758be164061c92f9762f3c9570eb3fbe6bd8759b4fd5bec608d31d5b",
+      "git_blob": "6aaacadc8e6674167dd77276cdef612d673fd280"
+    },
+    {
+      "path": "public/assets/effects/extra_Extra_283.png",
+      "sha256": "99b021a592fd4ad2442172bfce203cb885fbae262d35357c90a3296c2e6c9aec",
+      "git_blob": "0b0a40bcfc92696b6e1af6ae30ebc30635932928"
+    },
+    {
+      "path": "public/assets/effects/extra_Extra_33.png",
+      "sha256": "9229717e2026329afb88aa3da68691549591ecb9a86d086ea6d5ca6c208ffdb6",
+      "git_blob": "df9bc9af1c176e25146b6533a9d079659804b65f"
+    },
+    {
+      "path": "public/assets/effects/extra_Extra_36.png",
+      "sha256": "a229cdfca65b405b83b91bfe702a338cdb6e4b849a09a50e73c5df77e3df7e1e",
+      "git_blob": "832f95b96f3c52c35f5ecacdd4ee7bcc4cb42be0"
+    },
+    {
+      "path": "public/assets/effects/extra_Extra_76.png",
+      "sha256": "9180fa753a30497c02a3bd866bf5bcdd945f1c16deb50af0ca485d533efebe3b",
+      "git_blob": "2c273f798832535656ad94adec49a1ea0361a40e"
+    },
+    {
+      "path": "public/assets/effects/proj_Projectile_108.png",
+      "sha256": "ccc89672f5b2aeadc843539e6e0d113b22a5cd299c74cf6ce4539e5fc2f417e5",
+      "git_blob": "41e5256b23b5163af9eb55eb45405c97754bc509"
+    },
+    {
+      "path": "public/assets/effects/proj_Projectile_116.png",
+      "sha256": "673c1e700fde56f9303b1f61af561b9720d51ec828da6c8ff5209d1262b1cf85",
+      "git_blob": "f437ef844370ebbc9e023a700e54f5e52d91e3b5"
+    },
+    {
+      "path": "public/assets/effects/proj_Projectile_164.png",
+      "sha256": "05f0eb96afdbbc0e01063e4e5f871bee02776e1a582b8a17e675da299bd53944",
+      "git_blob": "cb14aea2081a6721db7ecc86be53da80289821db"
+    },
+    {
+      "path": "public/assets/effects/proj_Projectile_165.png",
+      "sha256": "206b442586c893d269e8bb28046eac59707ff347e6a45c1024ed3ed108252dfc",
+      "git_blob": "259f4d31c9b2804a7545a73a7dbab6c1f4b18222"
+    },
+    {
+      "path": "public/assets/effects/proj_Projectile_187.png",
+      "sha256": "9cef7dcfb91e45453a85a84612a0a62f30df98d9d211aca894b2e0b3224db628",
+      "git_blob": "668f5033a1f5813207e0997344cc3ba338b985f5"
+    },
+    {
+      "path": "public/assets/effects/proj_Projectile_340.png",
+      "sha256": "5baae947f3e3d21f76cb3aa93b4a812ddb6d0f34e72215491dbd5a1b01717a14",
+      "git_blob": "9afc75f589bf040fdde1ca158c3e81a03a399df1"
+    },
+    {
+      "path": "public/assets/effects/proj_Projectile_350.png",
+      "sha256": "27a568140fe61310751a4830b2c7b22932f024918d0465f98add8d7967c13c50",
+      "git_blob": "93d6727a111aaa07d26b5c5e1353b96cb9b7fb06"
+    },
+    {
+      "path": "public/assets/effects/proj_Projectile_97.png",
+      "sha256": "7f835204c212f94ecc922c57ea620fc465d6d50f3ff2f1838a68e97fe333cee7",
+      "git_blob": "1c89adcb4eafe8f6874b5ab88da5b36660cca18c"
+    },
+    {
+      "path": "public/assets/fire_flame.png",
+      "sha256": "869e65dc0dcc7e05683fb7f741d427e97f74a4bc679fd396826273c09bd78a19",
+      "git_blob": "03fe4bf48d4aa8249d9d9e46a0e776d162de55a0"
+    },
+    {
+      "path": "public/assets/fire_monster.png",
+      "sha256": "f6df838a075608af96c0b05371dd68b5a10fc189dfdc0a77bcde45c7ff8aec57",
+      "git_blob": "695e9dd622323d0e98cb64c23c884936865900cf"
+    },
+    {
+      "path": "public/assets/freeze_thaw_monster.png",
+      "sha256": "387906bb4d979639112e6df80ae68b1f9ddb813adab0aa3db03869fe196e32ae",
+      "git_blob": "ac5c555f37a06640a61a48a15cf7dc66ad03f544"
+    },
+    {
+      "path": "public/assets/leaf.png",
+      "sha256": "cc5313cb08de607a68034285115cc91c5014f36776f0eef5f28ad8f54346b272",
+      "git_blob": "6f5880a1d0655d7f378840f3b6ad6753c7005e18"
+    },
+    {
+      "path": "public/assets/menu_bg.jpg",
+      "sha256": "d86ddb37a11a3dfc6a814def6feb0dfd26d7a8e2c014b8e37f26df727a52973c",
+      "git_blob": "d101a76bad9d8c975dd922e93dde8b5e2a8ba182"
+    },
+    {
+      "path": "public/assets/monster_acid_rain.png",
+      "sha256": "d5d87e7ac6de3dfad106d896975f3e1d77896102aaa5809be8e2997d2f3340e5",
+      "git_blob": "b5e937dc92bbd1f599108161c63b3190ec374902"
+    },
+    {
+      "path": "public/assets/monster_fire.png",
+      "sha256": "2ad848ddab0961d27e170045f88ff18f745098afef53ad74f06b7f0a207368c4",
+      "git_blob": "4db08afc03892bacf36e3e246cf2694dbebf1631"
+    },
+    {
+      "path": "public/assets/monster_freeze_thaw.png",
+      "sha256": "d0af41a35c3729092e1a1a07161836f8547f5bc03ad381eae5449db74e5e695d",
+      "git_blob": "73e4e4b52de61d25607ecc36cd72f9b2646c6c29"
+    },
+    {
+      "path": "public/assets/monster_termite.png",
+      "sha256": "cf80958d6f1052eaa60128032b226801439431ca8bb3953f6ad4ccfaeab5e06b",
+      "git_blob": "4a9240bab57b7e3ffca9004709f92022a04d607b"
+    },
+    {
+      "path": "public/assets/monster_wind.png",
+      "sha256": "c2ed27c0d9bf91eb9bd764102481bcec53572ad301ecaa55c24cc840848de627",
+      "git_blob": "a4e7a5ef3ea90a5d1cb09ac1dcd646ca3740aba3"
+    },
+    {
+      "path": "public/assets/player_attack.png",
+      "sha256": "0fbd0296acfc7662c9ec0207ffbf97c5253c10ec1f5580633e0beb0711dc026f",
+      "git_blob": "c234257e5fadebb9369b833cc96dfa13ebcd247c"
+    },
+    {
+      "path": "public/assets/player_idle.png",
+      "sha256": "399af3bae1deb38655ec3c8105b3696a413ba6c4d54c97a54b737392bd27e79e",
+      "git_blob": "58e5c4433b2a25f302715ad066e1cb0dbe0ca00c"
     },
     {
       "path": "src/ArtGen.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/ArtGen.ts",
-      "gitBlobSha": "a6db244d98bcd3692ebf696a2cfe8d04bcc0e61d",
-      "expectedBytes": 76771,
-      "actualBytes": 76771,
-      "localSha256": "e2c15b420ac0920cb888110392a1b7e1b91f0303dab08e2faa1b0fa93cac77ae",
-      "exactGitBlobMatch": true
+      "sha256": "e680aa691deaf0ad4ad33cec34d25e95379862442a6b7310e1e2cede07665459",
+      "git_blob": "f558b984ec6d9302ff45c3554a4a505fcb6d36ce"
     },
     {
       "path": "src/Boss.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/Boss.ts",
-      "gitBlobSha": "214297c238a5c6a415663127fe7662128106ba25",
-      "expectedBytes": 8415,
-      "actualBytes": 8415,
-      "localSha256": "2e5440ef69e63d6a836ea705fac805a36450b5be11ff2419bb37fec482b54c99",
-      "exactGitBlobMatch": true
+      "sha256": "2e5440ef69e63d6a836ea705fac805a36450b5be11ff2419bb37fec482b54c99",
+      "git_blob": "214297c238a5c6a415663127fe7662128106ba25"
     },
     {
       "path": "src/Building.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/Building.ts",
-      "gitBlobSha": "b9aa0b10b961cdad19ff2629a7862cce9b902d2f",
-      "expectedBytes": 4604,
-      "actualBytes": 4604,
-      "localSha256": "3c8860cf35d988dc82d73a40161c5e08733e5ad3e8cf076336fd85e719a54dfa",
-      "exactGitBlobMatch": true
+      "sha256": "8adfab336bcea83c2521d7724f135eb228ad0f554b032a4962f640082dd26850",
+      "git_blob": "6f60d97bf17a891186235c7069bc2230a7b088d3"
     },
     {
       "path": "src/CombatFeel.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/CombatFeel.ts",
-      "gitBlobSha": "58fc470bf6590950d87ec678df57d3f55d73c749",
-      "expectedBytes": 3835,
-      "actualBytes": 3835,
-      "localSha256": "9d02af50f5f1739b217b36b611692256ce1227f4611a316bc176ba389bd4294e",
-      "exactGitBlobMatch": true
+      "sha256": "9d02af50f5f1739b217b36b611692256ce1227f4611a316bc176ba389bd4294e",
+      "git_blob": "58fc470bf6590950d87ec678df57d3f55d73c749"
     },
     {
       "path": "src/GameScene.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/GameScene.ts",
-      "gitBlobSha": "7cbe5481056cc2a81e0a5f9ba6a4f9f48835c4b5",
-      "expectedBytes": 44401,
-      "actualBytes": 44401,
-      "localSha256": "684213bc1858f5c803edf04898a8d8bc437a1bf9f59e2dc9ec9d79a38e07ef8e",
-      "exactGitBlobMatch": true
+      "sha256": "38894e93c8a66f6e674b0813a565d5c604b90be622087a4133f3c73906d75621",
+      "git_blob": "84d936a921ff11c6e78edbf3409150c1a4297192"
     },
     {
       "path": "src/HUD.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/HUD.ts",
-      "gitBlobSha": "2b9d95d31c70618f11293afa9bc61287a6cb1c15",
-      "expectedBytes": 26599,
-      "actualBytes": 26599,
-      "localSha256": "a39df380835217355aca577e728925acff0d87e85de352833b0c0006eba9f4e5",
-      "exactGitBlobMatch": true
+      "sha256": "f577a3e20085f1f27d6a81ce973f646ad642895731f9ea0a46e95679e8f888a7",
+      "git_blob": "7fe59545dfc4e4b2d4d2c94fa0ff23b4010f11ed"
     },
     {
       "path": "src/MenuScene.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/MenuScene.ts",
-      "gitBlobSha": "882ceff88ece6dc7001ba613817f97e9a8523098",
-      "expectedBytes": 5754,
-      "actualBytes": 5754,
-      "localSha256": "14c9a016d4f58db27c771591be7a7e0936c3aa3cbe9130bb500fa700c410e061",
-      "exactGitBlobMatch": true
+      "sha256": "ee2e9d7f233784a8d8f1533c1c58260f12e24de2bbc4b50da8e0d909a1fb0f99",
+      "git_blob": "f08ab8316615ba8f03a6f5a9afe39f6099bfc293"
     },
     {
       "path": "src/Monster.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/Monster.ts",
-      "gitBlobSha": "afff197df13b4e6c3e458351880ab81b8bc9f79b",
-      "expectedBytes": 12031,
-      "actualBytes": 12031,
-      "localSha256": "6a3d1f740f341a4c45923ad22889355dc29b441518d7651df6d9e2cab02186ee",
-      "exactGitBlobMatch": true
+      "sha256": "5d813663af0f071e01221543e3dec8bc3ba9ec2f789e402e18f2079f610ed5c3",
+      "git_blob": "4ad5b896973e1087b59b90fae8dad6c0f65bcbfc"
     },
     {
       "path": "src/Player.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/Player.ts",
-      "gitBlobSha": "9f253b8c772700d8f46aaf87bf7e02a79cfd6120",
-      "expectedBytes": 3700,
-      "actualBytes": 3700,
-      "localSha256": "9074071c30d1c43dd7a1d1a29dfc0312b681e9fb2b517f45a1a437e03bb0302f",
-      "exactGitBlobMatch": true
+      "sha256": "785d79a532b2ec4786234281c66e3008d4a494ff1790bdcffeb798f9f57339c9",
+      "git_blob": "a1f68914b06e0f7043f6173a91ae742603ca9d81"
+    },
+    {
+      "path": "src/SaveData.ts",
+      "sha256": "865f402cd3812f4ea74a416b4118c5dee3f9f165e14ae9fc1cefd1de3ffd78e9",
+      "git_blob": "b7613c11cde507c21182ffb1ecea2cf67aa016d8"
     },
     {
       "path": "src/SkillManager.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/SkillManager.ts",
-      "gitBlobSha": "31b273244db1a3683da32bf26b223a693043df8a",
-      "expectedBytes": 30294,
-      "actualBytes": 30294,
-      "localSha256": "d72e7052acdbd4a2d0711c9be260ade8dd666e4c9fff808f89d0dc005584dfb1",
-      "exactGitBlobMatch": true
+      "sha256": "c08ec3792bc8938894d67b127c774da79041dadff8445fe948df2b15d9df6e91",
+      "git_blob": "0f780ed0dfb7b468469487f3ce073b0c685efcac"
     },
     {
       "path": "src/SoundManager.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/SoundManager.ts",
-      "gitBlobSha": "f2ef79b539b21d2cff9d8a6ac334d59e7a4e1620",
-      "expectedBytes": 22031,
-      "actualBytes": 22031,
-      "localSha256": "1d404aa6ea69e5d5cba68a6d1b700bab769a1696bc74cdde2f975b622ef09aee",
-      "exactGitBlobMatch": true
-    },
-    {
-      "path": "src/SpriteLoader.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/SpriteLoader.ts",
-      "gitBlobSha": "a2b9db18c5b7631bcd607fca4f19aaa8053c8997",
-      "expectedBytes": 4078,
-      "actualBytes": 4078,
-      "localSha256": "db473956cd145134141f727d1516faad3f79c1f70787b501932c91ea3e5ccc69",
-      "exactGitBlobMatch": true
+      "sha256": "4a9a69978090b3478046b3982a1c6d7f9586def57434bf186f78b0d67dacf75a",
+      "git_blob": "b86334b26e1950652cef51cbb107dae33e0a1dda"
     },
     {
       "path": "src/TutorialScene.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/TutorialScene.ts",
-      "gitBlobSha": "4aba12fb9951ddb5af3fd2b53368ffef5150e032",
-      "expectedBytes": 7264,
-      "actualBytes": 7264,
-      "localSha256": "b4014ca3d53ebec7dc2ecfcc668dff127af166ee682b40144044fe74e7f43877",
-      "exactGitBlobMatch": true
+      "sha256": "b86fc29f29da57e7082d174c1c9247e84b28adad9aa584df729a88ea16175cbe",
+      "git_blob": "b76bd8a829b5c39e2a18e114fc131e420dc0a4d4"
     },
     {
       "path": "src/VFX.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/VFX.ts",
-      "gitBlobSha": "fc91939bb637ccbd1f0056be8d7e2ea70045b5f5",
-      "expectedBytes": 26061,
-      "actualBytes": 26061,
-      "localSha256": "5a869666dfca87a4113cb8d4bf713d02edb94ad64b86d00818cfafb59c6b5813",
-      "exactGitBlobMatch": true
+      "sha256": "4304a485df59340926dbaad5cbf643990db3e0dc90fb14f1a3dffe5d065271f9",
+      "git_blob": "fa603b08e436105780294aacbd851c77630b8866"
     },
     {
       "path": "src/config.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/config.ts",
-      "gitBlobSha": "4dd01b16c9c9e9af375c308d75023923a552bf62",
-      "expectedBytes": 24285,
-      "actualBytes": 24285,
-      "localSha256": "0fb518244d891ffb1ef91e877388b656fddd09bf0765942ecc7d0d1d0b1cdd4c",
-      "exactGitBlobMatch": true
+      "sha256": "129c20ed1e0780e08b88d880cd2928682a6042aa24925339ff0d1a4c4fa0ead6",
+      "git_blob": "de9246e85a9935f55c6f4eb616bc6b8aaf12fc33"
     },
     {
       "path": "src/main.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/src/main.ts",
-      "gitBlobSha": "d0b5d270b75f27cc64f463a403d6bb540ed2898e",
-      "expectedBytes": 882,
-      "actualBytes": 882,
-      "localSha256": "fdcc73ca5d593deb2358ef11929f88822b294fd0cfb570adf8631d89473a456b",
-      "exactGitBlobMatch": true
+      "sha256": "fdcc73ca5d593deb2358ef11929f88822b294fd0cfb570adf8631d89473a456b",
+      "git_blob": "d0b5d270b75f27cc64f463a403d6bb540ed2898e"
+    },
+    {
+      "path": "index.html",
+      "sha256": "a71866a462d13ff458ed2ba0d8aec3251e741575bb85e79ec3aec496a4ae77d9",
+      "git_blob": "8912ae34ce44a13b02d332f3996225ab43b67f6b"
+    },
+    {
+      "path": "package.json",
+      "sha256": "a047ce918f57c8c05fe884225a36ce063cf581d6ba2fd784eccec4fd33d604d7",
+      "git_blob": "4de15ee800307686f43f3cb191243022e9393a49"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "933319ea842d71e500a9fa933f73ea34ce56265bc66bd9691ac247c80a59dd29",
+      "git_blob": "0d36a1e2d4302cb2371d9fb83a1af523ef965fa7"
     },
     {
       "path": "tsconfig.json",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/tsconfig.json",
-      "gitBlobSha": "4b0e5ebfc48f20496c9dad20581c669368aaddf1",
-      "expectedBytes": 382,
-      "actualBytes": 382,
-      "localSha256": "630a74b15a1a08560beba04aa4931fd500175dd5ab924173d6b3110799e5e296",
-      "exactGitBlobMatch": true
+      "sha256": "630a74b15a1a08560beba04aa4931fd500175dd5ab924173d6b3110799e5e296",
+      "git_blob": "4b0e5ebfc48f20496c9dad20581c669368aaddf1"
     },
     {
       "path": "vite.config.ts",
-      "sourceUrl": "https://github.com/ShanEior/Hks/blob/843ecbbae414a403eae350f4f8105cfbb84acf72/vite.config.ts",
-      "gitBlobSha": "6bbe24c36d4b72b92a96e227c3a61224582f5d8d",
-      "expectedBytes": 173,
-      "actualBytes": 173,
-      "localSha256": "6b7d7a839bf056c51e2e347890633cd0ee2c0543fa0cb6919f5470164c46457b",
-      "exactGitBlobMatch": true
+      "sha256": "225bf309f0c2a9c44f40c54d4c1e6fdbcac36775793bacf0fa6b90be38ce024f",
+      "git_blob": "4cb22e04c271a057b94f133b4e25a0e7284a6b29"
+    }
+  ],
+  "replacements": [
+    {
+      "upstream_path": "public/assets/effects/extra_Extra_283.png",
+      "shipped_path": "public/assets/effects/star.png",
+      "source_path": "effects-source/star.svg",
+      "sha256": "17ca35fefcdce84eb9909c6b77223b5611eb9e1ebd2a78a431988b7b301f18ab",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/extra_Extra_76.png",
+      "shipped_path": "public/assets/effects/ring.png",
+      "source_path": "effects-source/ring.svg",
+      "sha256": "732ec82033df4541b8f9cbb3bcbe1c71dd0812e6f13e1afe9d718a78bab4a6a6",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/proj_Projectile_187.png",
+      "shipped_path": "public/assets/effects/dust.png",
+      "source_path": "effects-source/dust.svg",
+      "sha256": "c0f42074575d23617451552719e37d88e164eee7c8779f20d2b3e45cbfedb91b",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/proj_Projectile_340.png",
+      "shipped_path": "public/assets/effects/slash.png",
+      "source_path": "effects-source/slash.svg",
+      "sha256": "f703f8812a72d7c2b755533f966ec1f6748051de027989ab2a91b747fb4c86c7",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/proj_Projectile_97.png",
+      "shipped_path": "public/assets/effects/whirlwind.png",
+      "source_path": "effects-source/whirlwind.svg",
+      "sha256": "8a88a233e1e6f0548fea022500b885964d70efb28dcc651ca1ffe190d41a0c5c",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/proj_Projectile_108.png",
+      "shipped_path": "public/assets/effects/bolt.png",
+      "source_path": "effects-source/bolt.svg",
+      "sha256": "b5bc0f224067e5daf8c573f0136a26489a33ac543abbcd4fc74a3c546a346e54",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/proj_Projectile_165.png",
+      "shipped_path": "public/assets/effects/spark.png",
+      "source_path": "effects-source/spark.svg",
+      "sha256": "ef9461c3b63e9ea5632231610e2bcd53ddb1b20ac2cfd0280eb98f8cefedb208",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/extra_46.png",
+      "shipped_path": "public/assets/effects/water-drop.png",
+      "source_path": "effects-source/water-drop.svg",
+      "sha256": "34fd9dd7381296ea9f040eda061cd1349df51f16032a150cef3ee86f9e484d92",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/extra_Extra_33.png",
+      "shipped_path": "public/assets/effects/impact.png",
+      "source_path": "effects-source/impact.svg",
+      "sha256": "b4229daa1eb23277195938e8e9b6a82647bbf20a6842747f6be5ab35fa4c7dc2",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/extra_Extra_148.png",
+      "shipped_path": "public/assets/effects/impact-ring.png",
+      "source_path": "effects-source/impact-ring.svg",
+      "sha256": "aee2d7a3b1c2e3c6c9d1347456259b4511babfe5b9c38e0673dc3653428ce21c",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/proj_Projectile_164.png",
+      "shipped_path": "public/assets/effects/heal.png",
+      "source_path": "effects-source/heal.svg",
+      "sha256": "87061e7a2b7627809b12cc9428352fcc602c60acb975316234bae97758d8d96b",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/extra_Extra_196.png",
+      "shipped_path": "public/assets/effects/boss-ring.png",
+      "source_path": "effects-source/boss-ring.svg",
+      "sha256": "0cd6901d04bec97bb5cc5e3853a823073bb220dff8f729dab3b05c003021283d",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/proj_Projectile_350.png",
+      "shipped_path": "public/assets/effects/ice-shard.png",
+      "source_path": "effects-source/ice-shard.svg",
+      "sha256": "2971762c1a6559def87b193635d0715c4196c72ee705b2d320d701f3964e18b9",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/proj_Projectile_116.png",
+      "shipped_path": "public/assets/effects/ice-orb.png",
+      "source_path": "effects-source/ice-orb.svg",
+      "sha256": "d9ee95dac0647791675f395b4fd1c8665edf5489fcbda97f702013131529285d",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
+    },
+    {
+      "upstream_path": "public/assets/effects/extra_Extra_36.png",
+      "shipped_path": "public/assets/effects/ice-crack.png",
+      "source_path": "effects-source/ice-crack.svg",
+      "sha256": "66a0c7d8536606ee3f94ae696e6cf6050ad597fb30c550c576ed78dc66298502",
+      "reason": "Original vector artwork replaces upstream Terraria-identified sprite; no upstream pixels used."
     }
   ]
 }

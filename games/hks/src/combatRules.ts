@@ -1,4 +1,4 @@
-/** Normal melee needs both distance and cooldown; the Boss earthquake stays global. */
-export function canMeleeAttack(distance: number, range: number, elapsed: number, interval: number): boolean {
-  return distance <= range && elapsed >= interval;
+/** Boss normal melee must be both in range and off cooldown; its earthquake remains global. */
+export function canMeleeAttack(distance: number, range: number, elapsedMs: number, cooldownMs: number): boolean {
+  return distance <= range && elapsedMs >= cooldownMs;
 }

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { landmarkModels, loadLandmarkModel } from './LandmarkModels';
+import { PlayerController } from './PlayerController';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
@@ -106,6 +107,57 @@ export function strips(roads: CampusRoad[], extra: number): THREE.BufferGeometry
   return geometry;
 }
 
+/** Original human-scale streetscape along the designed Mechanical Hall–Qingze guide.
+ * These furnishings are interpretive, not a survey of real street furniture. */
+function addCorridor(world: THREE.Group, colliders: THREE.Group): void {
+  const stone = new THREE.MeshStandardMaterial({ color: 0xd2c8b2, roughness: 1 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x9d6a49, roughness: .9 });
+  const iron = new THREE.MeshStandardMaterial({ color: 0x4f5b50, roughness: .8 });
+  const light = new THREE.MeshStandardMaterial({ color: 0xf6e2b4, emissive: 0x5b492b });
+  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, physical = false) => {
+    const mesh = new THREE.Mesh(geo, mat); mesh.position.set(x, y, z); mesh.castShadow = mesh.receiveShadow = true; world.add(mesh);
+    if (physical) { const copy = new THREE.Mesh(geo.clone(), new THREE.MeshBasicMaterial()); copy.position.copy(mesh.position); colliders.add(copy); }
+  };
+  // Collision proxies match the three visible, estimated entrance steps of the detailed model.
+  // They are deliberately separate from the original source footprint; no interior is claimed.
+  for (const [x0, x1, z0, z1, y0, y1] of [
+    [-53.16, -51.70, 173.30, 178.00, 0, .12],
+    [-53.16, -52.12, 173.38, 177.92, .12, .24],
+    [-53.16, -52.50, 173.47, 177.83, .24, .36],
+  ]) {
+    const step = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), new THREE.MeshBasicMaterial());
+    step.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+    colliders.add(step);
+  }
+  // Low kerbs and warm paving frame the existing guide without claiming mapped detail.
+  add(new THREE.BoxGeometry(72, .12, 2.5), stone, -26.56, .06, 157.7, true);
+  add(new THREE.BoxGeometry(72, .12, 2.5), stone, -26.56, .06, 163.8, true);
+  for (const x of [-54, -30, -6, 15]) {
+    const z = x === 15 ? 169.5 : 165.8;
+    add(new THREE.BoxGeometry(1.8, .13, .55), wood, x, .48, z, true);
+    add(new THREE.BoxGeometry(1.8, .55, .12), wood, x, .85, z - .22, true);
+    for (const dx of [-.65, .65]) add(new THREE.BoxGeometry(.1, .45, .42), iron, x + dx, .23, z);
+  }
+  for (const x of [-59, -41, -23, -5, 13]) {
+    add(new THREE.CylinderGeometry(.055, .09, 3.5, 8), iron, x, 1.75, 155.5, true);
+    add(new THREE.SphereGeometry(.2, 10, 8), light, x, 3.48, 155.5);
+  }
+  const bark = new THREE.MeshStandardMaterial({ color: 0x746c55, roughness: 1 });
+  const leaves = new THREE.MeshStandardMaterial({ color: 0x829c77, roughness: 1 });
+  const treeSites: Point2[] = [[-48, 151], [-24, 151], [0, 151], [-43, 170], [-19, 170], [5, 170]];
+  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(.22, .3, 3.4, 8), bark, treeSites.length);
+  const canopies = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), leaves, treeSites.length);
+  const treeTransform = new THREE.Object3D();
+  treeSites.forEach(([x, z], i) => {
+    treeTransform.position.set(x, 1.7, z); treeTransform.scale.set(1, 1, 1); treeTransform.updateMatrix(); trunks.setMatrixAt(i, treeTransform.matrix);
+    treeTransform.position.set(x, 4.2, z); treeTransform.scale.set(2.1, 2.4, 2.1); treeTransform.updateMatrix(); canopies.setMatrixAt(i, treeTransform.matrix);
+    const proxy = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, 3.4, 8), new THREE.MeshBasicMaterial());
+    proxy.position.set(x, 1.7, z); colliders.add(proxy);
+  });
+  trunks.instanceMatrix.needsUpdate = canopies.instanceMatrix.needsUpdate = true;
+  trunks.castShadow = canopies.castShadow = true; world.add(trunks, canopies);
+}
+
 export function createCampusScene(container: HTMLElement, initialData: CampusData, onEvent: (event: SceneEvent) => void): CampusSceneHandle {
   let renderer: THREE.WebGLRenderer;
   try {
@@ -116,7 +168,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xbac7bc);
+  scene.background = new THREE.Color(0xdde9e5);
+  const distanceFog = new THREE.Fog(0xdde9e5, 380, 1300);
+  scene.fog = distanceFog;
   const camera = new THREE.OrthographicCamera(-250, 250, 250, -250, 0.1, 6000);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -136,7 +190,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const canvas = renderer.domElement;
   canvas.setAttribute('data-testid', 'campus-canvas');
-  canvas.setAttribute('aria-label', '米制校园三维场景，可拖拽旋转、滚轮缩放或使用地点目录。建筑占地有数据依据，楼高待核。');
+  canvas.setAttribute('aria-label', '第三人称校园场景。WASD 移动，拖动鼠标转向，Shift 跑步，空格跳跃；触屏左侧移动、右侧转动视角。建筑占地有数据依据，楼高待核。');
   canvas.setAttribute('role', 'img');
   canvas.tabIndex = 0;
   canvas.style.display = 'block';
@@ -148,6 +202,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   labels.domElement.className = 'landmark-label-layer';
   labels.domElement.setAttribute('aria-hidden', 'true');
   container.appendChild(labels.domElement);
+  const player = new PlayerController(container, canvas);
+  let mapMode = false;
+  controls.enabled = false;
 
   const credit = document.createElement('div');
   credit.style.cssText = 'position:absolute;left:14px;bottom:14px;max-width:min(55%,520px);padding:7px 10px;border-radius:6px;background:rgba(22,39,32,.82);color:#f3f0e5;font:11px/1.4 system-ui,sans-serif;pointer-events:none;z-index:2';
@@ -172,15 +229,14 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   let routeLayer = new THREE.Group();
   let highlightLayer = new THREE.Group();
   scene.add(world, routeLayer, highlightLayer);
-  let pawn = new THREE.Group();
+  const pawn = player.avatar;
   let markerMeshes = new Map<string, THREE.Mesh>();
   let buildingMeshes = new Map<string, THREE.Mesh>();
   let pickables: THREE.Object3D[] = [];
   let markerNormal: THREE.MeshStandardMaterial;
   let markerSelected: THREE.MeshStandardMaterial;
   let markerTarget: THREE.MeshStandardMaterial;
-  let lastId = 'start';
-  let travel: { id: string; points: Point2[]; cumulative: number[]; length: number; distance: number } | null = null;
+  let travel: { id: string; initialDistance: number; arrival: Point2; waypoints: Point2[] } | null = null;
   let frameSpan = 500;
   let tween: { fromPosition: THREE.Vector3; toPosition: THREE.Vector3; fromTarget: THREE.Vector3; toTarget: THREE.Vector3; fromSpan: number; toSpan: number; elapsed: number; duration: number } | null = null;
   let disposed = false;
@@ -209,6 +265,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     renderer.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight), false);
     labels.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight));
     refreshFrustum();
+    player.resize(container.clientWidth, container.clientHeight);
   }
   const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
   resizeObserver?.observe(container);
@@ -217,7 +274,6 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   function material(color: THREE.ColorRepresentation, roughness = 0.9): THREE.MeshStandardMaterial {
     return new THREE.MeshStandardMaterial({ color, roughness });
   }
-  function setPawnPosition(point: Point2): void { pawn.position.set(point[0], 0.14, point[1]); }
   function clearRoute(): void {
     disposeObject(routeLayer);
     routeLayer = new THREE.Group();
@@ -260,10 +316,11 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     };
     for (const model of models) updateModelStatus(model.landmarkId, 'loading');
     travel = null;
-    lastId = 'start';
     tween = null;
     clearRoute();
     clearHighlights();
+    pawn.removeFromParent();
+    player.shadow.removeFromParent();
     disposeObject(world);
     world = new THREE.Group();
     scene.add(world);
@@ -277,12 +334,12 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const [minX, minZ, maxX, maxZ] = boundsOf(allPoints);
     const centerX = (minX + maxX) / 2, centerZ = (minZ + maxZ) / 2;
     const extent = Math.max(maxX - minX, maxZ - minZ, 500);
-    const landscape = new THREE.Mesh(new THREE.PlaneGeometry(maxX - minX + 800, maxZ - minZ + 800), material(0x9aa995));
+    const landscape = new THREE.Mesh(new THREE.PlaneGeometry(maxX - minX + 800, maxZ - minZ + 800), material(0xa9b8a4));
     landscape.rotation.x = -Math.PI / 2;
     landscape.position.set(centerX, -0.12, centerZ);
     landscape.receiveShadow = true;
     world.add(landscape);
-    addSurface(world, boundary, -0.025, material(0xb5c0aa));
+    addSurface(world, boundary, -0.025, material(0xbecbb3));
     const curb = perimeter(boundary, 0.015, new THREE.LineBasicMaterial({ color: 0x8b9684 }));
     if (curb) world.add(curb);
     sun.position.set(centerX - extent * 0.7, extent * 1.15, centerZ + extent * 0.55);
@@ -294,8 +351,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     shadowCamera.near = 1; shadowCamera.far = extent * 3.5 + 500;
     shadowCamera.updateProjectionMatrix();
 
-    const roadEdge = new THREE.Mesh(strips(data.roads, 1.15), material(0xc3c1b2));
-    const roads = new THREE.Mesh(strips(data.roads, 0), material(0x777e79));
+    const roadEdge = new THREE.Mesh(strips(data.roads, 1.15), material(0xd7d0bb));
+    const roads = new THREE.Mesh(strips(data.roads, 0), material(0xa4a79c));
     roadEdge.receiveShadow = roads.receiveShadow = true;
     world.add(roadEdge, roads);
 
@@ -357,19 +414,19 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         const linked = data.landmarks.find((item) => item.featureId === feature.id || item.featureIds?.includes(feature.id));
         if (!linked) {
           backgroundBuckets[facadeIndex].push(geometry);
-          continue;
+        } else {
+          usedFacadeMats.add(facadeMats[facadeIndex]);
+          roofUsed = true;
+          const building = new THREE.Mesh(geometry, [roofMat, facadeMats[facadeIndex]]);
+          building.castShadow = true;
+          building.receiveShadow = true;
+          building.userData.height = height;
+          building.userData.landmarkId = linked.id; pickables.push(building);
+          world.add(building);
+          buildingMeshes.set(feature.id, building);
+          const parapet = perimeter(polygon, height + 0.12, new THREE.LineBasicMaterial({ color: 0x777e77 }));
+          if (parapet) { world.add(parapet); roofLines.set(feature.id, parapet); }
         }
-        usedFacadeMats.add(facadeMats[facadeIndex]);
-        roofUsed = true;
-        const building = new THREE.Mesh(geometry, [roofMat, facadeMats[facadeIndex]]);
-        building.castShadow = true;
-        building.receiveShadow = true;
-        building.userData.height = height;
-        if (linked) { building.userData.landmarkId = linked.id; pickables.push(building); }
-        world.add(building);
-        buildingMeshes.set(feature.id, building);
-        const parapet = perimeter(polygon, height + 0.12, new THREE.LineBasicMaterial({ color: 0x777e77 }));
-        if (parapet) { world.add(parapet); roofLines.set(feature.id, parapet); }
         const firstWindow = windowTransforms.length;
         let area = 0;
         for (let i = 0; i < polygon.length; i++) {
@@ -452,6 +509,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         }
       }
     }
+    const collisionProps = new THREE.Group();
     if (treePositions.length) {
       const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.3, 0.45, 3.8, 6), material(0x79765e), treePositions.length);
       const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), material(0x718d70), treePositions.length);
@@ -459,6 +517,10 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         dummy.position.set(x, 1.9, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); trunks.setMatrixAt(i, dummy.matrix);
         dummy.position.set(x, 4.6 + (i % 3) * 0.22, z); dummy.scale.set(2.1 + (i % 3) * 0.15, 2.4, 2.0 + (i % 2) * 0.25); dummy.updateMatrix(); crowns.setMatrixAt(i, dummy.matrix);
       });
+      for (const [x, z] of treePositions) {
+        const trunkCollider = new THREE.Mesh(new THREE.CylinderGeometry(.4, .4, 3.8, 6), new THREE.MeshBasicMaterial());
+        trunkCollider.position.set(x, 1.9, z); collisionProps.add(trunkCollider);
+      }
       trunks.instanceMatrix.needsUpdate = crowns.instanceMatrix.needsUpdate = true;
       trunks.castShadow = crowns.castShadow = true;
       world.add(trunks, crowns);
@@ -496,21 +558,10 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       world.add(owner);
     }
 
-    pawn = new THREE.Group();
-    const bodyMat = material(0x365f5b), headMat = material(0xe8c9a7), packMat = material(0xcb9963);
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.6, 1.45, 8), bodyMat);
-    body.position.y = 1.15;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.43, 10, 8), headMat);
-    head.position.y = 2.2;
-    const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.85, 0.35), packMat);
-    backpack.position.set(0, 1.22, 0.48);
-    const halo = new THREE.Mesh(new THREE.RingGeometry(1.05, 1.25, 24), new THREE.MeshBasicMaterial({ color: 0x69dcd3, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
-    halo.rotation.x = -Math.PI / 2;
-    halo.position.y = 0.06;
-    body.castShadow = head.castShadow = backpack.castShadow = false;
-    pawn.add(body, head, backpack, halo);
-    setPawnPosition(validPoint(data.start) ? data.start : [centerX, centerZ]);
-    world.add(pawn);
+    if (data.id === 'yingxi') addCorridor(world, collisionProps);
+    player.setCampus(data, collisionProps);
+    disposeObject(collisionProps);
+    world.add(pawn, player.shadow);
     renderer.shadowMap.needsUpdate = true;
     updateHighlights();
     const ownerWorld = world;
@@ -577,12 +628,16 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const [x0, z0, x1, z1] = boundsOf(points);
     animateView(new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), Math.max(300, (x1 - x0) * 1.35, (z1 - z0) * 1.35), initial);
   }
+  function showMap(): void { mapMode = true; controls.enabled = true; player.setEnabled(false); canvas.dataset.view = 'map'; }
+  function showPlayer(): void { mapMode = false; controls.enabled = false; player.setEnabled(true); player.updateCamera(true); canvas.dataset.view = 'player'; }
   function overview(): void {
+    showMap();
     const points = cleanPolygon(data.boundary || []);
     const [x0, z0, x1, z1] = boundsOf(points.length ? points : data.features.flatMap((f) => f.polygon));
     animateView(new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), Math.max(500, (x1 - x0) * 1.2, (z1 - z0) * 1.2));
   }
   function focusLandmark(id: string): void {
+    showMap();
     const landmark = data.landmarks.find((item) => item.id === id);
     if (!landmark || !validPoint(landmark.position)) return;
     const features = data.features.filter((f) => f.id === landmark.featureId || landmark.featureIds?.includes(f.id));
@@ -595,6 +650,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const lineGeometry = new THREE.BufferGeometry().setFromPoints(points.map(([x, z]) => new THREE.Vector3(x, 0.24, z)));
     const line = new THREE.Line(lineGeometry, new THREE.LineDashedMaterial({ color: 0xeeb760, dashSize: 5, gapSize: 3, transparent: true, opacity: 0.95, depthWrite: false }));
     line.computeLineDistances();
+    line.frustumCulled = false;
     routeLayer.add(line);
     const geometry = new THREE.SphereGeometry(0.85, 8, 6);
     const beaconMaterial = new THREE.MeshBasicMaterial({ color: 0xf4cb7a });
@@ -609,30 +665,34 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   function navigateTo(id: string): boolean {
     if (disposed || travel) return false;
     const landmark = data.landmarks.find((item) => item.id === id);
-    const raw = data.routes[`${lastId}>${id}`];
-    if (!landmark || !validPoint(landmark.arrival) || !raw || raw.length < 2 || !raw.every(validPoint)) return false;
-    const points = raw.map((p): Point2 => [p[0], p[1]]);
-    // A route must begin at the current position; never silently jump to it.
-    if (Math.hypot(points[0][0] - pawn.position.x, points[0][1] - pawn.position.z) > 0.001) return false;
-    const end = points[points.length - 1];
-    if (Math.hypot(end[0] - landmark.arrival[0], end[1] - landmark.arrival[1]) > 0.001) return false;
-    const cumulative = [0];
-    for (let i = 1; i < points.length; i++) cumulative.push(cumulative[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
-    const length = cumulative[cumulative.length - 1];
-    if (length < 0.001) return false;
-    travel = { id, points, cumulative, length, distance: 0 };
-    drawRoute(points);
-    const viewPoints = [...points, landmark.position, landmark.arrival].filter(validPoint);
-    const [x0, z0, x1, z1] = boundsOf(viewPoints);
-    animateView(new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), Math.max(120, (x1 - x0) * 1.35, (z1 - z0) * 1.35));
+    if (!landmark || !validPoint(landmark.arrival)) return false;
+    const start: Point2 = [pawn.position.x, pawn.position.z];
+    const distance = Math.hypot(start[0] - landmark.arrival[0], start[1] - landmark.arrival[1]);
+    // Join the nearest available waypoint on an authored route to this target.
+    // This is still guidance, never automated movement or proof of arrival.
+    let closest = Infinity;
+    let waypoints: Point2[] = [landmark.arrival];
+    for (const [key, points] of Object.entries(data.routes)) {
+      if (!key.endsWith(`>${id}`)) continue;
+      for (let i = 0; i < points.length; i++) {
+        if (!validPoint(points[i])) continue;
+        const separation = Math.hypot(start[0] - points[i][0], start[1] - points[i][1]);
+        if (separation < closest && points.slice(i).every(validPoint)) {
+          closest = separation;
+          waypoints = points.slice(i);
+        }
+      }
+    }
+    travel = { id, initialDistance: Math.max(distance, 1), arrival: landmark.arrival, waypoints };
+    drawRoute([start, ...waypoints]);
+    showPlayer();
     onEvent({ type: 'travel', progress: 0 });
     return true;
   }
   function resetJourney(): void {
     if (disposed) return;
-    travel = null; lastId = 'start'; clearRoute();
-    if (validPoint(data.start)) setPawnPosition(data.start);
-    pawn.rotation.y = 0;
+    travel = null; clearRoute();
+    // Resetting quest progress must not teleport someone already exploring.
   }
   function tick(time: number): void {
     if (disposed || paused) return;
@@ -647,28 +707,39 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       refreshFrustum();
       if (t >= 1) tween = null;
     }
+    player.update(Math.min(dt, .05));
     if (travel) {
       const current = travel;
-      current.distance = Math.min(current.length, current.distance + dt * Math.min(12, current.length / 3));
-      let i = 1;
-      while (i < current.cumulative.length - 1 && current.cumulative[i] < current.distance) i++;
-      const a = current.points[i - 1], b = current.points[i];
-      const segmentLength = current.cumulative[i] - current.cumulative[i - 1];
-      const t = segmentLength > 0 ? (current.distance - current.cumulative[i - 1]) / segmentLength : 1;
-      pawn.position.set(THREE.MathUtils.lerp(a[0], b[0], t), 0.14 + (reducedMotion ? 0 : Math.abs(Math.sin(current.distance * 0.45)) * 0.15), THREE.MathUtils.lerp(a[1], b[1], t));
-      if (segmentLength > 0) pawn.rotation.y = Math.atan2(-(b[0] - a[0]), -(b[1] - a[1]));
-      onEvent({ type: 'travel', progress: current.distance / current.length });
-      if (disposed) return;
-      if (travel === current && current.distance >= current.length) {
-        setPawnPosition(current.points[current.points.length - 1]);
-        travel = null; lastId = current.id; clearRoute();
-        onEvent({ type: 'arrive', id: current.id });
-        if (disposed) return;
+      const distance = Math.hypot(pawn.position.x - current.arrival[0], pawn.position.z - current.arrival[1]);
+      let advanced = false;
+      while (current.waypoints.length > 1 && Math.hypot(pawn.position.x - current.waypoints[0][0], pawn.position.z - current.waypoints[0][1]) < 4) {
+        current.waypoints.shift(); advanced = true;
+      }
+      if (advanced) drawRoute([[pawn.position.x, pawn.position.z], ...current.waypoints]);
+      const guide = routeLayer.children[0];
+      if (guide instanceof THREE.Line) {
+        const positions = guide.geometry.getAttribute('position');
+        positions.setXYZ(0, pawn.position.x, .24, pawn.position.z); positions.needsUpdate = true;
+        const distances = guide.geometry.getAttribute('lineDistance');
+        let accumulated = 0;
+        distances.setX(0, 0);
+        for (let i = 1; i < positions.count; i++) {
+          accumulated += Math.hypot(positions.getX(i) - positions.getX(i - 1), positions.getY(i) - positions.getY(i - 1), positions.getZ(i) - positions.getZ(i - 1));
+          distances.setX(i, accumulated);
+        }
+        distances.needsUpdate = true;
+      }
+      onEvent({ type: 'travel', progress: Math.max(0, Math.min(1, 1 - distance / current.initialDistance)) });
+      if (travel === current && distance < 5) {
+        travel = null; clearRoute(); onEvent({ type: 'arrive', id: current.id });
       }
     }
     controls.update();
-    labels.render(scene, camera);
-    renderer.render(scene, camera);
+    const activeCamera = mapMode ? camera : player.camera;
+    scene.fog = mapMode ? null : distanceFog;
+    labels.domElement.style.display = mapMode ? '' : 'none';
+    labels.render(scene, activeCamera);
+    renderer.render(scene, activeCamera);
     canvas.dataset.frame = String(++frameCount);
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
     canvas.dataset.triangles = String(renderer.info.render.triangles);
@@ -691,7 +762,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (!pointer || pointer.id !== event.pointerId) return;
     const click = !pointer.moved && Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) <= 6;
     pointer = null;
-    if (!click || disposed) return;
+    if (!click || disposed || !mapMode) return;
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     pointerNdc.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
@@ -719,6 +790,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     canvas.removeEventListener('pointerup', pointerUp);
     canvas.removeEventListener('pointercancel', pointerCancel);
     canvas.removeEventListener('webglcontextlost', contextLost);
+    player.dispose();
     disposeObject(routeLayer); disposeObject(highlightLayer); disposeObject(world);
     sun.shadow.dispose();
     renderer.dispose();
@@ -737,7 +809,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     buildCampus();
     resize();
     questView(true);
-    labels.render(scene, camera);
+    showPlayer();
+    labels.render(scene, player.camera);
     raf = requestAnimationFrame(tick);
   } catch (error) {
     dispose();
@@ -748,7 +821,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   return {
     setCampus(next) {
       if (disposed) return;
-      try { data = next; state = { selectedId: null, targetId: null }; buildCampus(); questView(true); labels.render(scene, camera); }
+      try { data = next; state = { selectedId: null, targetId: null }; buildCampus(); questView(true); showPlayer(); labels.render(scene, player.camera); }
       catch (error) { dispose(); onEvent({ type: 'error', reason: `Unable to build the 3D scene: ${error instanceof Error ? error.message : 'unknown error'}` }); }
     },
     setState(next) { if (!disposed) { state = { selectedId: next.selectedId, targetId: next.targetId }; updateHighlights(); } },
@@ -756,15 +829,15 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     resetJourney,
     focusLandmark,
     overview,
-    resetView() { if (!disposed) questView(); },
+    resetView() { if (!disposed) showPlayer(); },
     pause() {
       if (disposed || paused) return;
-      paused = true; controls.enabled = false; previousTime = 0;
+      paused = true; controls.enabled = false; player.setPaused(true); previousTime = 0;
       cancelAnimationFrame(raf); canvas.dataset.paused = 'true';
     },
     resume() {
       if (disposed || !paused) return;
-      paused = false; controls.enabled = true; previousTime = 0;
+      paused = false; controls.enabled = mapMode; player.setPaused(false); previousTime = 0;
       canvas.dataset.paused = 'false'; raf = requestAnimationFrame(tick);
     },
     dispose,

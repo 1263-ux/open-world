@@ -21,8 +21,8 @@ export type SurvivalState = {
   upgradeCards: Point[];
 };
 export type Movement = { kind: 'collect-xp' | 'orbit'; target: Point; keys: string[]; holdMs: number; plannedEnd: Point };
-export const GAME_SECONDS = 300;
-export const TRIAL_MS = 420_000;
+export const GAME_SECONDS = 420;
+export const TRIAL_MS = 600_000;
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
 
 export function validateSurvivalState(value: unknown): asserts value is SurvivalState {
@@ -57,10 +57,10 @@ export function validateSurvivalState(value: unknown): asserts value is Survival
   if (!Array.isArray(s.upgradeCards) || s.upgradeCards.some(p => !finite(p.x) || !finite(p.y))) throw new Error('Missing read-only Hks upgradeCards telemetry');
 }
 
-/** Liang-Barsky intersection against the existing base collider, inflated by player radius. */
+/** Liang-Barsky intersection against the native triangular base collider, conservatively bounded and inflated by player radius. */
 export function crossesBase(from: Point, to: Point, base: Point): boolean {
-  const minX = base.x - 64, maxX = base.x + 64;
-  const minY = base.y - 6, maxY = base.y + 46;
+  const minX = base.x - 174, maxX = base.x + 174;
+  const minY = base.y - 144, maxY = base.y + 164;
   const dx = to.x - from.x, dy = to.y - from.y;
   let lo = 0, hi = 1;
   for (const [p, q] of [[-dx, from.x - minX], [dx, maxX - from.x], [-dy, from.y - minY], [dy, maxY - from.y]]) {
@@ -78,7 +78,7 @@ export function chooseMovement(s: SurvivalState): Movement {
   const reachableXP = xp && Math.hypot(xp.x - s.x, xp.y - s.y) <= 270
     && Math.hypot(xp.x - base.x, xp.y - base.y) <= 310 && !crossesBase(player, xp, base);
   const angle = Math.atan2(s.y - base.y, s.x - base.x) + 0.55;
-  const target = reachableXP ? xp : { x: base.x + Math.cos(angle) * 170, y: base.y + Math.sin(angle) * 170 };
+  const target = reachableXP ? xp : { x: base.x + Math.cos(angle) * 240, y: base.y + Math.sin(angle) * 240 };
   const dx = target.x - s.x, dy = target.y - s.y, distance = Math.hypot(dx, dy);
   // Within the existing 120px attraction radius, wait briefly for actual collection.
   const settle = reachableXP && distance < 65;
@@ -102,12 +102,12 @@ export function chooseMovement(s: SurvivalState): Movement {
     keys = candidates.find(input => !crossesBase(player, project(input), base)) ?? [];
     // The inflated AABB conservatively includes the real collider's rounded
     // corners. If already there, escape toward its nearest edge, never idle.
-    if (!keys.length && s.x >= base.x - 64 && s.x <= base.x + 64 && s.y >= base.y - 6 && s.y <= base.y + 46) {
+    if (!keys.length && s.x >= base.x - 174 && s.x <= base.x + 174 && s.y >= base.y - 144 && s.y <= base.y + 164) {
       const exits = [
-        { key: 'ArrowLeft', depth: s.x - (base.x - 64) },
-        { key: 'ArrowRight', depth: base.x + 64 - s.x },
-        { key: 'ArrowUp', depth: s.y - (base.y - 6) },
-        { key: 'ArrowDown', depth: base.y + 46 - s.y },
+        { key: 'ArrowLeft', depth: s.x - (base.x - 174) },
+        { key: 'ArrowRight', depth: base.x + 174 - s.x },
+        { key: 'ArrowUp', depth: s.y - (base.y - 144) },
+        { key: 'ArrowDown', depth: base.y + 164 - s.y },
       ];
       exits.sort((a, b) => a.depth - b.depth);
       keys = [exits[0]!.key];
@@ -117,7 +117,7 @@ export function chooseMovement(s: SurvivalState): Movement {
 }
 
 export function validateOutcome(s: SurvivalState): void {
-  if (!s.ended || !s.outcome) throw new Error('No natural terminal outcome within the 420-second purpose window');
+  if (!s.ended || !s.outcome) throw new Error('No natural terminal outcome within the 600-second purpose window');
   if (!s.outcomeStructures) throw new Error('Natural outcome is missing terminal-time structure evidence');
   // Original update may heal a zero-HP structure later in the same terminal frame.
   const destroyed = Object.values(s.outcomeStructures).some(hp => hp.currentHp <= 0);

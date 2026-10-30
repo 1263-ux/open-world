@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { MonsterTemplate, MonsterType, StructureType, SPEED_FACTOR, KNOCKBACK_CONFIG } from './config';
+import { MonsterTemplate, MonsterType, StructureType, SPEED_FACTOR, KNOCKBACK_CONFIG, MAP_WIDTH, MAP_HEIGHT, EASY_MODE } from './config';
 import { SoundManager } from './SoundManager';
 import { VFX } from './VFX';
 
@@ -47,6 +47,7 @@ export class Monster {
   private hitStunTimer = 0;
 
   isDead = false;
+  canBeTargeted = false;
 
   /** 攻击时触发 */
   onAttack: ((monster: Monster) => void) | null = null;
@@ -72,6 +73,7 @@ export class Monster {
     this.type = template.type;
     this.timeScale = timeScale ?? { hpMult: 1, damageMult: 1, speedMult: 1, expMult: 1 };
     this.hp = Math.round(template.hp * this.timeScale.hpMult);
+    if (EASY_MODE.active) this.hp = Math.ceil(this.hp / 2);
     this.maxHp = this.hp;
     this.speed = template.speed * SPEED_FACTOR * this.timeScale.speedMult;
     this.damage = Math.round(template.damage * this.timeScale.damageMult);
@@ -155,6 +157,14 @@ export class Monster {
       );
       this.sprite.x += Math.cos(angle) * this.speed * dt;
       this.sprite.y += Math.sin(angle) * this.speed * dt;
+      // 进入地图内部后才可被攻击追踪
+      if (!this.canBeTargeted) {
+        const margin = 80;
+        if (this.sprite.x > margin && this.sprite.x < MAP_WIDTH - margin &&
+            this.sprite.y > margin && this.sprite.y < MAP_HEIGHT - margin) {
+          this.canBeTargeted = true;
+        }
+      }
     } else {
       if (time - this.lastAttackTime >= this.attackInterval) {
         this.lastAttackTime = time;
@@ -167,6 +177,9 @@ export class Monster {
 
   takeDamage(amount: number, attackerX?: number, attackerY?: number, skipGenericSound?: boolean): boolean {
     if (this.isDead) return false;
+
+    // 菜鸡模式：玩家伤害翻倍
+    if (EASY_MODE.active) amount *= 2;
 
     // 判定是否为致命一击（在扣血之前检查，避免命中与死亡反馈重叠）
     const willDie = this.hp - amount <= 0;
@@ -240,13 +253,13 @@ export class Monster {
     if (this.hp <= 0) {
       this.hp = 0;
       SoundManager.killMonster(this.type, this.sprite.x);
-      this.die(true);
+      this.die();
       return true;
     }
     return false;
   }
 
-  private die(isFatalBlow = false): void {
+  private die(): void {
     this.isDead = true;
     this.onDeath?.(this);
 
@@ -256,26 +269,9 @@ export class Monster {
     const color = MONSTER_COLORS[this.type] ?? 0xDDDDDD;
     VFX.killMonster(this.scene, this.sprite.x, this.sprite.y, color, this.type);
 
-    // ── 3 阶段死亡动画 ──
-    // 阶段 1 (0-60ms)：闪白定格
-    this.sprite.setTint(0xffffff);
-
-    // 阶段 2 (60-360ms)：膨胀 + 渐隐（致命一击放大到 5x，强化爆破感）
-    const deathScale = isFatalBlow ? 5 : 1.3;
-    this.scene.tweens.add({
-      targets: this.sprite,
-      scaleX: this.sprite.scaleX * deathScale,
-      scaleY: this.sprite.scaleY * deathScale,
-      alpha: 0,
-      duration: 300,
-      delay: 60,
-      ease: 'Power2',
-      // 阶段 3 (360ms)：销毁
-      onComplete: () => {
-        if (this.sprite.active) this.sprite.destroy();
-        if (this.hpBar.active) this.hpBar.destroy();
-      },
-    });
+    // 直接销毁（无死亡动画）
+    if (this.sprite.active) this.sprite.destroy();
+    if (this.hpBar.active) this.hpBar.destroy();
   }
 
   /** 启动待机动画（Tween 驱动，无额外纹理开销） */
@@ -367,4 +363,3 @@ export class Monster {
   get x(): number { return this.sprite.x; }
   get y(): number { return this.sprite.y; }
 }
-

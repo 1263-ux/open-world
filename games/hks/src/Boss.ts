@@ -1,9 +1,9 @@
-import { canMeleeAttack } from './combatRules';
 import Phaser from 'phaser';
 import { BOSS_CONFIG, MAP_WIDTH, MAP_HEIGHT, SPEED_FACTOR, StructureType } from './config';
 import { Building } from './Building';
 import { VFX } from './VFX';
 import { SoundManager } from './SoundManager';
+import { canMeleeAttack } from './combatRules';
 
 /**
  * Boss: 灾蚀核心 (Calamity Core)

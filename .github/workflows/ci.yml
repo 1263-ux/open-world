@@ -7,7 +7,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,7 +21,7 @@ jobs:
           python-version: '3.12'
       - run: pip install -r scripts/requirements.txt
       - run: python scripts/test_augment_buildings.py
-      - run: python scripts/landmarks/mechanical-hall/verify.py
+      - run: python scripts/art/verify_mechanical_hall.py public/assets/campuses/yingxi
       - run: python scripts/landmarks/meihua/verify.py
       - run: python scripts/landmarks/gate/verify_portable.py
       - run: python scripts/test_spatial_models.py
@@ -48,7 +48,7 @@ jobs:
 
   offline:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

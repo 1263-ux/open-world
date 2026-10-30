@@ -1,57 +1,13 @@
-# Minimal direct-port preparation — 2026-10-30 UTC
+# Integration changes against 7199cae (2026-10-30 UTC)
 
-Base: user-authored `ShanEior/Hks@843ecbbae414a403eae350f4f8105cfbb84acf72` (2026-05-30 07:53:46 UTC). User ownership/direct-port authorization is complete. The title, classes, art generators, eight original skills, waves, damage/XP numbers, 300-second victory and Boss rules are retained. No replacement game was written.
+- Retain all 16 upstream source files, with integration changes noted below; keep all 16 non-effects images byte-identical. Replace the 15 upstream Terraria-identified effect sprites with purpose-designed original vector drawings rendered as PNG (see `effects-source/` and the exact old-to-new mapping and output hashes in `SOURCE_INVENTORY.json`). Original texture dimensions and Phaser texture keys remain unchanged; no Terraria sprite pixels are used. The inventory records historical upstream hashes, not a claim that all upstream assets ship unchanged.
+- `main.ts`, `index.html`, `package.json`, `vite.config.ts`: retain the original page/game, build to the campus iframe, send `hks:ready`, `hks:error`, `hks:return`, destroy the game and audio on pagehide, and expose read-only canvas snapshots for real-input QA. Window input listeners stay inside the iframe. The lockfile retains upstream versions/integrity with registry URLs normalized to npm. A coarse-pointer portrait prompt pauses the game until landscape; short landscape screens fit the original popup without replacing its layout.
+- `Player.ts`: implement the arrow keys already advertised in the original tutorial. `TutorialScene.ts` and `MenuScene.ts`: correct the displayed 5 minutes to the actual 7 minutes (420 seconds); add a touch-joystick instruction.
+- `Boss.ts`, `combatRules.ts`: gate normal melee by its already-computed building range and cooldown; the original full-screen earthquake remains global. `GameScene.ts`: gate upstream developer shortcuts in production, release the touch joystick on outside release/blur, avoid a delayed encounter dialog overwriting an active dialog, and latch terminal/settlement read-only evidence. No game numbers changed.
+- `ArtGen.ts`: guard both global procedural canvas textures against duplicate creation on replay. `HUD.ts`: preserve newlines in the original monster text and use equivalent explicit illustration paths so the offline build can embed them. `SoundManager.ts`: track/cancel native timers and close/reset the audio context when leaving the iframe.
+- `vite-env.d.ts`: TypeScript declaration for Vite's production debug gate.
 
-## Files and rationale
+Build: `npm --prefix games/hks run build`. Actual browser interaction and mobile device behavior must be reported separately; a build or static hash comparison is not a playthrough.
 
-1. **src/ArtGen.ts** — Select the file's existing original procedural `genBackground`, remove its now-dead raster-compositing adapter, and guard repeated creation of global `px_white` texture so replay does not dereference a null canvas. All original character, monster, building, Boss and UI generators remain.
-2. **src/GameScene.ts** — Remove deleted-asset requests and unused external-environment method/import. Add complete per-run initialization and SHUTDOWN/DESTROY cleanup, with a named removable Boss earthquake listener. Center the existing procedural building at the original config center, remove large-PNG-only scale 0.45, use a low base collider inside monster attack radius, and pass the actual building coordinates to player/monsters/Boss/minions. Protect level-up pause from a late first-encounter popup.
-3. **src/Player.ts** — Register arrow keys as promised by the existing tutorial; same movement calculations, speed and WASD controls.
-4. **src/SoundManager.ts** — Add `activate()` and `dispose()`. Track every native timeout, invalidate older run generations, cancel queued sounds and voice-release callbacks, disconnect the compressor, close/reset AudioContext and clear static pools/dedup state. Core tone/noise/skill/Boss audio designs stay original. Ignore expected AudioContext resume rejection instead of leaking an unhandled promise.
-5. **src/HUD.ts** — Add `dispose()` and generation-scoped, cancellable monster/skill popup timers. A manual close cannot later dismiss another popup or unpause a level-up panel. Make a skill choice idempotent. When no external illustration exists, display the game's own generated monster texture rather than a blank illustration region.
-6. **src/VFX.ts** — Add `reset()` for static trauma/Scene references at run start/teardown. Original effects remain intact.
-7. **src/SpriteLoader.ts** — Removed only from the modified source set because its entire removed external sprite pack is obsolete; preserved unmodified under `.original/`.
-
-## Exact originals and diffs
-
-- `SOURCE_INVENTORY.json` is **unchanged** and continues to describe the exact remote source hashes, not the patched copies.
-- `.original/` contains all 21 exact text source/configuration originals; Git blob hashes were checked again after modifications, with zero mismatches.
-- `PORT_CHANGES.patch` is the unified diff against those originals.
-- `PATCHED_INVENTORY.json` records changed/deleted files and patched SHA256 separately.
-- All gameplay configuration in `src/config.ts` is byte-identical to the pinned original. Package/configuration/index/main files are unchanged.
-
-## Parent integration hooks
-
-- Keep original `MenuScene`, `TutorialScene`, `GameScene` and dimensions in a lazy-loaded Phaser factory.
-- **Do not import original main.ts into the campus bundle:** it auto-constructs a game and registers a global rejection handler. Parent should adapt that small entry to `createHksGame(container)` and retain the resulting Phaser.Game instance.
-- `GameScene` now activates and disposes run audio automatically when its Scene starts/stops. The outer factory should additionally call exported `SoundManager.dispose()` and `VFX.reset()` before `game.destroy(true, false)` on any exit/error, including menu/tutorial exits; wait for Phaser DESTROY before immediate re-entry.
-- Scope keyboard events to the focusable game mount; restore focus/campus state on exit. A DOM return-to-campus control should remain available throughout.
-- Only copy the needed `src/*.ts` implementation files; do not accidentally ship `.original/`, reference index.html/global CSS, old package tooling or scratch reports.
-
-## Verification boundary
-
-Performed **static file checks only**: exact original Git hashes, fixed relative imports resolving to files, no remaining runtime SpriteLoader/asset preload calls, unchanged gameplay config, diff inspection and file inventories. No npm install, TypeScript execution, game launch, browser interaction, CI trigger, campus repository edit, commit, push or deployment was performed. Parent must run typecheck/build and actual browser play against the integrated result.
-
-Still deliberately unchanged: original development cheat key handler Q/SPACE/R (parent should gate it for production), original manual-pause limitations and larger gameplay-balancing decisions. Do not present these static repairs as a natural-play win or tested performance result.
-
-## Campus embedding changes
-
-The entry page runs in a lazy same-origin iframe, not in the Vue/Three bundle. The small main entry is adapted to createHksGame, with ready/error/Escape notifications, pagehide disposal and read-only runtime snapshots for real-input QA. Original debug shortcut registration is gated behind Vite DEV; the shipped nested game is built in production mode. Vite output is public/games/hks and generated assets are not committed. Dependency versions remain pinned by the original lock; tarball host was normalized to the official npm registry. Original page CSS stays within its own iframe.
-
-- Boss normal melee now uses its already-computed buildingRange as intended by the existing movement comment, alongside unchanged cooldown. The separately presented global earthquake skill remains global. Pure regression tests distinguish out-of-range, cooling-down and in-range attacks; natural Boss victory has not yet been tested.
-
-## Real-browser feedback and latest source
-
-The first real browser run reached combat, natural defeat, menu replay and Escape return; one assertion incorrectly compared innerText with textContent and was corrected, not an app state-loss fix. Mobile screenshot exposed duplicate centering (CSS flex plus Phaser autoCenter); the container is now block layout. Portrait-only viewport600x960 improves readability while world1920x1080 and combat values stay unchanged. Root QA now uses actual CDP touch input and logical viewport dimensions.
-
-Latest six-file upstream feedback/readability improvements and seven existing project PNGs from3cb39bc8 were subsequently merged; see MODERNIZATION.md and ASSET_INVENTORY.json. All imported PNG bytes are original. Latest visual version still requires fresh browser checks.
-
-- The phone trial now creates a touch-capable mobile browser context before Phaser boots; merely changing viewport width did not enable Phaser TouchManager. Input windowEvents is disabled so Phaser does not retain parent-window listeners after iframe removal. Joystick release also handles leaving the canvas.
-
-## Candidate telemetry / offline delivery round
-
-Natural-play QA reads player, XP, Boss, upgrade-card locations and structure HP through canvas data attributes. Terminal outcome/HP snapshots are latched only for reporting, not used to change combat, timer or victory conditions. Tests drive ordinary keys and canvas clicks. Offline mode embeds the same game in srcdoc; child messages use a wildcard target only for the null file origin, while the parent still verifies both origin and exact iframe source. The HTTP path keeps its explicit same-origin target. The original seven PNGs remain byte-identical.
-
-## Portrait dialog correction
-
-Actual 390px phone screenshot revealed the 780-logical-pixel knowledge card exceeded the600px portrait viewport. HUD now stacks its unchanged illustration and complete text inside a552×640 panel; desktop remains780×430. Portrait-only upgrade cards gain vertical space for existing wrapped skill descriptions; desktop card height stays unchanged. No timer, content, control callback or gameplay values changed. Real-input QA waits for the natural first-encounter popup, records it, dismisses by real touch and holds the joystick until observed movement within a bounded deadline. It does not fake game state or retry the entire test.
+## Effect provenance and rights boundary
+The upstream `assets/effects-manifest.md` identifies these sprites as Terraria 1.4+ Extra / Projectile images. Their reuse and redistribution rights were not established, so all 15 referenced images were removed from the shipped tree and replaced with original geometric drawings authored in `effects-source/generate.py` and the generated SVG files; Inkscape rasterized them to the same respective pixel dimensions. These use no upstream pixels. The preserved upstream manifest is a historical source record, not a license or a shipped sprite. This does not establish rights for any other upstream/third-party assets; inventory and review remain necessary.

@@ -9,7 +9,7 @@
     <header class="header">
       <div class="heading">
         <h1 id="hks-title">山西古建保卫战</h1>
-        <p>移动 · 自动攻击 · 守护五分钟</p>
+        <p>移动 · 自动攻击 · 守护七分钟</p>
       </div>
       <button ref="returnButton" type="button" data-testid="hks-return" @click="emit('close')">
         返回校园
@@ -34,6 +34,11 @@
         <button type="button" data-testid="hks-retry" @click="retry">重新加载</button>
       </div>
     </main>
+    <div class="rotate-hint" role="status">
+      <span aria-hidden="true">↻</span><strong>请横屏体验古建守护</strong>
+      <small>旋转设备后，即可获得完整的游戏视野</small>
+      <button type="button" @click="emit('close')">返回校园</button>
+    </div>
   </section>
 </template>
 
@@ -143,6 +148,19 @@ button { min-width: 44px; min-height: 44px; padding: 8px 12px; cursor: pointer; 
 button:focus-visible { outline:2px solid #edc76a; outline-offset:3px; }
 .game { position: relative; height: calc(100dvh - 72px); min-height: 200px; }
 iframe { display: block; width: 100%; height: 100%; min-height: 200px; border: 0; }
+.rotate-hint { display: none; }
+@media (pointer: coarse) and (orientation: portrait) {
+  .rotate-hint { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #203c30; color: #f7f2df; text-align: center; }
+  .rotate-hint span { font-size: 48px; }
+  .rotate-hint strong { font-family: serif; font-size: 20px; }
+  .rotate-hint small { color: #c5d0bd; }
+}
+@media (max-height: 550px) and (orientation: landscape) {
+  .header { height: 44px; }
+  .heading p { display: none; }
+  .header button { min-height: 36px; padding: 4px 10px; }
+  .game { height: calc(100dvh - 44px); }
+}
 .status {
   position: absolute;
   inset: 0;

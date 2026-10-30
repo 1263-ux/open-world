@@ -33,7 +33,7 @@ function copyApproved(dir,allow) {
 }
 copyApproved('src', n=>/\.(?:ts|vue|css|json)$/.test(n));
 copyApproved('games/hks/src',n=>/\.ts$/.test(n));
-copyApproved('games/hks/public/assets',n=>/\.png$/.test(n));
+copyApproved('games/hks/public/assets',n=>/\.(?:png|jpe?g)$/.test(n));
 copyApproved('public/assets',n=>/\.glb$|\.metadata\.json$|^NOTO-CJK-COPYRIGHT\.txt$/.test(n));
 fs.symlinkSync(path.join(src,'node_modules'),path.join(stage,'node_modules'),'dir');
 fs.symlinkSync(path.join(src,'games/hks/node_modules'),path.join(stage,'games/hks/node_modules'),'dir');
@@ -44,7 +44,26 @@ const edit=(rel,fn)=>{const p=path.join(stage,rel), old=fs.readFileSync(p,'utf8'
 if(!fs.readFileSync(path.join(stage,'src/components/HksOverlay.vue'),'utf8').includes('__HKS_OFFLINE_HTML__')) edit('src/components/HksOverlay.vue',s=>s.replace(':src="gameUrl"',':src="offlineHtml ? undefined : gameUrl"\n        :srcdoc="offlineHtml"').replace('const gameUrl =',"const offlineHtml = import.meta.env.VITE_OFFLINE_BUILD === 'true' ? (window as Window & { __HKS_OFFLINE_HTML__?: string }).__HKS_OFFLINE_HTML__ : undefined\nconst gameUrl ="));
 if(!fs.readFileSync(path.join(stage,'games/hks/src/main.ts'),'utf8').includes("location.origin === 'null' ? '*' : location.origin")) edit('games/hks/src/main.ts',s=>s.replace('window.parent.postMessage({ type }, location.origin)',"window.parent.postMessage({ type }, location.origin === 'null' ? '*' : location.origin)"));
 const data=(p,mime)=>`data:${mime};base64,${fs.readFileSync(p).toString('base64')}`;
-edit('games/hks/src/GameScene.ts',s=>{for(const n of ['bg','building','monster_termite','monster_wind','monster_acid_rain','monster_fire','monster_freeze_thaw']){const needle=`'assets/${n}.png'`; if(!s.includes(needle))throw Error('Missing PNG ref '+n); s=s.replace(needle,JSON.stringify(data(path.join(stage,'games/hks/public/assets',n+'.png'),'image/png')));}return s;});
+// Embed the complete upstream asset tree, including nested effects and menu JPG.
+const hksAssets = new Set();
+function embedHksImages(dir) {
+  for (const entry of fs.readdirSync(dir, {withFileTypes:true})) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) { embedHksImages(full); continue; }
+    if (!entry.name.endsWith('.ts')) continue;
+    const code = fs.readFileSync(full, 'utf8').replace(/(['"])assets\/([^'"\n]+\.(?:png|jpe?g))\1/g, (_, quote, rel) => {
+      const root = path.resolve(stage, 'games/hks/public/assets');
+      const asset = path.resolve(root, rel);
+      if (!asset.startsWith(root + path.sep) || !fs.existsSync(asset)) throw Error('Missing/unsafe Hks image ' + rel);
+      hksAssets.add(rel);
+      return JSON.stringify(data(asset, /\.png$/.test(rel) ? 'image/png' : 'image/jpeg'));
+    });
+    fs.writeFileSync(full, code);
+  }
+}
+embedHksImages(path.join(stage, 'games/hks/src'));
+if (!hksAssets.size) throw Error('No Hks images embedded');
+console.log('Embedded Hks images:', hksAssets.size);
 // Registry URLs are deliberately explicit; do not silently ship a missing model.
 const modelSource=path.join(stage,'src/scene/LandmarkModels.ts');
 let modelCode=fs.readFileSync(modelSource,'utf8');

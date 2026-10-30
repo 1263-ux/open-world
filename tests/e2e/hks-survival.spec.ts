@@ -146,7 +146,10 @@ test('Hks natural survival: real controls, bounded one-attempt evidence @surviva
         const size = await logicalSize(canvas);
         if (wallMs() >= TRIAL_MS) { stopReason = 'purpose-window-no-outcome'; break; }
         const point = { x: size.width * 0.88, y: size.height * 0.88 };
-        if (!await clickLogical(page, canvas, point, trialStartedAt + TRIAL_MS)) { stopReason = 'purpose-window-no-outcome'; break; }
+        const popup = page.frameLocator('[data-testid="hks-frame"]').locator('#monster-popup');
+        if (!await popup.isVisible()) throw new Error('Paused without an observable knowledge popup');
+        if (wallMs() >= TRIAL_MS) { stopReason = 'purpose-window-no-outcome'; break; }
+        await popup.click();
         actions.push({ wallMs: wallMs(), kind: 'close-actual-knowledge-popup', target: point });
         await page.waitForTimeout(Math.min(500, Math.max(1, TRIAL_MS - wallMs())));
       } else {
@@ -171,7 +174,7 @@ test('Hks natural survival: real controls, bounded one-attempt evidence @surviva
     if (final.ended && wallMs() < TRIAL_MS && terminalObservedWallMs === null) terminalObservedWallMs = wallMs();
     stopReason = terminalObservedWallMs !== null ? `natural-${final.outcome ?? 'unknown'}` : 'purpose-window-no-outcome';
     await screenshot(final.ended ? `outcome-${final.outcome}` : 'no-outcome-deadline');
-    if (terminalObservedWallMs === null) throw new Error('No natural terminal outcome observed within the 420-second purpose window');
+    if (terminalObservedWallMs === null) throw new Error('No natural terminal outcome observed within the 600-second purpose window');
     validateOutcome(final);
     expect(errors, 'Natural play must have no uncaught runtime or console errors').toEqual([]);
     // Exit with a real supported control, then confirm the campus loop resumed.
@@ -189,7 +192,7 @@ test('Hks natural survival: real controls, bounded one-attempt evidence @surviva
     await setKeys([]).catch(() => undefined);
     const summary = {
       codeIdentity: process.env.HKS_TRIAL_CODE_IDENTITY ?? process.env.GITHUB_SHA ?? 'not supplied; do not associate with another candidate',
-      strategy: 'Nearest XP within 270px player / 310px building with a collision-free direct path; otherwise 170px near-building orbit; genuine offered-card/popup clicks.',
+      strategy: 'Nearest XP within 270px player / 310px building with a collision-free direct path; otherwise 240px near-building orbit; genuine offered-card/popup clicks.',
       scope: 'One random, unseeded, real-input bot attempt. Natural loss is valid evidence, not a CI failure. This is not proof of game balance, human difficulty, or general winnability.',
       stopReason, purposeWindowMs: TRIAL_MS, wallElapsedMs: wallMs(), terminalObservedWallMs,
       gameElapsedSeconds: lastState ? GAME_SECONDS - lastState.remaining : null,

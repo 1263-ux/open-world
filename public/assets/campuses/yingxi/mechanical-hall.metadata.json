@@ -122,28 +122,14 @@
   },
   "height_m": 15,
   "height_status": "unverified display estimate, not survey; 9m wings / 15m tower are visual-relative estimates",
-  "triangles_authoring": 3369,
-  "glb_bytes": 169324,
+  "triangles_authoring": 15603,
+  "glb_bytes": 827580,
   "software": "4.3.2",
-  "generator": "generator.py",
+  "generator": "scripts/art/mechanical_hall_refined.py",
   "attribution": "OpenStreetMap contributors; footprint ODbL, source data may be inaccurate or outdated",
   "research_date": "2026-10-30",
   "not_included": "No image textures, people, invented signage or interior",
-  "glb_bounds_local_m": {
-    "xEast": [
-      -17.7047061920166,
-      20.88520622253418
-    ],
-    "yUp": [
-      0.0,
-      14.949999809265137
-    ],
-    "zSouth": [
-      -60.5180549621582,
-      63.50190734863281
-    ]
-  },
-  "glb_triangles": 3369,
-  "validation": "GLB binary parsed; all 25 source base vertices match; winding agrees with vertex normals; roof faces up, 25 shell edges outward, all six sides of all 31 authored boxes outward, front/back windows and clock faces outward; see verify.py. Bounds include superficial trim.",
-  "artifactSha256": "a19a35a6049ba9a7ce5f42933544cd789cc6b55780b68b3d0b1ecdc793bba39d"
+  "design_notes": "Original geometry based on observation only. Recessed window and portal openings, inset glazing, arched surrounds and approximate exterior steps projecting beyond the footprint. Dimensions and orientation remain visual estimates, not survey.",
+  "glb_triangles": 15603,
+  "artifactSha256": "2db71a1046b775e826e8504f4be93fbcc2f5578837d3e73078955b2b6dcb17ec"
 }

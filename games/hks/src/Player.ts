@@ -11,6 +11,8 @@ export class Player {
   expToNext = 15;
 
   private slowFactor = 1.0;
+  private frozenTimer = 0;
+  private freezeImmunityTimer = 0;
   private knockbackVx = 0;
   private knockbackVy = 0;
   joystickVx = 0;
@@ -27,8 +29,8 @@ export class Player {
     S: Phaser.Input.Keyboard.Key;
     D: Phaser.Input.Keyboard.Key;
     UP: Phaser.Input.Keyboard.Key;
-    LEFT: Phaser.Input.Keyboard.Key;
     DOWN: Phaser.Input.Keyboard.Key;
+    LEFT: Phaser.Input.Keyboard.Key;
     RIGHT: Phaser.Input.Keyboard.Key;
   };
 
@@ -41,7 +43,8 @@ export class Player {
     this.scene = scene;
     this.baseMoveSpeed = moveSpeed * SPEED_FACTOR;
 
-    this.sprite = scene.add.image(x, y, 'player');
+    const texKey = scene.textures.exists('player_idle') ? 'player_idle' : 'player';
+    this.sprite = scene.add.image(x, y, texKey);
     this.sprite.setDepth(10);
     this.lastX = x;
 
@@ -53,13 +56,12 @@ export class Player {
         S: kb.addKey(Phaser.Input.Keyboard.KeyCodes.S),
         D: kb.addKey(Phaser.Input.Keyboard.KeyCodes.D),
         UP: kb.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
-        LEFT: kb.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
         DOWN: kb.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+        LEFT: kb.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
         RIGHT: kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
       };
     } else {
-      this.keys = { W: {} as any, A: {} as any, S: {} as any, D: {} as any,
-        UP: {} as any, LEFT: {} as any, DOWN: {} as any, RIGHT: {} as any };
+      this.keys = { W: {} as any, A: {} as any, S: {} as any, D: {} as any, UP: {} as any, DOWN: {} as any, LEFT: {} as any, RIGHT: {} as any };
     }
   }
 
@@ -71,14 +73,31 @@ export class Player {
     this.slowFactor = active ? factor : 1.0;
   }
 
+  /** 冻结玩家指定秒数（需检查免疫） */
+  tryFreeze(duration: number): boolean {
+    if (this.freezeImmunityTimer > 0 || this.frozenTimer > 0) return false;
+    this.frozenTimer = duration;
+    return true;
+  }
+
+  get isFrozen(): boolean { return this.frozenTimer > 0; }
+
   applyKnockback(fromX: number, fromY: number, force: number): void {
     const angle = Math.atan2(this.sprite.y - fromY, this.sprite.x - fromX);
     this.knockbackVx += Math.cos(angle) * force;
     this.knockbackVy += Math.sin(angle) * force;
   }
 
-  /** 攻击时轻微后坐力（2-4px，60ms 弹回） */
+  /** 攻击时切换贴图 + 轻微后坐力 */
   applyAttackRecoil(): void {
+    if (this.scene.textures.exists('player_attack')) {
+      this.sprite.setTexture('player_attack');
+      this.scene.time.delayedCall(150, () => {
+        if (this.sprite.active) {
+          this.sprite.setTexture(this.scene.textures.exists('player_idle') ? 'player_idle' : 'player');
+        }
+      });
+    }
     const recoil = this.facingRight ? -3 : 3;
     this.sprite.x += recoil;
     this.scene.tweens.add({
@@ -92,11 +111,23 @@ export class Player {
   update(delta: number): void {
     const dt = delta / 1000;
 
+    // 冻结计时
+    if (this.frozenTimer > 0) {
+      this.frozenTimer -= dt;
+      if (this.frozenTimer <= 0) {
+        this.frozenTimer = 0;
+        this.freezeImmunityTimer = 1.5; // 解冻后 1.5s 免疫
+      }
+    }
+    if (this.freezeImmunityTimer > 0) this.freezeImmunityTimer -= dt;
+
     let vx = this.joystickVx, vy = this.joystickVy;
-    if (this.keys.A.isDown || this.keys.LEFT.isDown) vx -= 1;
-    if (this.keys.D.isDown || this.keys.RIGHT.isDown) vx += 1;
-    if (this.keys.W.isDown || this.keys.UP.isDown) vy -= 1;
-    if (this.keys.S.isDown || this.keys.DOWN.isDown) vy += 1;
+    if (!this.isFrozen) {
+      if ((this.keys.A.isDown || this.keys.LEFT.isDown)) vx -= 1;
+      if ((this.keys.D.isDown || this.keys.RIGHT.isDown)) vx += 1;
+      if ((this.keys.W.isDown || this.keys.UP.isDown)) vy -= 1;
+      if ((this.keys.S.isDown || this.keys.DOWN.isDown)) vy += 1;
+    }
 
     const len = Math.sqrt(vx * vx + vy * vy);
     if (len > 0) { vx /= len; vy /= len; }
@@ -122,13 +153,19 @@ export class Player {
     this.sprite.setFlipX(!this.facingRight);
     this.lastX = nx;
 
-    // 移动时轻微弹跳缩放（lerp 平滑过渡，使用独立朝向避免绝对值冲突）
-    const isMoving = len > 0.1;
-    const targetScale = isMoving ? 1.04 : 1.0;
-    const currentScale = Math.abs(this.sprite.scaleX);
-    const newAbsScale = currentScale + (targetScale - currentScale) * 0.12;
-    const signedScale = this.facingRight ? newAbsScale : -newAbsScale;
-    this.sprite.setScale(signedScale, newAbsScale);
+    // 冻结视觉：蓝色 + 不缩放
+    if (this.isFrozen) {
+      this.sprite.setTint(0x88bbff);
+      this.sprite.setScale(1, 1);
+    } else {
+      this.sprite.clearTint();
+      // 移动时轻微弹跳缩放
+      const isMoving = len > 0.1;
+      const targetScale = isMoving ? 1.04 : 1.0;
+      const currentScale = Math.abs(this.sprite.scaleX);
+      const newAbsScale = currentScale + (targetScale - currentScale) * 0.12;
+      this.sprite.setScale(newAbsScale, newAbsScale);
+    }
   }
 
   get x(): number { return this.sprite.x; }

@@ -88,12 +88,12 @@ test('file:// campus, embedded model, Hks movement and repeated return without a
 
 
 test.describe('file:// touch-capable phone', () => {
-  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 844, height: 390 } });
   test('models load and real touch moves Hks without external requests', async ({ page }, info) => {
     test.setTimeout(120000); const blocked=await guard(page), errors:string[]=[];
     page.on('pageerror', e=>errors.push(e.message));
     await page.goto(target); const campus=page.getByTestId('campus-canvas');
-    await expect(campus).toBeVisible();
+    await expect(campus).toBeVisible(); await page.getByTestId('campus-huyu').click();
     // Huyu reports ready only after both registered models are ready.
     await expect(campus).toHaveAttribute('data-hero-model','ready',{timeout:30000});
     await page.getByTestId('campus-yingxi').click();
@@ -102,7 +102,7 @@ test.describe('file:// touch-capable phone', () => {
     // Wait for the real first-encounter knowledge card; capture it before dismissing it.
     await expect.poll(async()=> { const state=await snapshot(canvas); return state.paused && !state.levelUp; },{timeout:30000}).toBe(true);
     await page.screenshot({path:info.outputPath('offline-mobile-knowledge.png'),fullPage:true});
-    // A natural auto-close during screenshot capture is valid; the loop observes current state.
+    // Observe the imported knowledge card before dismissing it with a real tap.
     const touch=await page.context().newCDPSession(page), box=await canvas.boundingBox();
     if(!box || typeof before.x !== 'number') throw Error('No game canvas or player position');
     const x=box.x+box.width*.2, y=box.y+box.height*.75, deadline=Date.now()+30000;
@@ -117,10 +117,10 @@ test.describe('file:// touch-capable phone', () => {
         if(state.paused) {
           if(held) { await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]}); held=false; }
           if(state.levelUp) throw Error('Unexpected level-up interruption while checking early movement');
-          // First-encounter knowledge card explicitly closes on a real tap anywhere.
-          const closeX=box.x+box.width*.8, closeY=box.y+box.height*.8;
-          await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:closeX,y:closeY,id:1}]});
-          await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+          // The imported game uses a DOM knowledge card above the canvas.
+          const popup=page.frameLocator('[data-testid="hks-frame"]').locator('#monster-popup');
+          await expect(popup).toBeVisible(); await popup.tap();
+          await expect(popup).toBeHidden();
           await expect.poll(async()=> (await snapshot(canvas)).paused,{timeout:10000}).toBe(false);
         } else if(!held) {
           await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]}); held=true;

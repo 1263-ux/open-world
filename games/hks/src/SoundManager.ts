@@ -14,39 +14,22 @@ import type { SkillId, MonsterType } from './config';
 
 export class SoundManager {
   private static ctx: AudioContext | null = null;
-  private static active = false;
-  private static generation = 0;
+
   private static timers = new Set<ReturnType<typeof setTimeout>>();
-
-  /** Begin one game run without retaining an older run's audio or callbacks. */
-  static activate(): void {
-    this.dispose();
-    this.active = true;
+  private static later(callback: () => void, delay: number): void {
+    const timer = setTimeout(() => { this.timers.delete(timer); callback(); }, delay);
+    this.timers.add(timer);
   }
-
-  /** Also call this from the embedding factory before destroying Phaser. */
+  /** Dispose all native audio work when the embedded page is left. */
   static dispose(): void {
-    this.active = false;
-    this.generation++;
-    for (const timer of this.timers) clearTimeout(timer);
+    this.timers.forEach(clearTimeout);
     this.timers.clear();
-    const context = this.ctx;
-    this.ctx = null;
     this.masterCompressor?.disconnect();
     this.masterCompressor = null;
+    if (this.ctx && this.ctx.state !== 'closed') void this.ctx.close().catch(() => {});
+    this.ctx = null;
     this.voiceCount = 0;
     this.lastPlayed.clear();
-    if (context && context.state !== 'closed') void context.close().catch(() => {});
-  }
-
-  private static schedule(callback: () => void, delay: number): void {
-    if (!this.active) return;
-    const generation = this.generation;
-    const timer = setTimeout(() => {
-      this.timers.delete(timer);
-      if (this.active && generation === this.generation) callback();
-    }, delay);
-    this.timers.add(timer);
   }
 
   // ── 主压缩器 ──
@@ -91,7 +74,6 @@ export class SoundManager {
 
   /** 语音池准入 */
   private static reserveVoice(priority: number, _durationMs: number): boolean {
-    if (!this.active) return false;
     if (this.voiceCount < SOUND_CONFIG.voicePool.maxVoices) {
       this.voiceCount++;
       return true;
@@ -102,14 +84,13 @@ export class SoundManager {
 
   /** 语音释放（由 setTimeout 触发） */
   private static scheduleRelease(durationMs: number): void {
-    this.schedule(() => {
+    this.later(() => {
       this.voiceCount = Math.max(0, this.voiceCount - 1);
     }, durationMs + 100);
   }
 
   /** 音效去重：同一 key 在 DEDUP_MS 内只播一次 */
   private static dedup(key: string): boolean {
-    if (!this.active) return false;
     const now = performance.now();
     const last = this.lastPlayed.get(key) ?? 0;
     if (now - last < this.DEDUP_MS) return false;
@@ -125,7 +106,7 @@ export class SoundManager {
 
   /** 简易延迟混响（无外部文件） */
   private static connectReverb(src: AudioNode, wetLevel: number): void {
-    if (!this.active || wetLevel <= 0) return;
+    if (wetLevel <= 0) return;
     const ctx = this.getCtx();
     const delay = ctx.createDelay(0.3);
     delay.delayTime.value = 0.12;
@@ -293,7 +274,6 @@ export class SoundManager {
     pitchVar?: number; pan?: number; priority: number;
     reverbWet?: number;
   }): void {
-    if (!this.active) return;
     const pv = cfg.pitchVar ?? SOUND_CONFIG.pitchVar.impact;
     const pan = cfg.pan ?? 0;
     const pri = cfg.priority;
@@ -464,24 +444,6 @@ export class SoundManager {
   }
 
   // ── 新增技能 Cast 音效 (Batch 3) ──
-
-  static skillRepairField(level = 1, x = 0, _y = 0): void {
-    const a = SKILL_AUDIO.repair_field;
-    const p = SOUND_CONFIG.skillPower.levels[Math.min(level, 3) - 1];
-    const pan = this.worldPan(x);
-    const pri = SOUND_CONFIG.voicePool.PRI_IMPORTANT;
-
-    // Warm woody rising harmony — gentle sine waves ascending
-    this.playTone(a.primaryFreq[0], p.durationMs / 1000, 'sine',
-      0.06 * p.volMul, a.primaryFreq[1],
-      SOUND_CONFIG.pitchVar.ui, pan, 'lowpass', a.noiseLowpass, 1, pri);
-    this.playTone(a.bodyFreq[0], p.durationMs / 1000 * 0.7, 'sine',
-      0.04 * p.volMul, a.bodyFreq[1],
-      SOUND_CONFIG.pitchVar.ui, pan, undefined, undefined, undefined, pri);
-    // Quiet crackle — warm texture
-    this.playNoise(0.15, 0.02, a.noiseHighpass, a.noiseLowpass,
-      undefined, undefined, 0.1, pan, pri);
-  }
 
   static skillWhirlwind(level = 1, x = 0, _y = 0): void {
     const a = SKILL_AUDIO.whirlwind_slash;
@@ -691,9 +653,9 @@ export class SoundManager {
 
   static victory(): void {
     const pri = SOUND_CONFIG.voicePool.PRI_AMBIENT;
-    this.schedule(() => this.playTone(523, 0.15, 'triangle', 0.12, 659, 0.03, -0.4, 'highpass', 300, 1, pri), 0);
-    this.schedule(() => this.playTone(659, 0.15, 'triangle', 0.12, 784, 0.03, 0, 'highpass', 400, 1, pri), 150);
-    this.schedule(() => this.playTone(784, 0.3, 'triangle', 0.15, 1047, 0.03, 0.4, 'highpass', 500, 1, pri), 300);
+    this.later(() => this.playTone(523, 0.15, 'triangle', 0.12, 659, 0.03, -0.4, 'highpass', 300, 1, pri), 0);
+    this.later(() => this.playTone(659, 0.15, 'triangle', 0.12, 784, 0.03, 0, 'highpass', 400, 1, pri), 150);
+    this.later(() => this.playTone(784, 0.3, 'triangle', 0.15, 1047, 0.03, 0.4, 'highpass', 500, 1, pri), 300);
   }
 
   static defeat(): void {
@@ -751,7 +713,7 @@ export class SoundManager {
   static bossAlert(): void {
     const pri = SOUND_CONFIG.voicePool.PRI_CRITICAL;
     for (let i = 0; i < 3; i++) {
-      this.schedule(() => {
+      this.later(() => {
         this.playTone(200, 0.2, 'square', 0.12, 400, undefined, undefined, undefined, undefined, undefined, pri);
         this.playTone(300, 0.15, 'square', 0.1, 500, undefined, undefined, undefined, undefined, undefined, pri);
       }, i * 500);
@@ -762,8 +724,8 @@ export class SoundManager {
   static bossAppear(): void {
     const pri = SOUND_CONFIG.voicePool.PRI_CRITICAL;
     this.playTone(120, 0.5, 'sawtooth', 0.15, 60, undefined, undefined, undefined, undefined, undefined, pri);
-    this.schedule(() => this.playTone(200, 0.4, 'sawtooth', 0.12, 80, undefined, undefined, undefined, undefined, undefined, pri), 200);
-    this.schedule(() => this.playTone(300, 0.3, 'sawtooth', 0.1, 100, undefined, undefined, undefined, undefined, undefined, pri), 400);
+    this.later(() => this.playTone(200, 0.4, 'sawtooth', 0.12, 80, undefined, undefined, undefined, undefined, undefined, pri), 200);
+    this.later(() => this.playTone(300, 0.3, 'sawtooth', 0.1, 100, undefined, undefined, undefined, undefined, undefined, pri), 400);
   }
 
   /** Boss 地震波 */
@@ -792,8 +754,7 @@ export class SoundManager {
   static bossDeath(): void {
     const pri = SOUND_CONFIG.voicePool.PRI_CRITICAL;
     this.playTone(80, 0.4, 'sawtooth', 0.18, 30, undefined, undefined, undefined, undefined, undefined, pri);
-    this.schedule(() => this.playTone(200, 0.3, 'sawtooth', 0.12, 60, undefined, undefined, undefined, undefined, undefined, pri), 300);
-    this.schedule(() => this.playTone(500, 0.5, 'triangle', 0.15, 800, undefined, undefined, undefined, undefined, undefined, pri), 600);
+    this.later(() => this.playTone(200, 0.3, 'sawtooth', 0.12, 60, undefined, undefined, undefined, undefined, undefined, pri), 300);
+    this.later(() => this.playTone(500, 0.5, 'triangle', 0.15, 800, undefined, undefined, undefined, undefined, undefined, pri), 600);
   }
 }
-
