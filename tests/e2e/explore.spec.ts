@@ -11,7 +11,7 @@ async function record(page:Page){
 }
 test('desktop: continuous travel, observation, progress restore, complete and replay',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');await expect(page.getByTestId('campus-canvas')).toBeVisible();await expect(page.getByTestId('scene-error')).toHaveCount(0);
- await expect(page.locator('.landmark-label')).toHaveCount(3);await page.screenshot({path:'test-results/desktop-baseline.png',fullPage:true});await start(page);await record(page);await page.getByTestId('campus-yingxi').click();await page.getByTestId('campus-huyu').click();await expect(page.getByTestId('quest-status')).toContainText('1 / 3');await page.reload();
+ await expect(page.locator('.landmark-label')).toHaveCount(3);await expect.poll(()=>page.getByTestId('campus-canvas').getAttribute('data-draw-calls'),{timeout:30000}).not.toBeNull();expect(Number(await page.getByTestId('campus-canvas').getAttribute('data-draw-calls'))).toBeLessThan(180);await page.screenshot({path:'test-results/desktop-baseline.png',fullPage:true});await start(page);await record(page);await page.getByTestId('campus-yingxi').click();await page.getByTestId('campus-huyu').click();await expect(page.getByTestId('quest-status')).toContainText('1 / 3');await page.reload();
  await expect(page.getByTestId('quest-status')).toContainText('1 / 3');
  await record(page);await record(page);await expect(page.getByTestId('completion')).toBeVisible();
  await page.screenshot({path:'test-results/completed-journey.png',fullPage:true});
@@ -38,7 +38,7 @@ test('real canvas picking, drag suppression and repeated campus switching',async
 test('mobile: scene-first viewport and complete second campus chapter',async({page})=>{
  await page.setViewportSize({width:390,height:844});await page.goto('/');await expect(page.getByTestId('campus-canvas')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  const box=await page.getByTestId('campus-canvas').boundingBox();expect(box!.height).toBeGreaterThan(844*.65);await page.screenshot({path:'test-results/mobile-baseline.png',fullPage:true});
- await page.getByTestId('campus-yingxi').click();await start(page);for(let i=0;i<4;i++)await record(page);await expect(page.getByTestId('completion')).toBeVisible();
+ await page.getByTestId('campus-yingxi').click();await expect(page.locator('.landmark-label')).toHaveCount(4);await page.screenshot({path:'test-results/yingxi-dense.png',fullPage:true});await start(page);for(let i=0;i<4;i++)await record(page);await expect(page.getByTestId('completion')).toBeVisible();
 });
 test('WebGL denied: explicit accessible route can complete, corrupt saves ignored',async({page})=>{
  await page.addInitScript(()=>{localStorage.setItem('campus-atlas:quests','{broken');const original=HTMLCanvasElement.prototype.getContext;Object.defineProperty(HTMLCanvasElement.prototype,'getContext',{value:function(this:HTMLCanvasElement,type:string,...args:unknown[]){if(type.startsWith('webgl'))return null;return Reflect.apply(original,this,[type,...args]);}});});

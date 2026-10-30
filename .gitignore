@@ -28,3 +28,5 @@ test-results/
 /public/assets/private/
 
 # .agent/ is intentionally versioned: plans contain no credentials.
+
+.venv/

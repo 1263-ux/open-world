@@ -179,7 +179,7 @@ function safeUrl(source: string | undefined): string | null {
   } catch { return null; }
 }
 function heightLabel(status: string) {
-  return status === 'osm-tag' ? 'OSM 标注' : status === 'level-estimate' ? '按层数估算' : '待核实的估算';
+  return status === 'osm-tag' ? 'OSM 标注（非实测保证）' : status === 'level-estimate' ? '按层数估算' : status === 'ml-estimate' ? '2020 年模型预测（非实测）' : '展示用估算，待核实';
 }
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && panelOpen.value) closePanel();
@@ -280,6 +280,7 @@ onBeforeUnmount(() => {
             <p class="facts">{{ displayed.facts }}</p>
             <div v-if="displayedFeature" class="metric-note">轮廓：米制坐标 · 高 {{ displayedFeature.height }} m（{{ heightLabel(displayedFeature.heightStatus) }}）<template v-if="displayedFeature.levels !== null"> · {{ displayedFeature.levels }} 层</template></div>
             <div class="source-note">地点来源：<a v-if="safeUrl(displayed.source)" :href="safeUrl(displayed.source)!" target="_blank" rel="noopener noreferrer">{{ displayed.source }}</a><span v-else>{{ displayed.source }}</span><template v-if="displayedFeature"><br>轮廓来源：<a v-if="safeUrl(displayedFeature.source)" :href="safeUrl(displayedFeature.source)!" target="_blank" rel="noopener noreferrer">{{ displayedFeature.source }}</a><span v-else>{{ displayedFeature.source }}</span></template></div>
+            <p v-if="displayedFeature?.heightSource" class="facts">楼高依据：{{ displayedFeature.heightSource.dataset }}<template v-if="displayedFeature.heightSource.year"> · {{ displayedFeature.heightSource.year }}</template><template v-if="displayedFeature.heightSource.matchIoU !== undefined"> · 轮廓重叠 {{ Math.round(displayedFeature.heightSource.matchIoU * 100) }}%</template>。<a v-if="safeUrl(displayedFeature.heightSource.source)" :href="safeUrl(displayedFeature.heightSource.source)!" target="_blank" rel="noopener noreferrer">查看高度来源</a></p>
             <template v-if="panel === 'quest' && target?.id === displayed.id">
               <div class="clue"><span>观察线索</span><p>{{ displayed.clue }}</p></div>
               <div data-testid="arrival-status" class="arrival-status" aria-live="polite">{{ arrivedId === displayed.id ? (sceneError ? '无障碍列表模式 · 已打开观察题' : '已到达 · 可以开始观察') : travelling ? `正在前往 · ${Math.round(travelProgress * 100)}%` : '尚未到达本站' }}</div>
@@ -306,7 +307,7 @@ onBeforeUnmount(() => {
         </div>
       </aside>
 
-      <div class="attribution">{{ campus.attribution }} <span>·</span> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a> <span>·</span> 米制轮廓 · 楼高待核</div>
+      <div class="attribution">{{ campus.attribution }} <span>·</span> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a> <span>·</span> 米制轮廓 · 楼高含估算 <span>·</span> <a href="./data/sources/README.md" target="_blank" rel="noopener noreferrer">数据来源与许可</a></div>
     </main>
 
     <footer class="journey-bar" data-testid="quest-status">

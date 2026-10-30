@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
@@ -46,12 +47,13 @@ function boundsOf(points: Point2[]): [number, number, number, number] {
   for (const [x, z] of p) { minX = Math.min(minX, x); minZ = Math.min(minZ, z); maxX = Math.max(maxX, x); maxZ = Math.max(maxZ, z); }
   return [minX, minZ, maxX, maxZ];
 }
-function disposeObject(root: THREE.Object3D): void {
+export function disposeObject(root: THREE.Object3D): void {
   const geometries = new Set<THREE.BufferGeometry>();
   const materials = new Set<THREE.Material>();
   const textures = new Set<THREE.Texture>();
   root.traverse((object) => {
     if (object instanceof CSS2DObject) object.element.remove();
+    if (object instanceof THREE.InstancedMesh) object.dispose();
     const item = object as THREE.Mesh;
     if (item.geometry) geometries.add(item.geometry);
     const list = item.material ? (Array.isArray(item.material) ? item.material : [item.material]) : [];
@@ -300,6 +302,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const buildings = data.features.filter((f) => f.kind === 'building' && cleanPolygon(f.polygon).length >= 3);
     const windowTransforms: THREE.Matrix4[] = [];
     const dummy = new THREE.Object3D();
+    const backgroundBuckets = facadeMats.map((): THREE.BufferGeometry[] => []);
+    const usedFacadeMats = new Set<THREE.Material>();
+    let roofUsed = false;
 
     for (const feature of data.features) {
       const polygon = cleanPolygon(feature.polygon || []);
@@ -328,11 +333,18 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         geometry.rotateX(-Math.PI / 2);
         let hash = 0;
         for (const ch of feature.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-        const building = new THREE.Mesh(geometry, [roofMat, facadeMats[hash % facadeMats.length]]);
+        const facadeIndex = hash % facadeMats.length;
+        const linked = data.landmarks.find((item) => item.featureId === feature.id);
+        if (!linked) {
+          backgroundBuckets[facadeIndex].push(geometry);
+          continue;
+        }
+        usedFacadeMats.add(facadeMats[facadeIndex]);
+        roofUsed = true;
+        const building = new THREE.Mesh(geometry, [roofMat, facadeMats[facadeIndex]]);
         building.castShadow = true;
         building.receiveShadow = true;
         building.userData.height = height;
-        const linked = data.landmarks.find((item) => item.featureId === feature.id);
         if (linked) { building.userData.landmarkId = linked.id; pickables.push(building); }
         world.add(building);
         buildingMeshes.set(feature.id, building);
@@ -363,6 +375,22 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         }
       }
     }
+    for (let i = 0; i < backgroundBuckets.length; i++) {
+      const bucket = backgroundBuckets[i];
+      if (!bucket.length) continue;
+      const merged = mergeGeometries(bucket, false);
+      if (merged) bucket.forEach((geometry) => geometry.dispose());
+      usedFacadeMats.add(facadeMats[i]);
+      for (const geometry of merged ? [merged] : bucket) {
+        const mesh = new THREE.Mesh(geometry, facadeMats[i]);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        world.add(mesh);
+        pickables.push(mesh); // Opaque background geometry must occlude hidden landmarks.
+      }
+    }
+    for (const facadeMat of facadeMats) if (!usedFacadeMats.has(facadeMat)) facadeMat.dispose();
+    if (!roofUsed) roofMat.dispose();
     if (windowTransforms.length) {
       const windows = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), windowMat, windowTransforms.length);
       windowTransforms.forEach((matrix, i) => windows.setMatrixAt(i, matrix));
@@ -577,6 +605,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     controls.update();
     labels.render(scene, camera);
     renderer.render(scene, camera);
+    canvas.dataset.drawCalls = String(renderer.info.render.calls);
+    canvas.dataset.triangles = String(renderer.info.render.triangles);
     raf = requestAnimationFrame(tick);
   }
   function interruptView(): void { tween = null; }
@@ -601,8 +631,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (!rect.width || !rect.height) return;
     pointerNdc.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
     raycaster.setFromCamera(pointerNdc, camera);
-    const hit = raycaster.intersectObjects(pickables, false).find((item) => typeof item.object.userData.landmarkId === 'string');
-    if (hit) onEvent({ type: 'select', id: hit.object.userData.landmarkId as string });
+    const hit = raycaster.intersectObjects(pickables, false)[0];
+    if (hit && typeof hit.object.userData.landmarkId === 'string') onEvent({ type: 'select', id: hit.object.userData.landmarkId });
   }
   canvas.addEventListener('pointerdown', pointerDown);
   canvas.addEventListener('pointermove', pointerMove);

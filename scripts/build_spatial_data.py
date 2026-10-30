@@ -6,6 +6,7 @@ import json, math
 from shapely.geometry import Polygon, Point, LineString
 from shapely.ops import unary_union
 import networkx as nx
+from augment_buildings import augment_buildings
 ROOT=Path(__file__).resolve().parents[1]
 SRC=ROOT/'.agent/research/inputs'
 geo=json.loads((SRC/'tyut-osm-footprints.geojson').read_text())
@@ -42,6 +43,9 @@ for cid in ['huyu','yingxi']:
         item={'id':oid,'name':p['name'] if p['name']!='unnamed' else ('运动场' if kind=='sports' else '绿地'),'kind':kind,'polygon':poly,'height':height,'heightStatus':'osm-tag' if p['height_m'] else ('level-estimate' if levels else 'unverified'),'levels':levels,'source':p['source']}
         features.append(item)
         if kind=='building':buildings.append(shape)
+    features, augmentation_audit = augment_buildings(cid, features, project)
+    buildings=[Polygon(f['polygon']) for f in features if f['kind']=='building']
+    (ROOT/'public/data'/f'augmentation-{cid}-audit.json').write_text(json.dumps(augmentation_audit,ensure_ascii=False,indent=2)+'\n')
     roads=[]
     for e in raw['elements']:
         tags=e.get('tags',{})
@@ -89,7 +93,7 @@ for cid in ['huyu','yingxi']:
             shape=LineString(coords).simplify(.01)
             assert free.buffer(.001).covers(shape),f'route violates obstacle {ka}>{kb}'
             routes[ka+'>'+kb]=[[round(x,2),round(z,2)] for x,z in shape.coords]
-    out[cid]={'id':cid,'name':'虎峪校区' if cid=='huyu' else '迎西校区','englishName':'HUYU' if cid=='huyu' else 'YINGXI','description':'书与工的线索' if cid=='huyu' else '清泽园的四枚印记','origin':meta['origins'][cid],'boundary':boundary,'bounds':[round(x,2) for x in bounds],'features':features,'roads':roads,'landmarks':landmarks,'questOrder':[p['id'] for p in landmarks],'start':[round(x,2) for x in start],'routes':routes,'extentMeters':[round(maxx-minx,1),round(maxz-minz,1)],'attribution':'© OpenStreetMap contributors · ODbL 1.0'}
+    out[cid]={'id':cid,'name':'虎峪校区' if cid=='huyu' else '迎西校区','englishName':'HUYU' if cid=='huyu' else 'YINGXI','description':'书与工的线索' if cid=='huyu' else '清泽园的四枚印记','origin':meta['origins'][cid],'boundary':boundary,'bounds':[round(x,2) for x in bounds],'features':features,'roads':roads,'landmarks':landmarks,'questOrder':[p['id'] for p in landmarks],'start':[round(x,2) for x in start],'routes':routes,'extentMeters':[round(maxx-minx,1),round(maxz-minz,1)],'attribution':'© OpenStreetMap contributors / Overture · ODbL 1.0 · Che et al. 3D-GloBFP · CC BY 4.0'}
     print(cid, 'features',len(features),'roads',len(roads),'routes',len(routes),'extent',out[cid]['extentMeters'])
 (ROOT/'src/campus-data/spatial.json').write_text(json.dumps(out,ensure_ascii=False,separators=(',',':'))+'\n')
 (ROOT/'public/data/campus-spatial.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')

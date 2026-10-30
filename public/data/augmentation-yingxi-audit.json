@@ -1,0 +1,1128 @@
+{
+  "versions": {
+    "algorithm": "augment-buildings-1",
+    "python": "3.12.14",
+    "shapely": "2.2.0"
+  },
+  "thresholds": {
+    "minAreaM2": 20.0,
+    "maxOverlapM2": 1.0,
+    "minIoU": 0.65,
+    "minIoUMargin": 0.15,
+    "minHeightM": 3,
+    "maxHeightM": 60,
+    "minFloors": 1,
+    "maxFloors": 30,
+    "floorHeightM": 3.5
+  },
+  "counts": {
+    "original": 35,
+    "overtureCandidates": 143,
+    "gloCandidates": 200,
+    "validGloGeometries": 200,
+    "output": 155,
+    "heightMatches": 119,
+    "heightRejections": 6,
+    "rejected": 23
+  },
+  "candidateCount": 143,
+  "acceptedAdded": 120,
+  "rejected": [
+    {
+      "id": "overture:0129daff-bc9a-4314-a85c-bd996eb2fd87",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:04d1ccb6-be23-4421-af00-97b3db284f5c",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:0ee10d6c-11bd-4d1c-8298-f8e60a858439",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:1047b6d5-9a6d-4d50-b866-a265ba883516",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:1d9fcbcb-935e-4c3c-8ed9-5c975b377098",
+      "reason": "overlap exceeds 1 m2"
+    },
+    {
+      "id": "overture:458c9168-3e59-4c12-a6a4-7a6a4a3ed12b",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:53c37fd0-76ad-4274-8b9a-282dab985f8e",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:5ced66dc-b1cf-4488-9f2f-6a7c61471647",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:78ea0333-65c4-4df9-953d-16435f861dc6",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:7bc169b7-433b-4ca3-9159-96a891931a00",
+      "reason": "overlap exceeds 1 m2"
+    },
+    {
+      "id": "overture:a4093907-609f-40b0-a356-ee2950713914",
+      "reason": "overlap exceeds 1 m2"
+    },
+    {
+      "id": "overture:a7e74d95-a288-4acc-9a5e-616145862df7",
+      "reason": "overlap exceeds 1 m2"
+    },
+    {
+      "id": "overture:aa7d1725-3daa-4e18-aedf-7f7b055fc085",
+      "reason": "overlap exceeds 1 m2"
+    },
+    {
+      "id": "overture:b8395c66-daa1-4993-8ebb-058a31619cbd",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:bb452a5d-78a2-466c-999e-43b780ffc155",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:bdbfbb03-4071-49ce-9887-be8ee1891371",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:cde1f1c3-e4b3-4a94-8ec0-6f00a7801722",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:cf3beaad-d372-4f3a-a34d-b0acb89b9d47",
+      "reason": "area below 20 m2"
+    },
+    {
+      "id": "overture:e7f71553-4d7d-4615-9055-14f2cbd943eb",
+      "reason": "overlap exceeds 1 m2"
+    },
+    {
+      "id": "overture:ed333b36-2b26-48b6-8004-469ea7d46166",
+      "reason": "overlap exceeds 1 m2"
+    },
+    {
+      "id": "overture:ee7cb895-0e56-4605-8cee-7f4a82f2b495",
+      "reason": "overlap exceeds 1 m2"
+    },
+    {
+      "id": "overture:efe2511a-7746-4423-a31e-4f0425a06ad8",
+      "reason": "overlap exceeds 1 m2"
+    },
+    {
+      "id": "overture:fa4ba250-8888-4016-bb12-2de4f9017187",
+      "reason": "area below 20 m2"
+    }
+  ],
+  "heightMatches": [
+    {
+      "id": "overture:00a23d1e-3d36-4fda-866f-44418c00bfbf",
+      "accepted": true,
+      "height": 15.163168,
+      "sourceId": "57b4aa739def37d7",
+      "iou": 0.9961856975680237,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:01e170c3-72f7-4943-9d51-51b7176bd382",
+      "accepted": true,
+      "height": 28.897107000000002,
+      "sourceId": "70c280e1c6e1b717",
+      "iou": 0.9989585279098369,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:0914f5cf-4d12-4585-84ec-39afacc8b829",
+      "accepted": true,
+      "height": 26.406825,
+      "sourceId": "89aa3ef9ddc3cfcc",
+      "iou": 0.9989297607176748,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:092b6e49-c5ea-47a7-8863-d11022a8538f",
+      "accepted": true,
+      "height": 16.669721,
+      "sourceId": "2c0e0f1205f3bdcc",
+      "iou": 0.9989605219056749,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:09d325e2-2fff-4043-b025-8df42d22e819",
+      "accepted": true,
+      "height": 21.492545,
+      "sourceId": "e3d19f68dfde801d",
+      "iou": 1.0,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:0ca1cd88-a173-4199-b2d8-a84e3b5df1e4",
+      "accepted": true,
+      "height": 17.138879,
+      "sourceId": "39e7daacfa9d4727",
+      "iou": 0.9959559666525243,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:0e4811eb-4db0-42fc-8430-18fac22a25ac",
+      "accepted": true,
+      "height": 19.920514,
+      "sourceId": "814e1d02da7d1513",
+      "iou": 0.9993012558878506,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:107077be-3ac8-4017-8a0b-a3355a5708b3",
+      "accepted": true,
+      "height": 15.654961,
+      "sourceId": "5f3e4750174e04f9",
+      "iou": 0.9993089601923331,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:10e0148c-c9f8-4efc-b12b-8b5a335f9fd5",
+      "accepted": true,
+      "height": 11.374478,
+      "sourceId": "c1128c23b37bfbb2",
+      "iou": 0.9987774211264336,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:118020a0-755b-4b7c-bce4-c743bcd2afd4",
+      "accepted": true,
+      "height": 5.5512783,
+      "sourceId": "7f294ca461afa0a8",
+      "iou": 0.9976452252294542,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:1245b5bf-daa0-418f-b777-975b65f9416f",
+      "accepted": true,
+      "height": 19.111864,
+      "sourceId": "d27afba779f5edc7",
+      "iou": 0.9997793078163032,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:175c9d2e-e954-4767-83f0-2e9398915ec0",
+      "accepted": true,
+      "height": 6.4995848,
+      "sourceId": "ba6cdccfc0567baa",
+      "iou": 0.9985768642902895,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:1863b413-0753-4eec-831e-a501ea3860f0",
+      "accepted": true,
+      "height": 15.675801,
+      "sourceId": "072654006684203a",
+      "iou": 0.9992872478017469,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:18781126-4a15-47f1-899c-e0eb310e6d2b",
+      "accepted": true,
+      "height": 20.64463,
+      "sourceId": "77c23f37f077c00c",
+      "iou": 0.9990373355819112,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:19cff5eb-2128-4215-9294-f2589a900195",
+      "accepted": true,
+      "height": 18.977794,
+      "sourceId": "3feb8967b277a72d",
+      "iou": 0.9991876429815809,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:1b44a41e-7ddb-43dc-b72d-998fb31d0739",
+      "accepted": true,
+      "height": 23.896455,
+      "sourceId": "1b27ccb024b4307b",
+      "iou": 1.0,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:228e59f4-ac38-4c78-b1b7-a8820b09c3f9",
+      "accepted": true,
+      "height": 14.302559,
+      "sourceId": "a0157fb6d0f4e6cd",
+      "iou": 0.9992085882833949,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:228e8c8d-2863-49fa-b5dc-f966aa688cb0",
+      "accepted": true,
+      "height": 15.718382,
+      "sourceId": "f46f38216a7f05a2",
+      "iou": 0.9994595923676677,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:233fffb3-593e-4d7c-8fd1-99ef482b6c1e",
+      "accepted": true,
+      "height": 12.293715,
+      "sourceId": "8031dc64f2de3228",
+      "iou": 0.996874780532336,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:23fc02be-6e1f-489c-8b9a-102883c64c94",
+      "accepted": true,
+      "height": 15.24552,
+      "sourceId": "96ab0cdc066c6f8b",
+      "iou": 0.9999562290870322,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:24beb8f1-1900-49cd-974d-e26f92ce9a74",
+      "accepted": true,
+      "height": 10.3348214,
+      "sourceId": "03278e7243b327e8",
+      "iou": 0.9993269230989101,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:25596b11-92b0-455f-af3e-e204619145cd",
+      "accepted": true,
+      "height": 15.044096,
+      "sourceId": "d4c5a7f9f4575086",
+      "iou": 0.9999324983567695,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:260cc0ef-3b6a-4292-b745-fe237bd4b314",
+      "accepted": true,
+      "height": 19.020914,
+      "sourceId": "2b3a4f6092f56985",
+      "iou": 0.9971837857016147,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:2704db78-be51-4524-a3c0-7011902ce305",
+      "accepted": true,
+      "height": 11.863706,
+      "sourceId": "c33cbfbe9ea9ff2b",
+      "iou": 0.998616505752228,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:29166c08-6444-495f-84d5-eb6f8ef4622b",
+      "accepted": true,
+      "height": 20.948914000000002,
+      "sourceId": "624cdfd6883dc39d",
+      "iou": 0.9997271728169447,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:2b75dd8b-84ab-428f-a34b-01321a8dcaf3",
+      "accepted": true,
+      "height": 19.373033,
+      "sourceId": "2464ddf5e2f57b1f",
+      "iou": 0.9994087509289264,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:2cb9c83f-5253-4de7-afba-537b80ca251a",
+      "accepted": true,
+      "height": 8.1230323,
+      "sourceId": "9a2e23059b6ddb62",
+      "iou": 0.9996247674407965,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:2d94f096-a63a-403c-bbc8-0c8e5acd3703",
+      "accepted": true,
+      "height": 21.129501,
+      "sourceId": "8d80d39eaaf4e906",
+      "iou": 0.9977684140492873,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:2dad01e0-f121-4b4a-9315-3ec9981e1f25",
+      "accepted": true,
+      "height": 8.4158513,
+      "sourceId": "ec6738ee4ee4bdc8",
+      "iou": 0.9976188798018846,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:3102584e-8105-4984-8a30-901c2c51532f",
+      "accepted": true,
+      "height": 13.478299,
+      "sourceId": "b28efbac76868aaf",
+      "iou": 0.9994738462109231,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:364af68e-1867-4801-9af5-eca37c1903db",
+      "accepted": true,
+      "height": 26.05655,
+      "sourceId": "b1a7f90cc6572c57",
+      "iou": 0.9993735781475013,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:3845a38f-e1e7-404e-824c-aac30f880f06",
+      "accepted": true,
+      "height": 11.076432,
+      "sourceId": "b129be790fa5d903",
+      "iou": 1.0,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:3b39ec7d-e0c4-4af5-b1c6-c2abe84d2403",
+      "accepted": true,
+      "height": 17.655401,
+      "sourceId": "87b5b675b9afb86c",
+      "iou": 0.9992842786886305,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:3e338b0a-892c-4095-8d21-e26f1dd92b6c",
+      "accepted": true,
+      "height": 10.289693,
+      "sourceId": "27fafc558555a921",
+      "iou": 0.9996253933290523,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:41b84429-e790-4e6a-8873-389cbf5242b2",
+      "accepted": true,
+      "height": 13.215224000000001,
+      "sourceId": "951201f90b859672",
+      "iou": 0.999438729104312,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:41f71d98-d38c-4ce6-89a9-b8797cb07b0f",
+      "accepted": true,
+      "height": 24.257394,
+      "sourceId": "f27af5adff2ec892",
+      "iou": 0.9999999999999997,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:459ab7f4-196b-409e-bf6f-979400a6cd23",
+      "accepted": true,
+      "height": 9.372158,
+      "sourceId": "166008583ec41977",
+      "iou": 0.9987706870540739,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:48499b5d-edd1-4743-aa8b-12c98fb3c470",
+      "accepted": true,
+      "height": 13.733591,
+      "sourceId": "6b509597f9e4aef7",
+      "iou": 0.9989803761703254,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:4ed0680a-9382-46c7-bd73-7b389fb3ca0b",
+      "accepted": true,
+      "height": 19.639816,
+      "sourceId": "db31bea9b12d064d",
+      "iou": 0.9994330361605545,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:4fb6095a-f533-4001-bf8f-4a57e7893791",
+      "accepted": true,
+      "height": 12.724679,
+      "sourceId": "fb6f569d24f95511",
+      "iou": 0.9996586519871984,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:50faba09-e615-460a-a84b-191cf90b17bb",
+      "accepted": true,
+      "height": 25.429465,
+      "sourceId": "a6350aed1c1e75ff",
+      "iou": 0.9997857330437022,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:5a452f7b-0a76-4a0e-b11a-5fca533066b4",
+      "accepted": true,
+      "height": 29.4402,
+      "sourceId": "7851679260eb4998",
+      "iou": 1.0,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:6821572b-a854-4ad8-8604-b647a5722a97",
+      "accepted": true,
+      "height": 15.884893,
+      "sourceId": "a28c6b656a697b73",
+      "iou": 1.0,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:68b31905-15c6-49bb-8964-784be532a94e",
+      "accepted": true,
+      "height": 46.477284,
+      "sourceId": "e98d571594b5adbe",
+      "iou": 0.9993489031347306,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:69738f25-270e-49a6-9840-2c4bbe30b2fb",
+      "accepted": true,
+      "height": 26.535381,
+      "sourceId": "da1c788e1a2afa34",
+      "iou": 0.9997098884946559,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:6bc9234a-4bc8-445b-9e81-8a17d7924b21",
+      "accepted": true,
+      "height": 41.390480999999994,
+      "sourceId": "5b019564e98f8706",
+      "iou": 1.0,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:6c64930d-a40f-4ff6-ae9a-aa2b9c774c98",
+      "accepted": true,
+      "height": 17.660996,
+      "sourceId": "c4268260464c777d",
+      "iou": 0.9999344238794151,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:71d6a1e0-4382-4621-bd21-4a54118de9ab",
+      "accepted": true,
+      "height": 10.395048,
+      "sourceId": "6e0b0ef46195c41f",
+      "iou": 0.9995119614295562,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:72c807cc-e687-4b37-9a99-2fc40199c1ea",
+      "accepted": true,
+      "height": 18.123911,
+      "sourceId": "0ee68cd8fcf21f4f",
+      "iou": 0.9987867116253061,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:73dcb5e1-b56b-418a-a7cd-91cc38635598",
+      "accepted": true,
+      "height": 17.790995,
+      "sourceId": "c21405d89aa1ae71",
+      "iou": 0.9994293617746944,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:788b1714-8b37-4d67-8b1f-7d89858afb49",
+      "accepted": true,
+      "height": 15.06841,
+      "sourceId": "db44036aa1d5abf3",
+      "iou": 0.9983481467479997,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:7c180c52-0b1f-42de-b411-ed103ad365f0",
+      "accepted": true,
+      "height": 20.452068,
+      "sourceId": "8142e3f9d79ca127",
+      "iou": 0.9999171490946083,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:7c1933bc-cc9b-4a7f-96d7-f01ffda77c5a",
+      "accepted": true,
+      "height": 5.743619600000001,
+      "sourceId": "79da5abe2027b497",
+      "iou": 0.9982349487088298,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:7c204b32-894e-4408-a1be-58b0e8a84253",
+      "accepted": true,
+      "height": 5.6685757,
+      "sourceId": "e7f2251915c1dc45",
+      "iou": 0.9974029518707056,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:814e678b-6cf4-44f5-82eb-2279631bdeb1",
+      "accepted": true,
+      "height": 8.6211345,
+      "sourceId": "98f8b713bf23a61f",
+      "iou": 1.0,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:86698979-139f-4995-9f94-bd3af29188cb",
+      "accepted": true,
+      "height": 26.447541,
+      "sourceId": "b81cb3d6070860b8",
+      "iou": 0.9994207778711547,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:8b847622-80d7-4b12-8507-3aba6b64fab3",
+      "accepted": true,
+      "height": 15.429629,
+      "sourceId": "bb58edd97b3592d8",
+      "iou": 0.999632934596507,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:8badf009-bbaf-4260-874f-2fbb1669bab3",
+      "accepted": true,
+      "height": 9.807867,
+      "sourceId": "c89e59c9069d33c3",
+      "iou": 0.9974852187588739,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:8dc7e2b2-e3bc-4c52-b627-150f9eaffabe",
+      "accepted": true,
+      "height": 15.951407,
+      "sourceId": "51b09c54ba685c13",
+      "iou": 0.9988711877865597,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:8e6a8406-bb9b-412a-8547-bb0ed6f02993",
+      "accepted": true,
+      "height": 16.808676,
+      "sourceId": "2d0e0587e4ca3f1e",
+      "iou": 0.9998442013582283,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:8ecba87b-7518-44de-83ae-8dff1453b122",
+      "accepted": true,
+      "height": 8.018482,
+      "sourceId": "e902966699fef75c",
+      "iou": 0.99762266843737,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:98dbe593-effa-49de-b62e-932fed66e8d5",
+      "accepted": true,
+      "height": 35.858616999999995,
+      "sourceId": "51229fd4736f395a",
+      "iou": 0.9987827403513572,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:9a8efb25-7c9e-405c-b453-e0be85c726ab",
+      "accepted": true,
+      "height": 12.554363,
+      "sourceId": "b2db078ce7e88bec",
+      "iou": 0.9994655004859093,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:9c4f0b41-e7ca-4bab-a0f2-a8bb9af44924",
+      "accepted": true,
+      "height": 17.322354,
+      "sourceId": "8cbd326deecda890",
+      "iou": 0.9991506407266063,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:9f396dcc-5b63-4d6b-a671-efc9bfddb33a",
+      "accepted": true,
+      "height": 8.192157,
+      "sourceId": "d32782743708982e",
+      "iou": 0.9992130581733467,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:9ff9f81a-f230-416b-85a9-13d770e698d4",
+      "accepted": true,
+      "height": 25.429732,
+      "sourceId": "1df2669d3524469c",
+      "iou": 0.9997905689303247,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:9ffe0346-140a-4ac4-bf30-1d956d0f1b65",
+      "accepted": true,
+      "height": 9.7177245,
+      "sourceId": "179d6030b7a1d661",
+      "iou": 0.9984197415197055,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:a1963521-1bb5-473e-9ece-5d9a65e0a78a",
+      "accepted": true,
+      "height": 11.95299,
+      "sourceId": "8b224f9e23adfa80",
+      "iou": 0.9982351454760326,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:a1ab0be4-0c7a-42c4-818d-37d1ce25ac6a",
+      "accepted": true,
+      "height": 16.11763,
+      "sourceId": "926070a24cd7d37f",
+      "iou": 1.0,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:a2a2146c-3e7b-4a68-a409-7cf6c3c0b4bb",
+      "accepted": true,
+      "height": 15.621822,
+      "sourceId": "d95f7847b165bcd4",
+      "iou": 0.9990922355187072,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:a78abaa6-5e01-41b8-a238-084cc6a26239",
+      "accepted": true,
+      "height": 13.116833,
+      "sourceId": "6be9a782f37f392d",
+      "iou": 0.9994187557960461,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:a7bb1625-14e5-4a42-bcf8-ea5cc9b0c329",
+      "accepted": true,
+      "height": 12.976977,
+      "sourceId": "2357d3abedc58b6a",
+      "iou": 0.9988733716699875,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:aaee4552-4b8c-46c9-9dbb-46a5add49ab7",
+      "accepted": true,
+      "height": 9.390539,
+      "sourceId": "107bd664208287ae",
+      "iou": 0.9993662325467572,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:abf273ec-f301-4e1f-8057-7e5788aa8f18",
+      "accepted": true,
+      "height": 10.2243683,
+      "sourceId": "a8dd0b6f7f5fe9d7",
+      "iou": 1.0,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:adaab6a5-d947-4a21-a1da-02b8ec07fb1b",
+      "accepted": true,
+      "height": 10.171476,
+      "sourceId": "dd1c57ee6b569764",
+      "iou": 1.0000000000000007,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:b02ca478-0ac5-4480-89a7-4768648df57a",
+      "accepted": true,
+      "height": 54.071839999999995,
+      "sourceId": "f1198d739e8a5fae",
+      "iou": 1.0000000000000004,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:b053eaad-0e6f-4aa3-9471-753bff1168ee",
+      "accepted": true,
+      "height": 58.354459,
+      "sourceId": "e3a6925ce185856c",
+      "iou": 0.9993849977596001,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:b10ed176-3b43-484a-a8bb-9585857dc5bf",
+      "accepted": true,
+      "height": 38.256904,
+      "sourceId": "d7ce2f82e7801c57",
+      "iou": 0.9999999999999997,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:b729f178-a200-4dc8-99a9-766e7e78b794",
+      "accepted": true,
+      "height": 28.583564,
+      "sourceId": "f2bb99c9c321fad2",
+      "iou": 0.9995723291399379,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:ba72821a-510d-4cdc-8f93-14ee38f01848",
+      "accepted": true,
+      "height": 12.279847,
+      "sourceId": "da33870c5ef31498",
+      "iou": 0.9990339598618317,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:bf558984-344f-4403-b9ea-492c77019467",
+      "accepted": true,
+      "height": 11.355901000000001,
+      "sourceId": "a126c2094a4d574e",
+      "iou": 0.9997599981149908,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:c12f31b0-b310-40bd-82d4-183fa7da4962",
+      "accepted": true,
+      "height": 8.8294274,
+      "sourceId": "a35c854ee62bd5d5",
+      "iou": 0.9985090574980483,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:c159683e-6d71-43cf-9c4d-abf0560f3a1a",
+      "accepted": true,
+      "height": 18.082411,
+      "sourceId": "4eda67f968d71ed2",
+      "iou": 0.9982614954184601,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:c15f0dea-bc43-43d3-a415-a3c719746317",
+      "accepted": true,
+      "height": 8.1212127,
+      "sourceId": "1008f285b1587d8e",
+      "iou": 0.9978263109250796,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:c3a285a2-95c2-444f-88de-42d4c8eeef8a",
+      "accepted": true,
+      "height": 23.26175,
+      "sourceId": "747ffc048bb567f6",
+      "iou": 0.9998149081473161,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:c3f2196f-e939-4b9d-812c-1bccad51c647",
+      "accepted": true,
+      "height": 35.630047999999995,
+      "sourceId": "cbe2fb3b5c410d1f",
+      "iou": 0.9995912628343475,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:c603526a-57cb-48e5-8d01-3f8e98f7d502",
+      "accepted": true,
+      "height": 15.482987,
+      "sourceId": "5ce941b6467e4ea4",
+      "iou": 0.9991422889093834,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:c651b60f-ece4-4f9a-bb7b-dda6f555b306",
+      "accepted": true,
+      "height": 9.575434,
+      "sourceId": "a2c2b3e6492aeb57",
+      "iou": 0.997981826255583,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:c6b4af46-2f1e-4ad4-9e79-368ee0ae82ab",
+      "accepted": true,
+      "height": 9.410118,
+      "sourceId": "78e35927ab9449af",
+      "iou": 0.9997782375301518,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:c946635f-7090-45b4-b95d-fcb88d22bebe",
+      "accepted": true,
+      "height": 18.033680999999998,
+      "sourceId": "7b74de938e4e5bae",
+      "iou": 0.9998136982261119,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:c9cedba8-2b67-4c1a-aa3a-26bd5dd0ccbb",
+      "accepted": true,
+      "height": 15.826339,
+      "sourceId": "13c757dfd7eae04b",
+      "iou": 0.9990008175409446,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:caa62af9-9816-4bbe-bb3c-11167970c554",
+      "accepted": true,
+      "height": 14.198775000000001,
+      "sourceId": "4b76aeb3e087e305",
+      "iou": 0.9996770164841056,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:cae8259d-530d-48d5-b965-1aad8da51082",
+      "accepted": true,
+      "height": 25.387561,
+      "sourceId": "71ba944e95db4258",
+      "iou": 0.9995334157395009,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:cb0ec3a7-f355-45c9-a27f-120ee1f2ea48",
+      "accepted": true,
+      "height": 14.374547,
+      "sourceId": "fe8e4d0f2ef83915",
+      "iou": 0.9989221579257972,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:cbc5bada-9a9b-4a75-83c7-08c4c9a76ca9",
+      "accepted": true,
+      "height": 12.700341,
+      "sourceId": "8dcfed73314b3208",
+      "iou": 0.9991341605660369,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:ce4055fb-aa70-4795-acc0-c894b24ce0aa",
+      "accepted": true,
+      "height": 15.338609,
+      "sourceId": "c6951b4ea4ef5483",
+      "iou": 0.9987050621184561,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:cedc414d-2ce6-4587-aae0-c6bf8e4b1db0",
+      "accepted": true,
+      "height": 22.96005,
+      "sourceId": "15029dc751b1c994",
+      "iou": 0.9989874417268896,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:cf90bd5a-1904-43a4-af93-a00c9c46e9b0",
+      "accepted": true,
+      "height": 26.913484,
+      "sourceId": "3e7308bc38aea608",
+      "iou": 0.9999037915847542,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:d0698fda-9c68-474d-b3e0-09fd84ab7eb5",
+      "accepted": true,
+      "height": 11.504526,
+      "sourceId": "e2ce68125b7de919",
+      "iou": 0.9989284749170503,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:d08788bd-9c8f-40ca-a709-6a366161715b",
+      "accepted": true,
+      "height": 19.88272,
+      "sourceId": "b678b8a4377c3895",
+      "iou": 0.999733778834318,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:d1314f0f-cc4e-41b7-824a-9924c548dd90",
+      "accepted": true,
+      "height": 8.953017,
+      "sourceId": "fc68e89086f4668b",
+      "iou": 0.9999999999999997,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:d197d982-38df-4dd4-9c25-fd5bf65e2285",
+      "accepted": true,
+      "height": 44.940453999999995,
+      "sourceId": "966cae31d81a78fb",
+      "iou": 0.9990201020775473,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:d23e67b3-6997-4053-8f2e-61ac671d4031",
+      "accepted": true,
+      "height": 20.898872,
+      "sourceId": "2b047a994f571284",
+      "iou": 0.9987193944810641,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:de989e09-9a1f-4c32-a765-661068c13fc3",
+      "accepted": true,
+      "height": 17.401069,
+      "sourceId": "fb93e584e480aa86",
+      "iou": 1.0000000000000002,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:dec0b822-d13c-412c-8d30-c2f8fffdcb3b",
+      "accepted": true,
+      "height": 16.608090999999998,
+      "sourceId": "71ac17ef0bff7336",
+      "iou": 0.9991400239657917,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:e6375f93-8701-4dc8-a0ba-7232ee329904",
+      "accepted": true,
+      "height": 18.508378999999998,
+      "sourceId": "959d3a723e1d5dcb",
+      "iou": 0.9994344725083957,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:e7fe38f1-5c6d-4bb0-9bf7-045926e39727",
+      "accepted": true,
+      "height": 30.330503,
+      "sourceId": "7ccfaccc39ecb43d",
+      "iou": 0.9988859206875514,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:eb5cab87-39da-4733-a46f-0ab29b087871",
+      "accepted": true,
+      "height": 10.4825126,
+      "sourceId": "ed62261f2ab145b3",
+      "iou": 0.9977870787170601,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:ec379b3c-a68e-4f87-858a-3aa6d0f4d064",
+      "accepted": true,
+      "height": 20.005725,
+      "sourceId": "820552c475a835f2",
+      "iou": 0.9998359900679062,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:f0c584d2-57d4-45fd-8938-96af1545ae2e",
+      "accepted": true,
+      "height": 9.660862999999999,
+      "sourceId": "30cccd82bf0576f3",
+      "iou": 0.9978878453798917,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:f1900753-c88f-49f4-9d99-9ba37ee14799",
+      "accepted": true,
+      "height": 7.2891733,
+      "sourceId": "1bbaef6b1374dcad",
+      "iou": 0.9988824368916644,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:f2884986-8a18-4490-ae51-9a4cb4a437dc",
+      "accepted": true,
+      "height": 11.707101,
+      "sourceId": "76091ac6fdd2dc5d",
+      "iou": 1.0,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:f42c7199-5239-497e-b236-bcf24f8899d6",
+      "accepted": true,
+      "height": 11.135079000000001,
+      "sourceId": "bb515162a5d7ec35",
+      "iou": 0.9986704009530976,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:f71cd1b9-e360-44d1-b68a-6580cc62bc41",
+      "accepted": true,
+      "height": 18.446337,
+      "sourceId": "5207ccb0127b5215",
+      "iou": 0.9995218978027327,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:f9063819-f6ce-4c4d-819a-8607bf6cce14",
+      "accepted": true,
+      "height": 7.7150265,
+      "sourceId": "515c40173542ac6d",
+      "iou": 0.9985867976256974,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:fb809e72-e748-4695-9818-aeb58507f2e9",
+      "accepted": true,
+      "height": 14.276858500000001,
+      "sourceId": "bfdf37a96e4b7717",
+      "iou": 0.9966534655663839,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:fc9e6254-b838-403c-b922-f4ba80fe61dc",
+      "accepted": true,
+      "height": 11.10656,
+      "sourceId": "5b282513877f696c",
+      "iou": 1.0,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:fe34f5f1-1e04-4cb2-a109-78d9bd081064",
+      "accepted": true,
+      "height": 46.449574,
+      "sourceId": "86a897f17e636d28",
+      "iou": 0.9995965986528197,
+      "reason": "accepted"
+    },
+    {
+      "id": "overture:ff8235f7-5595-40b6-8f9b-086e35d137ec",
+      "accepted": true,
+      "height": 20.05083,
+      "sourceId": "25e4a342dfac69e9",
+      "iou": 0.9992892138197145,
+      "reason": "accepted"
+    }
+  ],
+  "heightRejections": [
+    {
+      "id": "182055472",
+      "accepted": false,
+      "height": null,
+      "sourceId": "1a2949d8846a2d39",
+      "iou": 0.22069501371617706,
+      "reason": "iou_below_threshold"
+    },
+    {
+      "id": "182055473",
+      "accepted": false,
+      "height": null,
+      "sourceId": "402ae1b9a6a15d40",
+      "iou": 0.05297710780359326,
+      "reason": "iou_below_threshold"
+    },
+    {
+      "id": "182055474",
+      "accepted": false,
+      "height": null,
+      "sourceId": "75d306a891d41eb5",
+      "iou": 0.29173263199320815,
+      "reason": "iou_below_threshold"
+    },
+    {
+      "id": "195741288",
+      "accepted": false,
+      "height": null,
+      "sourceId": "f120817b62798b89",
+      "iou": 0.19494601063817077,
+      "reason": "iou_below_threshold"
+    },
+    {
+      "id": "1524369619",
+      "accepted": false,
+      "height": null,
+      "sourceId": "42b17a819e46bf08",
+      "iou": 0.32412365129418375,
+      "reason": "iou_below_threshold"
+    },
+    {
+      "id": "overture:2f128501-eefb-404d-b37f-8276a7c703d9",
+      "accepted": false,
+      "height": null,
+      "sourceId": "87d197e6e309b8be",
+      "iou": 0.9996529093574296,
+      "reason": "invalid_height"
+    }
+  ]
+}

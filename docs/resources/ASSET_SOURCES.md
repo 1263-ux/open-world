@@ -17,3 +17,10 @@ Building coordinates are local illustrative coordinates, not geographical survey
 OpenStreetMap-derived polygons and clipped road centerlines: © OpenStreetMap contributors, ODbL1.0, https://www.openstreetmap.org/copyright . Runtime derived data is supplied in public/data/ with its source snapshot and license notice. No OSM tiles are used. The exact footprint polygons are preserved, projected into WGS84 local meter coordinates. Community height tags and floor-based height estimates are explicitly marked; not a survey or verified current facade.
 
 Offline geometry validation/cropping reuses Shapely, and route generation reuses NetworkX A*. Derived game routes are not real walking/navigation directions and avoid building footprints in the game model. No unverified new buildings are generated to fill coverage gaps.
+
+## 密集建筑轮廓与高度候选（2026-10-30）
+
+- **Overture Maps 2026-10-21.0**：来源 https://docs.overturemaps.org/guides/buildings/ ，许可/署名 https://docs.overturemaps.org/attribution/ 。实际校园候选虎峪100、迎西143；筛选后94/129个建筑多边形，保留原15个OSM命名楼体。底层含OpenStreetMap和East Asian Buildings (Shi et al., DOI10.5281/zenodo.8174931)，ODbL1.0。派生数据库与来源裁片公开随应用提供，不把这些图形称为现场核实楼栋数。
+- **Che et al., 3D-GloBFP**：Zenodo https://doi.org/10.5281/zenodo.15487006 ，作者Figshare https://doi.org/10.6084/m9.figshare.28904453.v4 ，CC BY4.0。2020时点机器学习预测，非实测楼高。只用高重叠、无冲突的高度属性；不覆盖已有OSM楼高/楼层。来源、裁片改动、文件checksum和处理门槛见 public/data/sources/manifest.json 与augmentation审计。允许按许可署名使用/改编，保留原作者信息及派生标记；与OSM/Overture混合后仍遵循其ODbL义务。
+- **本轮官方照片**：梅花教室 https://xiaoyou.tyut.edu.cn/info/1078/1809.htm ，迎西机械馆照片入口 https://www.tyut.edu.cn/xxgk1/xydl.htm 。仅作外观参考，不把原图/贴图放入仓库，不据照片推造未知真实尺寸。
+- **Three BufferGeometryUtils**：已安装Three0.186.1的MIT addon，https://threejs.org/docs/pages/module-BufferGeometryUtils.html 。复用mergeGeometries降低补充体块draw calls；无新增闭源模型/贴图。

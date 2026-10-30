@@ -2,7 +2,7 @@
 
 一个浏览器里的低多边形校园探索原型，覆盖太原理工大学虎峪与迎西校区的示意地标、信息卡片和一条可完成、重玩、退出的探索任务。
 
-> 当前是技术与视觉样板。建筑外观、尺寸及局部坐标为原创程序化示意，不是准确复原或导航地图。尚未公开部署。
+> 当前仍是开发中的校园探索原型，尚未公开部署或完成视觉验收。占地轮廓来自 OSM / Overture，统一转换为米制坐标；楼高分别标注来源值、楼层估算、机器学习预测或展示用估算，不是实测模型或现实导航。
 
 ## 运行
 
@@ -31,7 +31,26 @@ npm run test:e2e
 
 ## 验证状态
 
-本地 typecheck、lint、20 项单元测试、build 已通过。GitHub Actions 已在提交 `69334abb9dcb7d7f31933a2956d54bc8a858a59b` 上通过全部检查，包括 5 项 Playwright 浏览器测试（桌面/移动视口、画布拾取、任务、刷新、WebGL 初始化失败与运行时 context loss）。[验证记录](https://github.com/1263-ux/open-world/actions/runs/40892347891)。这只证明技术样板通过已列测试，不代表建筑精度、真实手机性能或最终 MVP 已验收。
+已验证的主线版本为 `4ee33f834f25a6e1b51e8e6cad317406663dc951`：24 项单元测试及 5 项真实浏览器流程测试通过。[主线验证记录](https://github.com/1263-ux/open-world/actions/runs/40934250289)。
+
+本次密集轮廓更新增加 6 项 Python 数据匹配回归，TypeScript 单测增至 26 项；新版本以对应提交的 GitHub Actions 结果为准。测试通过不代表建筑精度、真实手机性能或最终美术验收通过。
+
+## 数据生成与精度边界
+
+- 筛选后使用虎峪 94 个、迎西 129 个建筑多边形，包含原有 15 个命名地标建筑。数量是来源数据中的图形，不是现场核实的楼栋数。
+- 已有 OSM 楼高、楼层优先。207 个高度采用轮廓高重叠的 2020 年 3D-GloBFP 模型预测；不匹配或矛盾数据不自动覆盖。
+- 补充建筑以低细节体块批量渲染，重点建筑立面仍在深化。任务路线避开所有已接入楼体，但不保证现实可通行。
+- 来源、许可证和筛选记录见 [数据说明](public/data/README.md)、[来源清单](public/data/sources/manifest.json)。学校照片仅作参考，不在仓库中分发。
+
+离线重建需要 Python 3.12，建议使用虚拟环境：
+
+```bash
+python -m venv .venv
+# 激活虚拟环境后：
+pip install -r scripts/requirements.txt
+python scripts/test_augment_buildings.py
+python scripts/build_spatial_data.py
+```
 
 ## 项目资料
 

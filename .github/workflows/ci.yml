@@ -15,6 +15,13 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r scripts/requirements.txt
+      - run: python scripts/test_augment_buildings.py
+      - run: python scripts/build_spatial_data.py
+      - run: git diff --exit-code -- src/campus-data/spatial.json public/data/campus-spatial.json
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test

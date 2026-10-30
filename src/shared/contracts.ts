@@ -2,7 +2,9 @@ export type CampusId = 'huyu' | 'yingxi';
 export type Point2 = [number, number];
 export interface SpatialFeature {
   id: string; name: string; kind: 'building'|'park'|'sports'; polygon: Point2[];
-  height: number; heightStatus: 'osm-tag'|'level-estimate'|'unverified';
+  height: number; heightStatus: 'osm-tag'|'level-estimate'|'ml-estimate'|'unverified';
+  sourceId?: string;
+  heightSource?: {dataset: string; year?: number; method: string; matchIoU?: number; sourceId?: string; source?: string};
   levels: number | null; source: string;
 }
 export interface CampusRoad { id: string; points: Point2[]; width: number; source: string; }
