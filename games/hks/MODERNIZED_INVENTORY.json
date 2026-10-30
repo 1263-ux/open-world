@@ -33,8 +33,8 @@
     },
     {
       "path": "src/MenuScene.ts",
-      "sha256": "d704a0eea56da74f6725a71b6940d66dada4910f370f476079ebd4369142e82e",
-      "bytes": 8596
+      "sha256": "1f2dad4613b191cb7ffa54818d2ebd368472ce1bafba1883284830cb10748039",
+      "bytes": 8698
     },
     {
       "path": "src/Monster.ts",

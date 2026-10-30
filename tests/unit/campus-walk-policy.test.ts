@@ -11,7 +11,7 @@ describe('test-side campus walking policy', () => {
     expect(waypointKeys(1, 0, Math.PI)).toEqual(['KeyA']);
   });
   it('finds collision-aware routes between chapter entries and successive arrivals', () => {
-    expect(walkRoute(campuses.yingxi, [-32,175.5], campuses.yingxi.landmarks.find(l => l.id === campuses.yingxi.questOrder[0])!.arrival).length).toBeGreaterThan(0);
+    expect(walkRoute(campuses.yingxi, [-20,175.5], campuses.yingxi.landmarks.find(l => l.id === campuses.yingxi.questOrder[0])!.arrival).length).toBeGreaterThan(0);
     for (const campus of Object.values(campuses)) {
       let previous = campus.start;
       for (const id of campus.questOrder) {

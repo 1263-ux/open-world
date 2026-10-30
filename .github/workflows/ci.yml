@@ -32,10 +32,7 @@ jobs:
       - run: npm run test
       - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e -- --output=test-results/http
-      - name: Natural Hks play trial
-        if: contains(github.event.head_commit.message, '[playtrial]')
-        run: PLAYWRIGHT_HTML_OUTPUT_DIR=survival-playwright-report RUN_HKS_SURVIVAL=1 HKS_TRIAL_CODE_IDENTITY="$GITHUB_SHA" npm run test:e2e -- tests/e2e/hks-survival.spec.ts --workers=1 --retries=0 --output=test-results/survival
+      - run: npm run test:e2e -- tests/e2e/explore.spec.ts --output=test-results/http
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -75,4 +72,31 @@ jobs:
           path: |
             offline-playwright-report/
             test-results/offline/
+          retention-days: 7
+
+  hks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix games/hks ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Hks real menu, play, replay and landscape input
+        run: npm run test:e2e -- tests/e2e/hks.spec.ts --output=test-results/hks
+      - name: Natural Hks play trial
+        if: contains(github.event.head_commit.message, '[playtrial]')
+        run: PLAYWRIGHT_HTML_OUTPUT_DIR=survival-playwright-report RUN_HKS_SURVIVAL=1 HKS_TRIAL_CODE_IDENTITY="$GITHUB_SHA" npm run test:e2e -- tests/e2e/hks-survival.spec.ts --workers=1 --retries=0 --output=test-results/survival
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: campus-hks-browser-report
+          path: |
+            playwright-report/
+            test-results/
+            survival-playwright-report/
           retention-days: 7

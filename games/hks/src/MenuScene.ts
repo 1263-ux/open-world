@@ -119,22 +119,25 @@ export class MenuScene extends Phaser.Scene {
     genPixelButton(this, btnKey, btnW, btnH, PALETTE.OAK_WOOD, PALETTE.BRIGHT_GOLD);
 
     const btnY = 395;
-    const btnImg = this.add.image(0, btnY, btnKey + '_normal')
+    // The start control must be usable as soon as the scene is active, including
+    // when returning from settlement. Moving its hit area during the entrance
+    // tween made early clicks at the displayed destination miss entirely.
+    const btnImg = this.add.image(cx, btnY, btnKey + '_normal')
       .setDepth(4).setInteractive({ useHandCursor: true });
-    // 从下方飞入
-    btnImg.setAlpha(0);
-    this.tweens.add({ targets: btnImg, x: cx, alpha: 1, duration: 600, delay: 600, ease: 'Back.easeOut' });
 
     const btnText = this.add.text(cx, btnY, '开  始  游  戏', {
       ...FONT.title, color: PALETTE.BRIGHT_GOLD,
       stroke: '#000000', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(5).setAlpha(0);
-    this.tweens.add({ targets: btnText, alpha: 1, duration: 500, delay: 800 });
+    }).setOrigin(0.5).setDepth(5);
 
+    let starting = false;
     btnImg.on('pointerover', () => { btnImg.setTexture(btnKey + '_hover'); btnText.setColor('#FFFFFF'); });
     btnImg.on('pointerout', () => { btnImg.setTexture(btnKey + '_normal'); btnText.setColor(PALETTE.BRIGHT_GOLD); });
     btnImg.on('pointerdown', () => { btnImg.setTexture(btnKey + '_press'); });
     btnImg.on('pointerup', () => {
+      if (starting) return;
+      starting = true;
+      btnImg.disableInteractive();
       this.cameras.main.fadeOut(500, 26, 20, 16);
       this.time.delayedCall(550, () => {
         this.scene.start('TutorialScene');

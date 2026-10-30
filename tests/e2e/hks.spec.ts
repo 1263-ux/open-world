@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { position } from './campus-walk';
+import { assertKnowledgeDismissHint, assertLandscapeCanvasAndHud, observeNaturalKnowledgeScroll } from './hks-landscape-layout';
 import { campuses } from '../../src/campus-data/campuses';
 import { chooseMovement, validateOutcome, validateSurvivalState } from './hks-survival-policy';
 
@@ -76,7 +77,8 @@ test.describe('landscape touch-capable phone',()=>{
   test.use({hasTouch:true,isMobile:true,viewport:{width:844,height:390}});
   test('touch movement and failed-load return leave campus usable',async({page},info)=>{
     test.setTimeout(90000);await page.goto('/');const canvas=await launch(page);await startGame(page,canvas);
-    const popup=page.frameLocator('[data-testid="hks-frame"]').locator('#monster-popup');await expect(popup).toBeVisible({timeout:30000});await page.screenshot({path:info.outputPath('hks-landscape-knowledge.png')});await closeKnowledge(page);
+    await assertLandscapeCanvasAndHud(page,canvas,info);
+    const popup=page.frameLocator('[data-testid="hks-frame"]').locator('#monster-popup');await expect(popup).toBeVisible({timeout:30000});await assertKnowledgeDismissHint(page,info);await page.screenshot({path:info.outputPath('hks-landscape-knowledge.png')});await observeNaturalKnowledgeScroll(page,info);await closeKnowledge(page);
     const before=await snapshot(canvas),r=await canvas.boundingBox();if(!r||typeof before.x!=='number')throw Error('Missing player or canvas');const touch=await page.context().newCDPSession(page),x=r.x+r.width*.2,y=r.y+r.height*.75;
     await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+60,y,id:1}]});await page.waitForTimeout(1500);await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     await expect.poll(async()=>(await snapshot(canvas)).x,{timeout:10000}).toBeGreaterThan(before.x+20);await page.screenshot({path:info.outputPath('hks-landscape-play.png')});

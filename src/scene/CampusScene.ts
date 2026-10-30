@@ -168,8 +168,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xdde9e5);
-  const distanceFog = new THREE.Fog(0xdde9e5, 380, 1300);
+  scene.background = new THREE.Color(0xb7d5de);
+  const distanceFog = new THREE.Fog(0xb7d5de, 380, 1300);
   scene.fog = distanceFog;
   const camera = new THREE.OrthographicCamera(-250, 250, 250, -250, 0.1, 6000);
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -180,7 +180,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   controls.maxPolarAngle = Math.PI / 2 - 0.08;
   controls.minZoom = 0.3;
   controls.maxZoom = 5;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+  let renderRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+  let slowFrames = 0, fastFrames = 0;
+  renderer.setPixelRatio(renderRatio);
   renderer.shadowMap.enabled = true;
   // Campus geometry/light are static; do not redraw a 2048px shadow map each frame.
   renderer.shadowMap.autoUpdate = false;
@@ -215,7 +217,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
 
   const hemisphere = new THREE.HemisphereLight(0xe2e9df, 0x707969, 1.65);
   scene.add(hemisphere);
-  const sun = new THREE.DirectionalLight(0xffd6a5, 2.15);
+  const sun = new THREE.DirectionalLight(0xffead4, 2.15);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.bias = -0.00025;
@@ -261,7 +263,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
   function resize(): void {
     if (disposed) return;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderRatio = Math.min(renderRatio, window.devicePixelRatio || 1, 1.5);
+    renderer.setPixelRatio(renderRatio);
     renderer.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight), false);
     labels.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight));
     refreshFrustum();
@@ -334,12 +337,12 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const [minX, minZ, maxX, maxZ] = boundsOf(allPoints);
     const centerX = (minX + maxX) / 2, centerZ = (minZ + maxZ) / 2;
     const extent = Math.max(maxX - minX, maxZ - minZ, 500);
-    const landscape = new THREE.Mesh(new THREE.PlaneGeometry(maxX - minX + 800, maxZ - minZ + 800), material(0xa9b8a4));
+    const landscape = new THREE.Mesh(new THREE.PlaneGeometry(maxX - minX + 800, maxZ - minZ + 800), material(0x96b298));
     landscape.rotation.x = -Math.PI / 2;
     landscape.position.set(centerX, -0.12, centerZ);
     landscape.receiveShadow = true;
     world.add(landscape);
-    addSurface(world, boundary, -0.025, material(0xbecbb3));
+    addSurface(world, boundary, -0.025, material(0xa6c19e));
     const curb = perimeter(boundary, 0.015, new THREE.LineBasicMaterial({ color: 0x8b9684 }));
     if (curb) world.add(curb);
     sun.position.set(centerX - extent * 0.7, extent * 1.15, centerZ + extent * 0.55);
@@ -377,9 +380,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const windowTransforms: THREE.Matrix4[] = [];
     const modelWindowRanges = new Map<string, [number, number]>();
     const roofLines = new Map<string, THREE.LineLoop>();
-    let windowInstances: THREE.InstancedMesh | null = null;
+    const windowInstances: { mesh: THREE.InstancedMesh; index: number }[] = [];
     const dummy = new THREE.Object3D();
-    const backgroundBuckets = facadeMats.map((): THREE.BufferGeometry[] => []);
+    const backgroundBuckets = new Map<string, { index: number; geometries: THREE.BufferGeometry[] }>();
     const usedFacadeMats = new Set<THREE.Material>();
     let roofUsed = false;
 
@@ -413,7 +416,10 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         const facadeIndex = hash % facadeMats.length;
         const linked = data.landmarks.find((item) => item.featureId === feature.id || item.featureIds?.includes(feature.id));
         if (!linked) {
-          backgroundBuckets[facadeIndex].push(geometry);
+          const [x0, z0, x1, z1] = boundsOf(polygon);
+          const key = `${facadeIndex}:${Math.floor((x0 + x1) / 200)}:${Math.floor((z0 + z1) / 200)}`;
+          const bucket = backgroundBuckets.get(key) ?? { index: facadeIndex, geometries: [] };
+          bucket.geometries.push(geometry); backgroundBuckets.set(key, bucket);
         } else {
           usedFacadeMats.add(facadeMats[facadeIndex]);
           roofUsed = true;
@@ -454,14 +460,12 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         modelWindowRanges.set(feature.id, [firstWindow, windowTransforms.length]);
       }
     }
-    for (let i = 0; i < backgroundBuckets.length; i++) {
-      const bucket = backgroundBuckets[i];
-      if (!bucket.length) continue;
-      const merged = mergeGeometries(bucket, false);
-      if (merged) bucket.forEach((geometry) => geometry.dispose());
-      usedFacadeMats.add(facadeMats[i]);
-      for (const geometry of merged ? [merged] : bucket) {
-        const mesh = new THREE.Mesh(geometry, facadeMats[i]);
+    for (const { index, geometries } of backgroundBuckets.values()) {
+      const merged = mergeGeometries(geometries, false);
+      if (merged) geometries.forEach((geometry) => geometry.dispose());
+      usedFacadeMats.add(facadeMats[index]);
+      for (const geometry of merged ? [merged] : geometries) {
+        const mesh = new THREE.Mesh(geometry, facadeMats[index]);
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         world.add(mesh);
@@ -471,12 +475,24 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     for (const facadeMat of facadeMats) if (!usedFacadeMats.has(facadeMat)) facadeMat.dispose();
     if (!roofUsed) roofMat.dispose();
     if (windowTransforms.length) {
-      const windows = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), windowMat, windowTransforms.length);
-      windowTransforms.forEach((matrix, i) => windows.setMatrixAt(i, matrix));
-      windowInstances = windows;
-      windows.instanceMatrix.needsUpdate = true;
-      windows.receiveShadow = true;
-      world.add(windows);
+      // Spatially bounded instances let the player camera cull entire distant
+      // blocks; map mode still sees all chunks within its own frustum.
+      const chunks = new Map<string, number[]>();
+      windowTransforms.forEach((matrix, i) => {
+        const key = `${Math.floor(matrix.elements[12] / 100)}:${Math.floor(matrix.elements[14] / 100)}`;
+        const indices = chunks.get(key) ?? []; indices.push(i); chunks.set(key, indices);
+      });
+      const windowGeometry = new THREE.BoxGeometry(1, 1, 1);
+      for (const indices of chunks.values()) {
+        const windows = new THREE.InstancedMesh(windowGeometry, windowMat, indices.length);
+        indices.forEach((global, local) => {
+          windows.setMatrixAt(local, windowTransforms[global]); windowInstances[global] = { mesh: windows, index: local };
+        });
+        windows.instanceMatrix.needsUpdate = true;
+        windows.computeBoundingSphere();
+        windows.receiveShadow = true;
+        world.add(windows);
+      }
     } else windowMat.dispose();
 
     // A deterministic clustered planting pattern, always checked against the park and buildings.
@@ -511,19 +527,31 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     }
     const collisionProps = new THREE.Group();
     if (treePositions.length) {
-      const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.3, 0.45, 3.8, 6), material(0x79765e), treePositions.length);
-      const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), material(0x718d70), treePositions.length);
+      const chunks = new Map<string, number[]>();
       treePositions.forEach(([x, z], i) => {
-        dummy.position.set(x, 1.9, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); trunks.setMatrixAt(i, dummy.matrix);
-        dummy.position.set(x, 4.6 + (i % 3) * 0.22, z); dummy.scale.set(2.1 + (i % 3) * 0.15, 2.4, 2.0 + (i % 2) * 0.25); dummy.updateMatrix(); crowns.setMatrixAt(i, dummy.matrix);
+        const key = `${Math.floor(x / 100)}:${Math.floor(z / 100)}`;
+        const indices = chunks.get(key) ?? []; indices.push(i); chunks.set(key, indices);
       });
+      const trunkGeometry = new THREE.CylinderGeometry(0.3, 0.45, 3.8, 6);
+      const crownGeometry = new THREE.IcosahedronGeometry(1, 1);
+      const trunkMaterial = material(0x79765e), crownMaterial = material(0x718d70);
+      for (const indices of chunks.values()) {
+        const trunks = new THREE.InstancedMesh(trunkGeometry, trunkMaterial, indices.length);
+        const crowns = new THREE.InstancedMesh(crownGeometry, crownMaterial, indices.length);
+        indices.forEach((i, local) => {
+          const [x, z] = treePositions[i];
+          dummy.position.set(x, 1.9, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); trunks.setMatrixAt(local, dummy.matrix);
+          dummy.position.set(x, 4.6 + (i % 3) * 0.22, z); dummy.scale.set(2.1 + (i % 3) * 0.15, 2.4, 2.0 + (i % 2) * 0.25); dummy.updateMatrix(); crowns.setMatrixAt(local, dummy.matrix);
+        });
+        trunks.instanceMatrix.needsUpdate = crowns.instanceMatrix.needsUpdate = true;
+        trunks.computeBoundingSphere(); crowns.computeBoundingSphere();
+        trunks.castShadow = crowns.castShadow = true;
+        world.add(trunks, crowns);
+      }
       for (const [x, z] of treePositions) {
         const trunkCollider = new THREE.Mesh(new THREE.CylinderGeometry(.4, .4, 3.8, 6), new THREE.MeshBasicMaterial());
         trunkCollider.position.set(x, 1.9, z); collisionProps.add(trunkCollider);
       }
-      trunks.instanceMatrix.needsUpdate = crowns.instanceMatrix.needsUpdate = true;
-      trunks.castShadow = crowns.castShadow = true;
-      world.add(trunks, crowns);
     }
 
     markerNormal = material(0xe7e0c9, 0.45);
@@ -577,10 +605,12 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
           const roof = roofLines.get(featureId);
           if (roof) roof.visible = false;
           const range = modelWindowRanges.get(featureId);
-          if (range && windowInstances) {
+          if (range) {
             const hidden = new THREE.Matrix4().makeScale(0, 0, 0);
-            for (let i = range[0]; i < range[1]; i++) windowInstances.setMatrixAt(i, hidden);
-            windowInstances.instanceMatrix.needsUpdate = true;
+            for (let i = range[0]; i < range[1]; i++) {
+              const instance = windowInstances[i];
+              instance.mesh.setMatrixAt(instance.index, hidden); instance.mesh.instanceMatrix.needsUpdate = true;
+            }
           }
         }
         model.traverse(object => {
@@ -698,6 +728,22 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (disposed || paused) return;
     const dt = previousTime ? Math.min(1, Math.max(0, (time - previousTime) / 1000)) : 0;
     previousTime = time;
+    // Keep the canvas responsive on software renderers and slow devices;
+    // recover resolution only after sustained fast frames to avoid oscillation.
+    if (dt > .1) { slowFrames++; fastFrames = 0; }
+    else if (dt > 0 && dt < .025) { fastFrames++; slowFrames = 0; }
+    else { slowFrames = 0; fastFrames = 0; }
+    const maxRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+    const nextRatio = slowFrames >= 3 ? Math.max(.5, renderRatio * .75)
+      : fastFrames >= 180 ? Math.min(maxRatio, renderRatio / .75) : renderRatio;
+    if (nextRatio !== renderRatio) {
+      renderRatio = nextRatio; renderer.setPixelRatio(renderRatio);
+      const shadowType = renderRatio <= .75 ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+      if (renderer.shadowMap.type !== shadowType) { renderer.shadowMap.type = shadowType; renderer.shadowMap.needsUpdate = true; }
+      renderer.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight), false);
+      slowFrames = fastFrames = 0;
+    }
+    canvas.dataset.renderRatio = renderRatio.toFixed(2);
     if (tween) {
       tween.elapsed += dt;
       const t = Math.min(1, tween.elapsed / tween.duration), eased = t * t * (3 - 2 * t);
@@ -707,7 +753,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       refreshFrustum();
       if (t >= 1) tween = null;
     }
-    player.update(Math.min(dt, .05));
+    player.advance();
     if (travel) {
       const current = travel;
       const distance = Math.hypot(pawn.position.x - current.arrival[0], pawn.position.z - current.arrival[1]);

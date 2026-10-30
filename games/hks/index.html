@@ -256,15 +256,25 @@
       #rotate-hint span { font-size: 42px; }
     }
     /* Keep the original landscape compositions usable on short phone screens. */
-    @media (max-height: 500px) {
-      #game-container { border-width: 6px; }
-      #monster-popup .scroll { min-height: 0; max-height: 90vh; }
+    @media (max-height: 500px) and (orientation: landscape) {
+      /* Phaser FIT measures its parent border box. Insetting the borderless
+         parent makes its measured height equal the actual drawable height. */
+      #game-container {
+        top: 6px; left: 6px;
+        width: calc(100% - 12px); height: calc(100% - 12px);
+        border: 0;
+        box-shadow: 0 0 0 6px #3E2510, 0 0 0 8px #8B6914;
+      }
+      #game-container::before { top: -6px; left: -6px; right: -6px; bottom: -6px; }
+      #monster-popup .scroll { min-height: 0; height: calc(100% - 36px); max-height: none; }
       #monster-popup .illus-wrap { flex: 0 0 30%; padding: 10px; }
       #monster-popup .illus-frame img { max-height: 65vh; }
-      #monster-popup .info { flex: 1; min-width: 0; padding: 10px; overflow-y: auto; }
-      #monster-popup .info .name { font-size: 20px; margin-bottom: 0; }
+      #monster-popup .info { flex: 1; min-width: 0; min-height: 0; padding: 8px 12px 18px 10px; overflow: hidden; }
+      #monster-popup .info .name { font-size: 20px; margin-bottom: 0; color: #5A2D16 !important; text-shadow: none; }
       #monster-popup .info .ornament { margin-bottom: 0; }
-      #monster-popup .info .desc { font-size: 12px; line-height: 1.4; white-space: pre-line; }
+      #monster-popup .info .desc { min-height: 0; overflow-y: auto; touch-action: pan-y; font-size: 14px; line-height: 1.35; white-space: pre-line; text-shadow: none; }
+      #monster-popup .info .desc span { color: #6B2A10 !important; }
+      #monster-popup .close-hint { flex: none; margin-top: 6px; color: #573015; font-size: 14px; font-weight: 700; letter-spacing: 0; }
       #levelup-popup { overflow-y: auto; }
       #levelup-popup .title { font-size: 22px; margin: 4px; }
       #levelup-popup .cards { gap: 8px; }

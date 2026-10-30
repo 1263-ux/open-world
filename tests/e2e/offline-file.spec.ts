@@ -1,6 +1,7 @@
 // Set OFFLINE_HTML to the absolute extracted offline index.html. Run with scripts/offline/playwright.config.ts.
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
+import { assertKnowledgeDismissHint, assertLandscapeCanvasAndHud, observeNaturalKnowledgeScroll } from './hks-landscape-layout';
 
 const file = process.env.OFFLINE_HTML;
 const target = file ? pathToFileURL(file).href : '';
@@ -99,9 +100,12 @@ test.describe('file:// touch-capable phone', () => {
     await page.getByTestId('campus-yingxi').click();
     await expect(campus).toHaveAttribute('data-hero-model','ready',{timeout:30000});
     const canvas=await launch(page); await start(page,canvas); const before=await snapshot(canvas);
+    await assertLandscapeCanvasAndHud(page,canvas,info);
     // Wait for the real first-encounter knowledge card; capture it before dismissing it.
     await expect.poll(async()=> { const state=await snapshot(canvas); return state.paused && !state.levelUp; },{timeout:30000}).toBe(true);
+    await assertKnowledgeDismissHint(page,info);
     await page.screenshot({path:info.outputPath('offline-mobile-knowledge.png'),fullPage:true});
+    await observeNaturalKnowledgeScroll(page,info);
     // Observe the imported knowledge card before dismissing it with a real tap.
     const touch=await page.context().newCDPSession(page), box=await canvas.boundingBox();
     if(!box || typeof before.x !== 'number') throw Error('No game canvas or player position');

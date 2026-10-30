@@ -2,6 +2,8 @@ import { expect, test, type Page, type Locator } from '@playwright/test';
 import { campuses } from '../../src/campus-data/campuses';
 import { position, walkTo } from './campus-walk';
 
+declare global { interface Window { __testFocusEvents: string[] } }
+
 test.setTimeout(600000);
 async function start(page: Page) {
   if (!await page.getByTestId('quest-start').isVisible()) await page.getByTestId('open-quest').click();
@@ -24,46 +26,67 @@ async function record(page: Page, canvas: Locator, campus: typeof campuses.huyu,
   await page.getByTestId('answer-0').click(); await page.getByTestId('quest-check-in').click();
 }
 
-test('default Yingxi hall: optional quest preserves location and runtime frame evidence', async ({ page }, info) => {
-  await page.goto('/');
-  const canvas = page.getByTestId('campus-canvas');
-  await expect(page.getByTestId('campus-yingxi')).toHaveAttribute('aria-pressed', 'true');
-  await expect(canvas).toHaveAttribute('data-model-yx-mechanical', 'ready', { timeout: 30000 });
-  await expect.poll(async () => { const [x,,z] = await position(canvas); return Math.hypot(x + 32,z - 175.5); }).toBeLessThan(1);
-  const before = await position(canvas);
-  await start(page);
-  const after = await position(canvas);
-  expect(Math.hypot(after[0]-before[0], after[2]-before[2]), 'Starting an optional quest must not teleport').toBeLessThan(.1);
-  await page.getByTestId('landmark-close').click();
-  await page.screenshot({ path: info.outputPath('yingxi-default-hall.png') });
-  const measurement = await page.evaluate(async () => {
+async function samplePerformance(page: Page) {
+  return page.evaluate(async () => {
     const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="campus-canvas"]');
     if (!canvas) throw new Error('Missing canvas');
     const start = performance.now(), firstFrame = Number(canvas.dataset.frame);
     const intervals: number[] = []; let previous = start;
-    const samples: { calls: number; triangles: number }[] = [];
+    const samples: { calls: number; triangles: number; ratio: number | null; model: string | null }[] = [];
     await new Promise<void>(resolve => {
       const tick = (now: number) => {
         intervals.push(now - previous); previous = now;
-        samples.push({ calls: Number(canvas.dataset.drawCalls), triangles: Number(canvas.dataset.triangles) });
+        samples.push({ calls: Number(canvas.dataset.drawCalls), triangles: Number(canvas.dataset.triangles),
+          ratio: canvas.dataset.renderRatio === undefined ? null : Number(canvas.dataset.renderRatio), model: canvas.dataset.modelYxMechanical ?? null });
         if (now - start >= 5000) resolve(); else requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
     });
     const elapsedMs = performance.now() - start, frames = Number(canvas.dataset.frame) - firstFrame;
     const sorted = intervals.slice().sort((a,b) => a-b);
+    const ratios = [...new Set(samples.map(s => s.ratio))];
     return { elapsedMs, frames, fps: frames * 1000 / elapsedMs,
       frameIntervalMedianMs: sorted[Math.floor(sorted.length * .5)], frameIntervalP95Ms: sorted[Math.floor(sorted.length * .95)],
       drawCallsMin: Math.min(...samples.map(s => s.calls)), drawCallsMax: Math.max(...samples.map(s => s.calls)),
       trianglesMin: Math.min(...samples.map(s => s.triangles)), trianglesMax: Math.max(...samples.map(s => s.triangles)),
+      renderRatiosObserved: ratios, renderRatioStableDuringSample: ratios.length === 1,
+      shadowQuality: null, shadowQualityNote: 'Not exposed by read-only telemetry; do not infer a measured value from render ratio',
+      mechanicalModelStatesObserved: [...new Set(samples.map(s => s.model))],
       viewport: { width: innerWidth, height: innerHeight, devicePixelRatio }, userAgent: navigator.userAgent,
-      scene: 'Yingxi default mechanical hall spawn; model loaded; optional quest panel closed; 5 seconds',
+      scene: 'Yingxi default mechanical hall spawn; 5-second sample',
     };
   });
-  await info.attach('yingxi-runtime-performance', { body: JSON.stringify(measurement, null, 2), contentType: 'application/json' });
-  expect(measurement.frames).toBeGreaterThan(0);
-  expect(measurement.drawCallsMin).toBeGreaterThan(0); expect(measurement.trianglesMin).toBeGreaterThan(0);
-  // This is a runner-specific measurement, not a universal FPS guarantee.
+}
+
+test('default Yingxi hall: optional quest preserves location and runtime frame evidence', async ({ page }, info) => {
+  const navigationStarted = Date.now(); await page.goto('/');
+  const canvas = page.getByTestId('campus-canvas');
+  await expect(page.getByTestId('campus-yingxi')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => canvas.getAttribute('data-frame'), { timeout: 30000 }).not.toBeNull();
+  const samplingStarted = Date.now();
+  const initial = await samplePerformance(page);
+  await info.attach('yingxi-initial-performance', { body: JSON.stringify({ ...initial, startedMsAfterNavigation: samplingStarted-navigationStarted }, null, 2), contentType: 'application/json' });
+  await expect(canvas).toHaveAttribute('data-model-yx-mechanical', 'ready', { timeout: 30000 });
+  await expect.poll(async () => { const [x,,z] = await position(canvas); return Math.hypot(x + 20,z - 175.5); }).toBeLessThan(1);
+  const before = await position(canvas);
+  await start(page);
+  const after = await position(canvas);
+  expect(Math.hypot(after[0]-before[0], after[2]-before[2]), 'Starting an optional quest must not teleport').toBeLessThan(.1);
+  await page.getByTestId('landmark-close').click();
+  await page.screenshot({ path: info.outputPath('yingxi-default-hall.png') });
+  // Separate window after at least ten seconds of renderer warmup. Report
+  // whether quality actually stabilized; waiting does not erase the initial sample.
+  const remainingWarmup = samplingStarted + 10000 - Date.now();
+  if (remainingWarmup > 0) await page.waitForTimeout(remainingWarmup);
+  const settledStarted = Date.now(); const settled = await samplePerformance(page);
+  await info.attach('yingxi-post-warmup-performance', { body: JSON.stringify({ ...settled, startedMsAfterSampling: settledStarted-samplingStarted }, null, 2), contentType: 'application/json' });
+  await page.screenshot({ path: info.outputPath('yingxi-post-warmup-hall.png') });
+  for (const sample of [initial, settled]) {
+    expect(sample.frames).toBeGreaterThan(0);
+    expect(sample.drawCallsMin).toBeGreaterThan(0); expect(sample.trianglesMin).toBeGreaterThan(0);
+    expect(sample.renderRatiosObserved.every(ratio => ratio !== null && ratio > 0)).toBe(true);
+  }
+  // Two runner-specific windows are evidence, not a universal FPS guarantee.
 });
 
 test('desktop: player-directed walk, observations, chapter completion and replay', async ({ page }, info) => {
@@ -111,7 +134,7 @@ test('desktop: player-directed walk, observations, chapter completion and replay
 test('Yingxi chapter: real walking through every arrival and replay', async ({ page }, info) => {
   await page.goto('/'); const canvas=page.getByTestId('campus-canvas'); await page.getByTestId('campus-yingxi').click();
   await expect.poll(() => canvas.getAttribute('data-player-x')).not.toBeNull();
-  await expect.poll(async()=>{const [x,,z]=await position(canvas);return Math.hypot(x-(-32),z-175.5);},{timeout:15000}).toBeLessThan(1); await start(page);
+  await expect.poll(async()=>{const [x,,z]=await position(canvas);return Math.hypot(x-(-20),z-175.5);},{timeout:15000}).toBeLessThan(1); await start(page);
   for(let i=0;i<campuses.yingxi.questOrder.length;i++) await record(page,canvas,campuses.yingxi,i);
   await expect(page.getByTestId('completion')).toBeVisible(); await page.screenshot({path:info.outputPath('yingxi-complete.png')});
   await page.getByTestId('quest-replay').click(); await expect(page.getByTestId('quest-status')).toContainText('0 / 4');
@@ -128,7 +151,9 @@ test('desktop: real controls, map toggling, jump, focus and repeated switches', 
   const walked = await position(canvas); expect(Math.hypot(walked[0]-initial[0],walked[2]-initial[2])).toBeGreaterThan(1);
   await page.keyboard.down('Shift'); await page.keyboard.down('w'); await page.waitForTimeout(1300); await page.keyboard.up('w'); await page.keyboard.up('Shift');
   const ran = await position(canvas); expect(Math.hypot(ran[0]-walked[0],ran[2]-walked[2])).toBeGreaterThan(Math.hypot(walked[0]-initial[0],walked[2]-initial[2])*1.3);
-  await page.keyboard.press('Space'); await expect.poll(async () => (await position(canvas))[1], { timeout: 2000, intervals: [50] }).toBeGreaterThan(initial[1] + .1);
+  // Space on a focused button is reserved for the control; focus the scene
+  // as a real keyboard user would before using Space for a jump.
+  await canvas.focus(); await page.keyboard.press('Space'); await expect.poll(async () => (await position(canvas))[1], { timeout: 2000, intervals: [50] }).toBeGreaterThan(initial[1] + .1);
   const yaw = Number(await canvas.getAttribute('data-camera-yaw')); const box = await canvas.boundingBox(); if (!box) throw Error('Missing canvas bounds');
   await page.mouse.move(box.x + box.width*.55,box.y + box.height*.45); await page.mouse.down(); await page.mouse.move(box.x + box.width*.65,box.y + box.height*.45,{steps:8}); await page.mouse.up();
   await expect.poll(async () => Number(await canvas.getAttribute('data-camera-yaw'))).not.toBe(yaw);
@@ -142,20 +167,39 @@ test('desktop: real controls, map toggling, jump, focus and repeated switches', 
 });
 
 test('desktop: releasing keys and losing window focus stop movement', async ({ page }) => {
+  await page.addInitScript(() => {
+    const state = window;
+    state.__testFocusEvents = [];
+    window.addEventListener('blur', () => state.__testFocusEvents.push('blur'));
+    window.addEventListener('focus', () => state.__testFocusEvents.push('focus'));
+  });
   await page.goto('/'); await selectHuyu(page);
   const canvas = page.getByTestId('campus-canvas');
-  await expect.poll(() => canvas.getAttribute('data-player-x')).not.toBeNull();
+  const frame = async () => Number(await canvas.getAttribute('data-frame'));
+  const advance = async (from: number, count: number) => {
+    await expect.poll(frame, { timeout: 15000, intervals: [100] }).toBeGreaterThanOrEqual(from + count);
+  };
   await canvas.focus();
-  await page.keyboard.down('w'); await page.waitForTimeout(800); await page.keyboard.up('w');
-  const stopped = await position(canvas); await page.waitForTimeout(600);
+  const initial = await position(canvas);
+  await page.keyboard.down('w');
+  try {
+    await expect.poll(async () => { const p = await position(canvas); return Math.hypot(p[0]-initial[0],p[2]-initial[2]); }, { timeout: 15000 }).toBeGreaterThan(.5);
+  } finally { await page.keyboard.up('w'); }
+  await advance(await frame(), 1); // Observe a post-keyup render before the stop baseline.
+  const stopped = await position(canvas); await advance(await frame(), 2);
   let after = await position(canvas);
   expect(Math.hypot(after[0]-stopped[0], after[2]-stopped[2]), 'Releasing W stops the player').toBeLessThan(.25);
-  await page.keyboard.down('w'); await page.waitForTimeout(500);
+  await page.keyboard.down('w');
+  await expect.poll(async () => { const p = await position(canvas); return Math.hypot(p[0]-after[0],p[2]-after[2]); }, { timeout: 15000 }).toBeGreaterThan(.5);
+  const priorBlurCount = await page.evaluate(() => window.__testFocusEvents.filter(x => x === 'blur').length);
   const other = await page.context().newPage();
   try {
     await other.goto('about:blank'); await other.bringToFront();
+    await expect.poll(() => page.evaluate(() => window.__testFocusEvents.filter(x => x === 'blur').length), { timeout: 10000 }).toBeGreaterThan(priorBlurCount);
     await page.bringToFront();
-    const restored = await position(canvas); await page.waitForTimeout(700); after = await position(canvas);
+    await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(true);
+    await advance(await frame(), 1); // Flush any telemetry from before the genuine blur.
+    const restored = await position(canvas); await advance(await frame(), 2); after = await position(canvas);
     expect(Math.hypot(after[0]-restored[0], after[2]-restored[2]), 'W must be cleared on window blur, even if its keyup was missed').toBeLessThan(.25);
   } finally { await page.keyboard.up('w'); await other.close(); }
 });

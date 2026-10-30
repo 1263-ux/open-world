@@ -23,6 +23,7 @@ export class PlayerController {
   private enabled = true;
   private jumpQueued = false;
   private runHeld = false;
+  private lastAdvance = performance.now();
   private joystick = new THREE.Vector2();
   private pointer: { id: number; x: number; y: number; kind: 'move' | 'look'; startX: number; startY: number }[] = [];
   private readonly ui: HTMLDivElement;
@@ -37,12 +38,13 @@ export class PlayerController {
     }
     if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight'].includes(e.code)) {
       e.preventDefault();
+      this.advance();
       this.keys.add(e.code);
       if (e.code === 'Space' && !e.repeat) this.jumpQueued = true;
     }
   };
-  private readonly onKeyUp = (e: KeyboardEvent) => this.keys.delete(e.code);
-  private readonly onBlur = () => { this.keys.clear(); this.pointer = []; this.joystick.set(0, 0); this.runHeld = false; this.jumpQueued = false; this.stick.style.transform = ''; };
+  private readonly onKeyUp = (e: KeyboardEvent) => { this.advance(); this.keys.delete(e.code); };
+  private readonly onBlur = () => { this.advance(); this.keys.clear(); this.pointer = []; this.joystick.set(0, 0); this.runHeld = false; this.jumpQueued = false; this.stick.style.transform = ''; };
   private readonly onVisibilityChange = () => { if (document.hidden) this.onBlur(); };
   private readonly onPointerDown = (e: PointerEvent) => {
     if (!this.enabled || this.paused || e.button !== 0 || this.pointer.some(p => p.id === e.pointerId)) return;
@@ -55,6 +57,7 @@ export class PlayerController {
   private readonly onPointerMove = (e: PointerEvent) => {
     const p = this.pointer.find(item => item.id === e.pointerId);
     if (!p || this.paused || !this.enabled) return;
+    this.advance();
     if (p.kind === 'look') {
       this.yaw -= (e.clientX - p.x) * .005;
       this.pitch = THREE.MathUtils.clamp(this.pitch + (e.clientY - p.y) * .004, -.15, .8);
@@ -66,6 +69,7 @@ export class PlayerController {
     p.x = e.clientX; p.y = e.clientY;
   };
   private readonly onPointerUp = (e: PointerEvent) => {
+    this.advance();
     const p = this.pointer.find(item => item.id === e.pointerId);
     if (p?.kind === 'move') { this.joystick.set(0, 0); this.stick.style.transform = ''; }
     this.pointer = this.pointer.filter(item => item.id !== e.pointerId);
@@ -80,11 +84,11 @@ export class PlayerController {
     this.stick = this.ui.querySelector('.virtual-stick span')!;
     const run = this.ui.querySelector<HTMLButtonElement>('.touch-run')!;
     const jump = this.ui.querySelector<HTMLButtonElement>('.touch-jump')!;
-    run.addEventListener('pointerdown', e => { e.preventDefault(); this.runHeld = true; run.setPointerCapture(e.pointerId); });
-    run.addEventListener('pointerup', () => { this.runHeld = false; });
-    run.addEventListener('pointercancel', () => { this.runHeld = false; });
-    run.addEventListener('lostpointercapture', () => { this.runHeld = false; });
-    jump.addEventListener('pointerdown', e => { e.preventDefault(); if (this.enabled && !this.paused) this.jumpQueued = true; });
+    run.addEventListener('pointerdown', e => { e.preventDefault(); this.advance(); this.runHeld = true; run.setPointerCapture(e.pointerId); });
+    run.addEventListener('pointerup', () => { this.advance(); this.runHeld = false; });
+    run.addEventListener('pointercancel', () => { this.advance(); this.runHeld = false; });
+    run.addEventListener('lostpointercapture', () => { this.advance(); this.runHeld = false; });
+    jump.addEventListener('pointerdown', e => { e.preventDefault(); if (this.enabled && !this.paused) { this.advance(); this.jumpQueued = true; } });
     container.appendChild(this.ui);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
@@ -162,9 +166,11 @@ export class PlayerController {
     mat.dispose();
     // This is a designed gameplay viewpoint, not a surveyed entrance or a
     // replacement for the source's original route start.
-    this.setPosition(data.id === 'yingxi' ? [-32, 175.5] : data.start);
+    this.setPosition(data.id === 'yingxi' ? [-20, 175.5] : data.start);
     this.yaw = data.id === 'huyu' ? 0 : -Math.PI / 2;
-    this.pitch = .24;
+    this.pitch = -.15;
+    this.avatar.rotation.y = this.yaw;
+    this.lastAdvance = performance.now();
     this.updateCamera(true);
   }
   setPosition(p: Point2) {
@@ -174,8 +180,16 @@ export class PlayerController {
     this.velocityY = 0; this.grounded = true;
   }
   resize(width: number, height: number) { this.camera.aspect = Math.max(1, width) / Math.max(1, height); this.camera.updateProjectionMatrix(); }
-  setEnabled(enabled: boolean) { this.enabled = enabled; this.ui.hidden = !enabled; if (!enabled) this.onBlur(); }
-  setPaused(paused: boolean) { this.paused = paused; if (paused) this.onBlur(); }
+  setEnabled(enabled: boolean) { if (!enabled) this.onBlur(); this.enabled = enabled; this.ui.hidden = !enabled; this.lastAdvance = performance.now(); }
+  setPaused(paused: boolean) { if (paused) this.onBlur(); this.paused = paused; this.lastAdvance = performance.now(); }
+  /** Advance to the event or frame time before changing input. Input edges
+   * must not disappear merely because a slow frame missed a short press. */
+  advance() {
+    const now = performance.now();
+    const dt = Math.min(2, Math.max(0, (now - this.lastAdvance) / 1000));
+    this.lastAdvance = now;
+    this.update(dt);
+  }
   update(dt: number) {
     if (!this.enabled || this.paused) return;
     const x = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft')) + this.joystick.x;
@@ -187,13 +201,13 @@ export class PlayerController {
     const movement = new THREE.Vector3((input.x * cos + input.y * sin) * speed, 0, (-input.x * sin + input.y * cos) * speed);
     if (this.jumpQueued && this.grounded) { this.velocityY = 5.5; this.grounded = false; }
     this.jumpQueued = false;
-    this.velocityY -= 15 * dt;
     // Small fixed substeps limit tunnelling at low frame rates, then project out of collision for wall sliding.
     const steps = Math.max(1, Math.ceil(dt / (1 / 60)));
     const sub = dt / steps;
     for (let i = 0; i < steps; i++) {
       const wasGrounded = this.grounded;
       this.grounded = false;
+      this.velocityY -= 15 * sub;
       this.collider.translate(new THREE.Vector3(movement.x * sub, this.velocityY * sub, movement.z * sub));
       for (let n = 0; n < 3; n++) {
         const hit = this.octree.capsuleIntersect(this.collider);
@@ -228,7 +242,7 @@ export class PlayerController {
     this.canvas.dataset.playerZ = this.avatar.position.z.toFixed(3);
   }
   updateCamera(immediate: boolean) {
-    const target = this.avatar.position.clone().add(new THREE.Vector3(0, 1.32, 0));
+    const target = this.avatar.position.clone().add(new THREE.Vector3(0, 1.4, 0));
     const horizontal = Math.cos(this.pitch) * 6;
     const desired = target.clone().add(new THREE.Vector3(-Math.sin(this.yaw) * horizontal, Math.sin(this.pitch) * 6 + 1.1, -Math.cos(this.yaw) * horizontal));
     const delta = desired.clone().sub(target), distance = delta.length();
