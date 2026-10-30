@@ -60,7 +60,8 @@ async function launch(page: Page) {
 async function start(page: Page, canvas: Locator) {
   const w=Number(await canvas.getAttribute('data-logical-width'));
   await clickGame(page,canvas,w/2,395);
-  await expect.poll(async()=> (await snapshot(canvas)).scene).toContain('TutorialScene');
+  // The menu fades out for 550 ms of Phaser game time; slow software-rendered CI can take longer than 5 s wall time.
+  await expect.poll(async()=> (await snapshot(canvas)).scene,{timeout:15000}).toContain('TutorialScene');
   await clickGame(page,canvas,w-44,37);
   await expect.poll(async()=> (await snapshot(canvas)).scene,{timeout:15000}).toContain('GameScene');
 }

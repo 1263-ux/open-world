@@ -6,6 +6,9 @@ Goal: adapt the proven isolated Vite IIFE prototype to the current three-model r
 ## File-mode CI regression (2026-10-30)
 The a67f2e real Chromium trace showed `ReferenceError: process is not defined` before the campus canvas was created. Vite library mode intentionally leaves `process.env.*` dynamic (https://vite.dev/guide/build.html#environment-variables, read 2026-10-30). The builder now uses Vite's documented static `process.env.NODE_ENV` production definition; the output checker rejects unresolved `process.env` in either IIFE. The regression guard was verified to reject the pre-fix bundle. This static fix requires a fresh file:// Chromium run; it does not prove later game flows work.
 
+## Main repeat CI observation (2026-10-30)
+In the dff65fe main-repeat desktop trace, the real menu click occurred once at 28.442 seconds. The last scene-state read returned `TutorialScene` at 33.617 seconds, just after the default 5-second poll deadline; the failure screenshot also showed the tutorial. The game menu uses a 550 ms Phaser-time fade, which can take longer in the software-rendered CI environment. The offline test now allows 15 seconds for the explicitly observed scene transition (one click, no retries); runtime behavior is unchanged. The dedicated HTML report is written to the repository-root `offline-playwright-report/` so CI can retain evidence. A fresh real-browser rerun is required; this diagnosis is not evidence of a successful rerun or general device performance.
+
 ## Build and test
 
 Use an **immutable/frozen source tree** with existing root and Hks dependencies installed from the lockfiles. Output must be outside the source tree, in an empty directory or one initialized by this builder. From the repository root:
