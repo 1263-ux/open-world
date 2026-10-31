@@ -28,8 +28,8 @@
     },
     {
       "path": "src/HUD.ts",
-      "sha256": "c793ca837f3098fa7cb06cfa3d6e90aebbb7b4c231f0c9e778d4ba089d6d81f1",
-      "bytes": 34944
+      "sha256": "c7e0f9c65850b29bd22590bc3402fc8dde452261dab7c7bca83cb2f421772938",
+      "bytes": 34427
     },
     {
       "path": "src/MenuScene.ts",
@@ -100,6 +100,11 @@
       "path": "src/vite-env.d.ts",
       "sha256": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
       "bytes": 38
+    },
+    {
+      "path": "src/wrapCJK.ts",
+      "sha256": "63b5f25cd7550056da79808c29f6eb699b4c3fbe1934e3d48651dbdd452560e4",
+      "bytes": 1157
     }
   ]
 }

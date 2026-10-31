@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT, StructureType, SkillId, SKILL_CONFIGS, FONT, P
 import { Player } from './Player';
 import { Building } from './Building';
 import { genOrnatePanel, genPixelButton } from './ArtGen';
+import { wrapCJK } from './wrapCJK';
 
 interface StructBar {
   type: StructureType;
@@ -511,32 +512,13 @@ export class HUD {
     this.levelUpTimers = [];
   }
 
-  /** 手动 CJK 换行 — 按字符数估算每行宽度 */
+  /** Approximate CJK wrapping without splitting numeric values and units. */
   private wrapCJK(text: string, fontSize: string, maxWidth: number): string {
-    const charW = parseInt(fontSize, 10); // CJK 字符约等于字号宽度
-    const charsPerLine = Math.floor(maxWidth / charW);
-    if (charsPerLine <= 0) return text;
-
-    let result = '';
-    let lineLen = 0;
-    for (const ch of text) {
-      result += ch;
-      if (ch === '\n') { lineLen = 0; continue; }
-      lineLen++;
-      if (lineLen >= charsPerLine) {
-        result += '\n';
-        lineLen = 0;
-      }
-    }
-    return result;
+    return wrapCJK(text, fontSize, maxWidth);
   }
 
   private estimateWrappedLineCount(text: string, fontSize: string, maxWidth: number): number {
-    const charW = parseInt(fontSize, 10);
-    const charsPerLine = Math.max(1, Math.floor(maxWidth / charW));
-    return text
-      .split('\n')
-      .reduce((total, line) => total + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
+    return this.wrapCJK(text, fontSize, maxWidth).split('\n').length;
   }
 
   // ── 怪物首次遭遇科普弹窗（详细：灾害背景 + 游戏影响） ──

@@ -179,9 +179,43 @@ test('desktop: real controls, map toggling, jump, focus and repeated switches', 
   expect(walkSeconds).toBeGreaterThan(1); expect(runSeconds).toBeGreaterThan(1);
   expect(walkDistance).toBeGreaterThan(1); expect(runDistance).toBeGreaterThan(1);
   expect(runSpeed).toBeGreaterThan(walkSpeed*1.3);
-  // Space on a focused button is reserved for the control; focus the scene
-  // as a real keyboard user would before using Space for a jump.
-  await canvas.focus(); await page.keyboard.press('Space'); await expect.poll(async () => (await position(canvas))[1], { timeout: 2000, intervals: [50] }).toBeGreaterThan(initial[1] + .1);
+  // Test the real Space edge from a settled player. Observe every rendered
+  // frame: SwiftShader can stall beyond 2 seconds and protocol polls can miss
+  // the short airborne interval even when the actual jump succeeds.
+  await expect(canvas).toHaveAttribute('data-player-motion', 'idle', { timeout: 15000 });
+  await canvas.focus();
+  const jumpStart = (await position(canvas))[1];
+  await page.evaluate(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('[data-testid="campus-canvas"]');
+    if (!canvas) throw new Error('Missing campus canvas');
+    const sample = { frames: [] as {frame:number; y:number; motion:string | null}[], key: null as null | {trusted:boolean; accepted:boolean; canvasFocused:boolean}, stopped: false };
+    (window as unknown as {__qaJump: typeof sample}).__qaJump = sample;
+    window.addEventListener('keydown', event => {
+      if (event.code === 'Space' && !event.repeat) sample.key = {trusted:event.isTrusted, accepted:event.defaultPrevented, canvasFocused:document.activeElement === canvas};
+    }, { once: true });
+    const observe = () => {
+      if (sample.stopped) return;
+      const frame = Number(canvas.dataset.frame), y = Number(canvas.dataset.playerY);
+      if (Number.isFinite(frame) && Number.isFinite(y) && sample.frames.at(-1)?.frame !== frame) sample.frames.push({frame, y, motion:canvas.dataset.playerMotion ?? null});
+      requestAnimationFrame(observe);
+    };
+    requestAnimationFrame(observe);
+  });
+  try {
+    await page.keyboard.press('Space');
+    await expect.poll(() => page.evaluate(() => {
+      const sample = (window as unknown as {__qaJump: {frames: {y:number}[]}}).__qaJump;
+      return Math.max(-Infinity, ...sample.frames.map(frame => frame.y));
+    }), { timeout: 15000, intervals: [100] }).toBeGreaterThan(jumpStart + .1);
+  } finally {
+    const evidence = await page.evaluate(() => {
+      const sample = (window as unknown as {__qaJump: {stopped:boolean; key:{trusted:boolean; accepted:boolean; canvasFocused:boolean} | null; frames:{frame:number; y:number; motion:string | null}[]}}).__qaJump;
+      sample.stopped = true; return sample;
+    });
+    await info.attach('jump-render-frame-evidence', {body: JSON.stringify({jumpStart, ...evidence}, null, 2), contentType:'application/json'});
+    expect(evidence.key).toEqual({trusted:true, accepted:true, canvasFocused:true});
+    expect(evidence.frames.some(frame => frame.motion === 'airborne' && frame.y > jumpStart + .1)).toBe(true);
+  }
   const yaw = Number(await canvas.getAttribute('data-camera-yaw')); const box = await canvas.boundingBox(); if (!box) throw Error('Missing canvas bounds');
   await page.mouse.move(box.x + box.width*.55,box.y + box.height*.45); await page.mouse.down(); await page.mouse.move(box.x + box.width*.65,box.y + box.height*.45,{steps:8}); await page.mouse.up();
   await expect.poll(async () => Number(await canvas.getAttribute('data-camera-yaw'))).not.toBe(yaw);
