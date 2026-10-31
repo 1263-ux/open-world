@@ -136,6 +136,9 @@ async function aimAtGarden(page: Page, canvas: Locator): Promise<void> {
 }
 
 test('same-camera garden shadow and depth A/B/C/D/E/F/G/H experiment', async ({ page }, info) => {
+  // Archived experiment for the original thin-wedge asset only.
+  const originalBytes = await readFile('public/assets/campuses/yingxi/qingze-reading-garden.glb');
+  test.skip(createHash('sha256').update(originalBytes).digest('hex') !== 'c052ab3c24ae259b875dbd91e05a4e202f544f83db1cc5ddba0e4855e7916e76', 'Original-asset diagnostic; use normal quality tests for replacement models');
   const moduleCount = await installDiagnostic(page);
   await page.goto('/');
   expect(moduleCount(), 'exactly one intercepted Vite module').toBe(1);

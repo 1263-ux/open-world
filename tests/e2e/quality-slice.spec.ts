@@ -247,12 +247,29 @@ test('student: real idle, walk, run and airborne input, plus campus and Hks roun
     finally { await page.keyboard.up('Shift'); }
   } finally { await page.keyboard.up('w'); }
   await expect(canvas).toHaveAttribute('data-player-motion','idle',{timeout:15000});
-  const ground=(await position(canvas))[1];await canvas.focus();await page.keyboard.press('Space');
+  // The long walk/run capture can end on the hall's raised entrance steps.
+  // Back away first (the route planner cannot start inside a wall-clearance
+  // margin), then genuinely walk to the known open courtyard before testing
+  // a same-surface jump. No player or camera state is injected.
+  await canvas.focus();await page.keyboard.down('s');
+  try { await expect.poll(async()=>(await position(canvas))[0],{timeout:30000,intervals:[250]}).toBeGreaterThan(-46); }
+  finally { await page.keyboard.up('s'); }
+  await walkTo(page,canvas,campuses.yingxi,[-20,175.5]);
+  await expect(canvas).toHaveAttribute('data-player-motion','idle',{timeout:15000});
+  const flatStart=await position(canvas);
+  expect(Math.hypot(flatStart[0]+20,flatStart[2]-175.5)).toBeLessThan(5);
+  expect(flatStart[1]).toBeGreaterThan(.08);expect(flatStart[1]).toBeLessThan(.2);
+  await page.waitForTimeout(1000);const flatStable=await position(canvas);
+  expect(Math.abs(flatStable[1]-flatStart[1])).toBeLessThan(.02);
+  const ground=flatStable[1];await page.screenshot({path:info.outputPath('student-flat-before-jump.png')});
+  await canvas.focus();await page.keyboard.press('Space');
   await expect(canvas).toHaveAttribute('data-player-motion','airborne',{timeout:15000});
   await expect.poll(async()=>(await position(canvas))[1],{timeout:15000,intervals:[50]}).toBeGreaterThan(ground+.1);
   await page.screenshot({path:info.outputPath('student-airborne.png')});
   await expect(canvas).toHaveAttribute('data-player-motion','idle',{timeout:15000});
   await expect.poll(async()=>Math.abs((await position(canvas))[1]-ground),{timeout:15000}).toBeLessThan(.1);
+  const landed=await position(canvas);
+  await info.attach('student-flat-jump-position',{body:JSON.stringify({flatStart,flatStable,landed},null,2),contentType:'application/json'});
   for(let i=0;i<2;i++){await page.getByTestId('campus-huyu').click();await page.getByTestId('campus-yingxi').click();}
   await expect(canvas).toHaveAttribute('data-player-model','ready');
   await page.getByTestId('open-hks').click();await expect(page.frameLocator('[data-testid="hks-frame"]').locator('canvas')).toBeVisible({timeout:30000});

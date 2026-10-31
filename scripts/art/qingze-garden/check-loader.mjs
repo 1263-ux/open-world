@@ -7,5 +7,5 @@ const b = fs.readFileSync(f);
 const g = await new Promise((ok, bad) => new GLTFLoader().parse(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), '', ok, bad));
 const box = new Box3().setFromObject(g.scene); let meshes = 0;
 g.scene.traverse(o => { if (o.isMesh) meshes++; });
-if (meshes !== 15 || box.min.y < -.01 || box.max.y > 9 || g.animations.length) throw Error('Unexpected model structure');
+if (meshes !== 13 || box.min.y < -.01 || box.max.y > 9 || g.animations.length) throw Error('Unexpected model structure');
 console.log('PASS GLTFLoader parse; meshes', meshes, 'bounds', box.min.toArray(), box.max.toArray(), 'animations', g.animations.length);

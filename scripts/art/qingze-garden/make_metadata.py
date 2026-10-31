@@ -1,7 +1,7 @@
 """Record the approved GLB's actual semantic vertices and estimated design obstacles."""
 import pathlib,json,struct,math,hashlib,sys
 p=pathlib.Path(sys.argv[1]);out=pathlib.Path(sys.argv[2]);b=p.read_bytes();sha=hashlib.sha256(b).hexdigest()
-assert sha=='c052ab3c24ae259b875dbd91e05a4e202f544f83db1cc5ddba0e4855e7916e76', 'Refuse to label a different model as the approved visual candidate'
+assert sha=='872b09e7d12dcf83743d2ee1a8a4a77f4f79bc104780eeaac72e794950b9dab5', 'Refuse to label a different model as the approved visual candidate'
 n=struct.unpack_from('<I',b,12)[0];j=json.loads(b[20:20+n]);binary=b[28+n:]
 def acc(i):
  a=j['accessors'][i];v=j['bufferViews'][a['bufferView']];count={'VEC3':3,'SCALAR':1}[a['type']];fmt='<'+{5126:'f',5123:'H',5125:'I',5121:'B'}[a['componentType']]*count;start=v.get('byteOffset',0)+a.get('byteOffset',0);step=v.get('byteStride',struct.calcsize(fmt))

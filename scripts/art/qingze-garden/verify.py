@@ -32,6 +32,19 @@ def inside(x,z):
 assert all(inside(35+x,205+z) for x in bounds[0] for z in bounds[2]), 'model bounds escape park polygon'
 assert 205+bounds[2][0]>173, 'old route zone changed'
 assert degenerate==0, f'{degenerate} degenerate triangles'
+# Calm court is a single coplanar 64-sided disk with two inlay bands.
+court_area=0.0; court_faces=0
+for obj in j['meshes']:
+ for p in obj['primitives']:
+  xyz=acc(p['attributes']['POSITION']);ii=[x[0] for x in acc(p['indices'])]
+  for i in range(0,len(ii),3):
+   a,c,d=[xyz[k] for k in ii[i:i+3]]
+   if all(abs(v[1]-.046)<1e-5 for v in (a,c,d)):
+    signed=((c[2]-a[2])*(d[0]-a[0])-(c[0]-a[0])*(d[2]-a[2]))/2
+    if signed>0: court_faces+=1;court_area+=signed
+assert court_faces==576, f'unexpected court top count: {court_faces}'
+assert abs(court_area-64*.5*8.2**2*math.sin(2*math.pi/64))<1e-4, 'court disk area differs'
+print('PASS 576 coplanar upward court triangles; disk area',round(court_area,6),'m²')
 metadata=D/'qingze-reading-garden.metadata.json'
 if metadata.exists():
  m=json.loads(metadata.read_text());assert hashlib.sha256(b).hexdigest()==m['artifactSha256']

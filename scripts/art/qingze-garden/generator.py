@@ -26,15 +26,31 @@ def ellipsoid(name,loc,scale,mat,segments=10,rings=6):
  bpy.ops.mesh.primitive_uv_sphere_add(segments=segments,ring_count=rings,location=loc);o=bpy.context.object;o.name=name;o.scale=scale;bpy.ops.object.transform_apply(location=False,rotation=False,scale=True);o.data.materials.append(mats[mat]);objects.append(o);return o
 def segment(name,a,b,r0,r1,mat,vertices=7):
  a,b=Vector(a),Vector(b);d=b-a;bpy.ops.mesh.primitive_cone_add(vertices=vertices,radius1=r0,radius2=r1,depth=d.length,location=(a+b)*.5);o=bpy.context.object;o.name=name;o.rotation_euler=d.to_track_quat('Z','Y').to_euler();o.data.materials.append(mats[mat]);objects.append(o);return o
-# A shallow circular court with two contrasting curved rings, 16.4m across.
-# Top tile wedges are staggered rather than copying a photo or texture.
-ring('Court base',.02,8.2,0,.035,segments=64,mat='stone')
-for r0,r1,n in [(.02,1.9,24),(1.9,3.8,36),(3.8,5.8,44),(5.8,8.1,56)]:
- for i in range(n):
-  a=2*math.pi*(i+.015)/n;b=2*math.pi*(i+.985)/n
-  ring('Paving course',r0+.025,r1-.025,.036,.046,a,b,1,random.choice(['tile1','tile2','tile3']))
-# Two delicate ink-toned arcs give the floor compositional rhythm.
-for r in (3.82,5.82):ring('Fine paving inlay',r,r+.05,.047,.05,segments=64,mat='stone')
+# Calm court: one coplanar stone surface with two broad inlay bands.
+# Keep RNG state identical to the 160 removed original wedge material choices.
+for _ in range(160): random.choice(['tile1','tile2','tile3'])
+def court_region(name, inner, outer, mat, n=64):
+ verts=[]; faces=[]
+ if inner == 0:
+  verts.append((0,0,.046))
+  for i in range(n):
+   a=2*math.pi*i/n; verts.append((outer*math.cos(a),outer*math.sin(a),.046))
+  for i in range(n): faces.append((0,1+i,1+(i+1)%n))
+ else:
+  for i in range(n):
+   a=2*math.pi*i/n; verts.extend([(inner*math.cos(a),inner*math.sin(a),.046),(outer*math.cos(a),outer*math.sin(a),.046)])
+  for i in range(n):
+   j=(i+1)%n; faces.append((2*i,2*i+1,2*j+1,2*j))
+ return mesh(name,verts,faces,mat)
+for name,r0,r1,material in [('Court center',0,3.73,'tile1'),('Court inlay A',3.73,3.91,'sand'),('Court middle',3.91,5.73,'tile1'),('Court inlay B',5.73,5.91,'sand'),('Court outer',5.91,8.20,'tile1')]:
+ court_region(name,r0,r1,material)
+# Outer edge only; no duplicate top surface.
+v=[];f=[]
+for i in range(64):
+ a=2*math.pi*i/64;v.extend([(8.2*math.cos(a),8.2*math.sin(a),0),(8.2*math.cos(a),8.2*math.sin(a),.046)])
+for i in range(64):
+ j=(i+1)%64;f.append((2*i,2*j,2*j+1,2*i+1))
+mesh('Court edge',v,f,'stone')
 # Approach toward existing route, flush walking surface: local +Y = north.
 box('Open approach',(0,12.2,.025),(3.4,8.8,.05),'tile1')
 for y in (9,10.5,12,13.5,15):box('Approach joint',(0,y,.052),(3.4,.028,.004),'stone')
@@ -103,6 +119,19 @@ def willow(x,y,h,seed):
      blade(['leaf1','leaf2','leaf3'][(i+k+(side>0))%3],(cx,cy,cz),v,.095,(math.cos(a),math.sin(a),.08))
 willow(-6.5,-6.5,6.3,31);willow(-2.1,-8.1,7.0,22);willow(6.2,-5.9,5.9,19)
 for name,(verts,faces) in leafgeo.items():mesh('Willow pointed leaves',verts,faces,name)
+# Oriented-face-order-independent fingerprint of untouched source objects.
+import hashlib,json
+bpy.context.view_layer.update()
+exclude={'Court base','Paving course','Fine paving inlay','Court center','Court inlay A','Court middle','Court inlay B','Court outer','Court edge'}
+records=[]
+for o in objects:
+ if o.name.split('.')[0] in exclude: continue
+ v=[[round(q,6) for q in o.matrix_world @ p.co] for p in o.data.vertices]
+ polys=[]
+ for p in o.data.polygons:
+  a=tuple(p.vertices);polys.append(min(a[i:]+a[:i] for i in range(len(a))))
+ polys.sort();records.append([o.name.split('.')[0],o.data.materials[0].name,v,polys])
+with open(D+'/unchanged-geometry.json','w') as f:json.dump({'objects':len(records),'sha256':hashlib.sha256(repr(records).encode()).hexdigest()},f)
 # Batch by material, reduce draw calls while retaining authored elements.
 bpy.ops.object.select_all(action='DESELECT')
 joined=[]

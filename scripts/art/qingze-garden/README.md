@@ -23,3 +23,5 @@ python scripts/art/qingze-garden/verify.py public/assets/campuses/yingxi
 ```
 
 Metadata generation intentionally refuses a different SHA, because collision and semantic vertices are tied to the specifically reviewed asset. A new visual revision requires new review and metadata, not a changed hash hidden behind the old identity.
+
+Calm-court test revision replaces 160 raised wedge tiles with a single coplanar tessellated 16.4 m disk and two low-contrast 18 cm inlays. There are 12,386 triangles and 13 primitives. The generator records an `unchanged-geometry.json` fingerprint of all 283 non-court objects: `7439e1cdd44b45c321a71b3c7b94e50f1d4a9fa3665217f01a027aba19d436ca`, identical to the baseline. New SHA is the actual restored GLB identity, not the earlier nondeterministic Blender export bytes. It remains a test candidate.
