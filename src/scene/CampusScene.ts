@@ -149,7 +149,7 @@ function addCorridor(world: THREE.Group, colliders: THREE.Group): void {
     add(new THREE.SphereGeometry(.2, 10, 8), light, x, 3.48, 155.5);
   }
   const bark = new THREE.MeshStandardMaterial({ color: 0x746c55, roughness: 1 });
-  const leaves = new THREE.MeshStandardMaterial({ color: 0x829c77, roughness: 1, vertexColors: true });
+  const leaves = new THREE.MeshStandardMaterial({ color: 0x839f7f, roughness: 1, vertexColors: true, side: THREE.DoubleSide });
   const treeSites: Point2[] = [[-48, 151], [-24, 151], [0, 151], [-43, 170], [-19, 170], [5, 170]];
   const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(.22, .3, 3.4, 8), bark, treeSites.length);
   const canopies = new THREE.InstancedMesh(createFoliageGeometry(), leaves, treeSites.length);
@@ -174,8 +174,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xb7d5de);
-  const distanceFog = new THREE.Fog(0xb7d5de, 45, 320);
+  scene.background = new THREE.Color(0xdce7df);
+  const distanceFog = new THREE.Fog(0xdce7df, 45, 320);
   scene.fog = distanceFog;
   const camera = new THREE.OrthographicCamera(-250, 250, 250, -250, 0.1, 6000);
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -389,14 +389,15 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const parkMat = data.features.some(f => f.kind === 'park' && cleanPolygon(f.polygon).length >= 3) ? createSurfaceMaterial('grass', 0x879f82) : null;
     const trackMat = material(0xb5795f);
     const fieldMat = material(0x829d77);
-    const facadeMats = [material(0xd4cbb8), material(0xb6b8aa), material(0xb59580), material(0xc3bba9)];
-    const roofMat = material(0xa5a89d);
-    const windowMat = new THREE.MeshStandardMaterial({ color: 0x7f9293, roughness: 0.55, metalness: 0.04 });
+    const facadeMats = [material(0xded1bc), material(0xc5c3b3), material(0xb9947c), material(0xd2c6b3)];
+    const roofMat = material(0x6d786b);
+    const windowMat = new THREE.MeshStandardMaterial({ color: 0x769491, roughness: 0.55, metalness: 0.04 });
     const buildings = data.features.filter((f) => f.kind === 'building' && cleanPolygon(f.polygon).length >= 3);
     const windowTransforms: THREE.Matrix4[] = [];
+    const trimParts: THREE.BufferGeometry[] = [];
     const modelWindowRanges = new Map<string, [number, number]>();
     const roofLines = new Map<string, THREE.LineLoop>();
-    const windowInstances: { mesh: THREE.InstancedMesh; index: number }[] = [];
+    const windowInstances: { mesh: THREE.InstancedMesh; frame: THREE.InstancedMesh; index: number }[] = [];
     const dummy = new THREE.Object3D();
     const backgroundBuckets = new Map<string, { index: number; geometries: THREE.BufferGeometry[] }>();
     const usedFacadeMats = new Set<THREE.Material>();
@@ -430,6 +431,21 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         let hash = 0;
         for (const ch of feature.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
         const facadeIndex = hash % facadeMats.length;
+        // Restrained projecting plinth and coping are merged once for the
+        // campus. Detailed GLB footprints are omitted to avoid overlaying them.
+        if (!models.some(model => model.featureIds.includes(feature.id))) {
+          for (let edge = 0; edge < polygon.length; edge++) {
+            const a = polygon[edge], b = polygon[(edge + 1) % polygon.length];
+            const dx = b[0] - a[0], dz = b[1] - a[1], length = Math.hypot(dx, dz);
+            if (length < .2) continue;
+            for (const y of [.13, height + .06]) {
+              const part = new THREE.BoxGeometry(length, .14, .16);
+              part.rotateY(Math.atan2(-dz, dx));
+              part.translate((a[0] + b[0]) / 2, y, (a[1] + b[1]) / 2);
+              trimParts.push(part);
+            }
+          }
+        }
         const linked = data.landmarks.find((item) => item.featureId === feature.id || item.featureIds?.includes(feature.id));
         if (!linked) {
           const [x0, z0, x1, z1] = boundsOf(polygon);
@@ -476,6 +492,16 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         modelWindowRanges.set(feature.id, [firstWindow, windowTransforms.length]);
       }
     }
+    if (trimParts.length) {
+      const trimGeometry = mergeGeometries(trimParts, false);
+      trimParts.forEach(part => part.dispose());
+      if (trimGeometry) {
+        const trim = new THREE.Mesh(trimGeometry, material(0xeee2d0));
+        trim.castShadow = trim.receiveShadow = true;
+        trim.userData.photoIgnore = true;
+        world.add(trim);
+      }
+    }
     for (const { index, geometries } of backgroundBuckets.values()) {
       const merged = mergeGeometries(geometries, false);
       if (merged) geometries.forEach((geometry) => geometry.dispose());
@@ -499,13 +525,18 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         const indices = chunks.get(key) ?? []; indices.push(i); chunks.set(key, indices);
       });
       const windowGeometry = new THREE.BoxGeometry(1, 1, 1);
+      const frameGeometry = new THREE.BoxGeometry(1.15, 1.12, .55);
+      const frameMaterial = material(0xeee2d0);
       for (const indices of chunks.values()) {
         const windows = new THREE.InstancedMesh(windowGeometry, windowMat, indices.length);
+        const frames = new THREE.InstancedMesh(frameGeometry, frameMaterial, indices.length);
         indices.forEach((global, local) => {
-          windows.setMatrixAt(local, windowTransforms[global]); windowInstances[global] = { mesh: windows, index: local };
+          windows.setMatrixAt(local, windowTransforms[global]); frames.setMatrixAt(local, windowTransforms[global]); windowInstances[global] = { mesh: windows, frame: frames, index: local };
         });
-        windows.instanceMatrix.needsUpdate = true;
-        windows.computeBoundingSphere();
+        windows.instanceMatrix.needsUpdate = frames.instanceMatrix.needsUpdate = true;
+        windows.computeBoundingSphere(); frames.computeBoundingSphere();
+        frames.userData.photoIgnore = true;
+        world.add(frames);
         windows.receiveShadow = true;
         windows.userData.photoIgnore = true; // Building bodies already provide occlusion.
         world.add(windows);
@@ -543,6 +574,20 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         }
       }
     }
+    // Designed route-side planting, not mapped roads or surveyed trees.
+    // Large offsets retain walkable path width and conservative building clearance.
+    for (const path of gamePaths) for (let i = 1; i < path.points.length && treePositions.length < 270; i++) {
+      const a = path.points[i - 1], b = path.points[i];
+      const dx = b[0] - a[0], dz = b[1] - a[1], length = Math.hypot(dx, dz);
+      if (length < 15) continue;
+      for (const side of [-1, 1]) {
+        const x = (a[0] + b[0]) / 2 - side * dz / length * 7;
+        const z = (a[1] + b[1]) / 2 + side * dx / length * 7;
+        const samples: Point2[] = [[x, z], [x + 3, z], [x - 3, z], [x, z + 3], [x, z - 3]];
+        const gardenConflict = data.id === 'yingxi' && x >= QINGZE_DECORATION_BOUNDS.minX && x <= QINGZE_DECORATION_BOUNDS.maxX && z >= QINGZE_DECORATION_BOUNDS.minZ && z <= QINGZE_DECORATION_BOUNDS.maxZ;
+        if (!gardenConflict && samples.every(([sx, sz]) => inside(sx, sz, boundary) && !buildings.some(f => inside(sx, sz, f.polygon))) && treePositions.every(([tx, tz]) => Math.hypot(tx - x, tz - z) > 10)) treePositions.push([x, z]);
+      }
+    }
     const collisionProps = new THREE.Group();
     if (treePositions.length) {
       const chunks = new Map<string, number[]>();
@@ -552,7 +597,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       });
       const trunkGeometry = new THREE.CylinderGeometry(0.3, 0.45, 3.8, 6);
       const crownGeometry = createFoliageGeometry();
-      const trunkMaterial = material(0x79765e), crownMaterial = new THREE.MeshStandardMaterial({ color: 0x718d70, roughness: 1, vertexColors: true });
+      const trunkMaterial = material(0x79765e), crownMaterial = new THREE.MeshStandardMaterial({ color: 0x839f7f, roughness: 1, vertexColors: true, side: THREE.DoubleSide });
       for (const indices of chunks.values()) {
         const trunks = new THREE.InstancedMesh(trunkGeometry, trunkMaterial, indices.length);
         const crowns = new THREE.InstancedMesh(crownGeometry, crownMaterial, indices.length);
@@ -570,6 +615,39 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         const trunkCollider = new THREE.Mesh(new THREE.CylinderGeometry(.4, .4, 3.8, 6), new THREE.MeshBasicMaterial());
         trunkCollider.position.set(x, 1.9, z); collisionProps.add(trunkCollider);
       }
+    }
+
+    // Designed human-scale rest points, placed beside existing routes rather
+    // than changing mapped geometry. Conservative clearance keeps the route
+    // and known building footprints free; their collision proxies match seats.
+    const benchSites: { x: number; z: number; angle: number }[] = [];
+    for (const path of gamePaths) for (let i = 1; i < path.points.length && benchSites.length < 14; i++) {
+      const a = path.points[i - 1], b = path.points[i];
+      const dx = b[0] - a[0], dz = b[1] - a[1], length = Math.hypot(dx, dz);
+      if (length < 12) continue;
+      const x = (a[0] + b[0]) / 2 - dz / length * 3.4;
+      const z = (a[1] + b[1]) / 2 + dx / length * 3.4;
+      const samples: Point2[] = [[x, z], [x + 2, z], [x - 2, z], [x, z + 2], [x, z - 2]];
+      const gardenConflict = data.id === 'yingxi' && x >= QINGZE_DECORATION_BOUNDS.minX && x <= QINGZE_DECORATION_BOUNDS.maxX && z >= QINGZE_DECORATION_BOUNDS.minZ && z <= QINGZE_DECORATION_BOUNDS.maxZ;
+      if (gardenConflict || !samples.every(([sx, sz]) => inside(sx, sz, boundary) && !buildings.some(f => inside(sx, sz, f.polygon))) || benchSites.some(site => Math.hypot(site.x - x, site.z - z) < 18) || treePositions.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < 3)) continue;
+      benchSites.push({ x, z, angle: Math.atan2(-dz, dx) });
+    }
+    if (benchSites.length) {
+      const wood = material(0x95704d), metal = material(0x405e57);
+      const seat = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, .12, .48), wood, benchSites.length);
+      const back = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, .42, .10), wood, benchSites.length);
+      const legs = new THREE.InstancedMesh(new THREE.BoxGeometry(.12, .5, .42), metal, benchSites.length * 2);
+      benchSites.forEach(({ x, z, angle }, i) => {
+        const place = (mesh: THREE.InstancedMesh, index: number, localX: number, y: number, localZ: number): void => {
+          dummy.position.set(x + localX * Math.cos(angle) + localZ * Math.sin(angle), y, z - localX * Math.sin(angle) + localZ * Math.cos(angle));
+          dummy.rotation.set(0, angle, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); mesh.setMatrixAt(index, dummy.matrix);
+        };
+        place(seat, i, 0, .53, 0); place(back, i, 0, .84, -.2);
+        place(legs, i * 2, -.65, .25, 0); place(legs, i * 2 + 1, .65, .25, 0);
+        const proxy = new THREE.Mesh(new THREE.BoxGeometry(1.8, .9, .5), new THREE.MeshBasicMaterial());
+        proxy.position.set(x, .45, z); proxy.rotation.y = angle; collisionProps.add(proxy);
+      });
+      for (const mesh of [seat, back, legs]) { mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); mesh.castShadow = true; mesh.receiveShadow = true; world.add(mesh); }
     }
 
     markerNormal = material(0xe7e0c9, 0.45);
@@ -636,6 +714,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
             for (let i = range[0]; i < range[1]; i++) {
               const instance = windowInstances[i];
               instance.mesh.setMatrixAt(instance.index, hidden); instance.mesh.instanceMatrix.needsUpdate = true;
+              instance.frame.setMatrixAt(instance.index, hidden); instance.frame.instanceMatrix.needsUpdate = true;
             }
           }
         }

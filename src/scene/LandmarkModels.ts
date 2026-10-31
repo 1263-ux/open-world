@@ -1,5 +1,6 @@
 import type { Group } from 'three';
 import type { CampusId } from '../shared/contracts';
+import { styleLandmarkMaterials } from './LandmarkStyle';
 import mechanical from '../campus-data/mechanical-hall-model.json' with { type: 'json' };
 import huyu from '../campus-data/huyu-models.json' with { type: 'json' };
 
@@ -17,6 +18,7 @@ export const landmarkModels: LandmarkModel[] = [
 export async function loadLandmarkModel(config: LandmarkModel): Promise<Group> {
   const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
   const gltf = await new GLTFLoader().loadAsync(config.url);
+  styleLandmarkMaterials(gltf.scene, config.landmarkId);
   gltf.scene.position.set(config.centerX, 0, config.centerZ);
   gltf.scene.name = `${config.landmarkId}-detail`;
   return gltf.scene;

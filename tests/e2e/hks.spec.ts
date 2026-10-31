@@ -2,7 +2,8 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { position } from './campus-walk';
 import { assertKnowledgeDismissHint, assertLandscapeCanvasAndHud, observeNaturalKnowledgeScroll } from './hks-landscape-layout';
 import { campuses } from '../../src/campus-data/campuses';
-import { chooseMovement, validateOutcome, validateSurvivalState } from './hks-survival-policy';
+import { chooseMovement, isDisplayedCard, validateOutcome, validateSurvivalState } from './hks-survival-policy';
+import { LEVELUP_CARD } from '../../games/hks/src/config';
 
 type Point={x:number;y:number};
 type State={tutorialPage?:number|null;scene?:string;remaining?:number;paused?:boolean;ended?:boolean;levelUp?:boolean;kills?:number;x?:number;y?:number;level?:number;upgradeCards?:Point[];settlementButton?:Point|null;outcome?:string|null};
@@ -102,6 +103,100 @@ test('Hks real play: knowledge, natural combat and settlement replay preserve ca
 
 test.describe('landscape touch-capable phone',()=>{
   test.use({hasTouch:true,isMobile:true,viewport:{width:844,height:390}});
+  test('natural touch upgrade: visible cards, real selection and campus return',async({page},info)=>{
+    test.setTimeout(360000);
+    const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+    const attempts:Array<{number:number; result:string; moved:boolean; samples:unknown[]; actions:unknown[]}> = [];
+    const touch=await page.context().newCDPSession(page);
+    await page.goto('/');await page.getByTestId('open-hks').tap();
+    await expect(page.getByTestId('hks-loading')).toHaveCount(0,{timeout:30000});
+    await expect(page.getByTestId('hks-error')).toHaveCount(0);
+    const canvas=page.frameLocator('[data-testid="hks-frame"]').locator('canvas');
+    await expect(canvas).toBeVisible();await expect.poll(async()=>(await snapshot(canvas)).scene).toContain('MenuScene');
+    async function tapGame(point:Point) {
+      const box=await canvas.boundingBox();const width=Number(await canvas.getAttribute('data-logical-width')),height=Number(await canvas.getAttribute('data-logical-height'));
+      if(!box || width!==1280 || height!==720 || point.x<0 || point.y<0 || point.x>width || point.y>height)throw Error('Invalid phone canvas or logical tap');
+      await canvas.tap({position:{x:box.width*point.x/width,y:box.height*point.y/height}});
+    }
+    async function startTouch() {
+      await tapGame({x:640,y:395});await expect.poll(async()=>(await snapshot(canvas)).scene,{timeout:15000}).toContain('TutorialScene');
+      await tapGame({x:1236,y:37});await expect.poll(async()=>(await snapshot(canvas)).scene,{timeout:15000}).toContain('GameScene');
+      expect((await snapshot(canvas)).remaining).toBeGreaterThan(410);
+    }
+    const popup=page.frameLocator('[data-testid="hks-frame"]').locator('#monster-popup');
+    let selected=false;
+    try {
+      await startTouch();
+      for(let number=1;number<=2 && !selected;number++) {
+        const attempt={number,result:'playing',moved:false,samples:[] as unknown[],actions:[] as unknown[]};attempts.push(attempt);
+        const started=Date.now(),deadline=started+150000;let lastSample=0;
+        while(Date.now()<deadline) {
+          if(await popup.isVisible()) {await popup.tap();await expect(popup).toBeHidden();attempt.actions.push({wallMs:Date.now()-started,kind:'tap-knowledge'});continue;}
+          const raw=await snapshot(canvas),validated:unknown=raw;validateSurvivalState(validated);
+          if(Date.now()-lastSample>=1000 || raw.ended || raw.levelUp) {attempt.samples.push({wallMs:Date.now()-started,state:raw});lastSample=Date.now();}
+          if(validated.ended) {
+            validateOutcome(validated);attempt.result=`natural-${validated.outcome}`;
+            await page.screenshot({path:info.outputPath(`hks-phone-attempt-${number}-${validated.outcome}.png`)});
+            if(number<2) {
+              if(!raw.settlementButton)throw Error('Natural outcome has no return-to-menu control');
+              await tapGame(raw.settlementButton);await expect.poll(async()=>(await snapshot(canvas)).scene,{timeout:15000}).toContain('MenuScene');
+              await startTouch();
+            }
+            break;
+          }
+          if(validated.levelUp) {
+            if(!validated.upgradeCards.length || !validated.upgradeCards.every(isDisplayedCard))throw Error('Visible upgrade choices lack read-only displayed text');
+            const box=await canvas.boundingBox(),frame=await page.getByTestId('hks-frame').boundingBox(),viewport=page.viewportSize();
+            if(!box || !frame || !viewport)throw Error('Phone upgrade geometry unavailable');
+            expect(attempt.moved,'The successful life must include observed real joystick displacement').toBe(true);
+            expect(box.x>=frame.x-.5 && box.y>=frame.y-.5 && box.x+box.width<=frame.x+frame.width+.5 && box.y+box.height<=frame.y+frame.height+.5,'Full canvas must fit iframe').toBe(true);
+            expect(frame.x>=-.5 && frame.y>=-.5 && frame.x+frame.width<=viewport.width+.5 && frame.y+frame.height<=viewport.height+.5,'Full iframe must fit viewport').toBe(true);
+            const n=validated.upgradeCards.length,logicalWidth=1280,logicalHeight=720;
+            const cardWidth=Math.min(LEVELUP_CARD.w,Math.floor((logicalWidth-120-20*(n-1))/n)),cardHeight=LEVELUP_CARD.h;
+            const cards=validated.upgradeCards.map(card=>({displayed:card.displayed,logicalCenter:{x:card.x,y:card.y},
+              projectedBounds:{x:box.x+(card.x-cardWidth/2)*box.width/logicalWidth,y:box.y+(card.y-cardHeight/2)*box.height/logicalHeight,width:cardWidth*box.width/logicalWidth,height:cardHeight*box.height/logicalHeight}}));
+            for(const card of cards) {
+              const b=card.projectedBounds;
+              expect(b.x>=box.x-.5 && b.y>=box.y-.5 && b.x+b.width<=box.x+box.width+.5 && b.y+b.height<=box.y+box.height+.5,'Projected whole card should fit the canvas').toBe(true);
+            }
+            const geometry={viewport,frame,canvas:box,logicalWidth,logicalHeight,cardWidth,cardHeight,scaleX:box.width/logicalWidth,scaleY:box.height/logicalHeight,
+              estimatedStatsFontCssPx:12*box.height/logicalHeight,cards};
+            await info.attach('hks-phone-natural-upgrade-geometry',{body:JSON.stringify(geometry,null,2),contentType:'application/json'});
+            await page.screenshot({path:info.outputPath('hks-phone-natural-upgrade.png')});
+            const chosen=validated.upgradeCards[0]!;await tapGame(chosen);
+            attempt.actions.push({wallMs:Date.now()-started,kind:'tap-offered-card',chosen});
+            await expect.poll(async()=>(await snapshot(canvas)).levelUp,{timeout:10000}).toBe(false);
+            if(await popup.isVisible()) {await popup.tap();await expect(popup).toBeHidden();}
+            await expect.poll(async()=>(await snapshot(canvas)).paused,{timeout:10000}).toBe(false);
+            await page.screenshot({path:info.outputPath('hks-phone-upgrade-resumed.png')});
+            attempt.result='natural-upgrade-selected';selected=true;break;
+          }
+          if(validated.paused) {await page.waitForTimeout(200);continue;}
+          const movement=chooseMovement(validated),box=await canvas.boundingBox();if(!box)throw Error('Missing phone canvas');
+          const dx=Number(movement.keys.includes('ArrowRight'))-Number(movement.keys.includes('ArrowLeft'));
+          const dy=Number(movement.keys.includes('ArrowDown'))-Number(movement.keys.includes('ArrowUp'));
+          const length=Math.hypot(dx,dy),x=box.x+box.width*.22,y=box.y+box.height*.72,scale=box.width/1280;
+          if(length) {
+            await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:21}]});
+            try {
+              await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+dx/length*55*scale,y:y+dy/length*55*scale,id:21}]});
+              await page.waitForTimeout(movement.holdMs);
+            } finally {await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
+          } else await page.waitForTimeout(movement.holdMs);
+          const after=await snapshot(canvas);
+          if(length && typeof after.x==='number' && typeof after.y==='number' && Math.hypot(after.x-validated.x,after.y-validated.y)>5)attempt.moved=true;
+          attempt.actions.push({wallMs:Date.now()-started,kind:movement.kind,keys:movement.keys,holdMs:movement.holdMs,before:{x:validated.x,y:validated.y},after:{x:after.x,y:after.y}});
+        }
+        if(attempt.result==='playing') {attempt.result='active-window-expired';throw Error('No natural upgrade or terminal outcome within 150 seconds; active game was not reset');}
+      }
+      expect(selected,'At least one of at most two natural lives must reach and select a real upgrade').toBe(true);
+      await page.getByTestId('hks-return').tap();await expect(page.getByTestId('hks-overlay')).toHaveCount(0);
+      await expect(page.getByTestId('campus-canvas')).toHaveAttribute('data-paused','false');expect(errors).toEqual([]);
+    } finally {
+      await touch.detach();
+      await info.attach('hks-phone-natural-upgrade-attempts',{body:JSON.stringify(attempts,null,2),contentType:'application/json'});
+    }
+  });
   test('touch movement and failed-load return leave campus usable',async({page},info)=>{
     test.setTimeout(90000);await page.goto('/');const canvas=await launch(page);await startGame(page,canvas);
     await assertLandscapeCanvasAndHud(page,canvas,info);

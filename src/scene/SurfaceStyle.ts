@@ -88,31 +88,31 @@ export function createSurfaceMaterial(kind: SurfaceKind, color: THREE.ColorRepre
   return new THREE.MeshStandardMaterial({ color, roughness: 1, ...(map ? { map } : {}) });
 }
 
-/**
- * Five overlapping irregular leaf clusters in ONE geometry. Instancing still
- * needs one draw call per chunk; each crown is 100 triangles, with restrained
- * per-cluster color variation and no extra materials or texture passes.
- */
+/** Original fine leaf clusters, baked once and instanced per tree. The sparse
+ * opaque cards avoid alpha overdraw while keeping a broken, leafy silhouette.
+ * All trees share this geometry; random variation is deterministic. */
 export function createFoliageGeometry(): THREE.BufferGeometry {
-  const lobes: ReadonlyArray<readonly [number, number, number, number, number]> = [
-    [-.46, .03, .03, .70, .91], [.42, .04, .08, .71, .97],
-    [0, .39, -.08, .71, 1.0], [0, -.17, .34, .66, .95],
-    [.02, -.07, -.38, .64, .89],
-  ];
-  const geometries = lobes.map(([x, y, z, scale, shade]) => {
-    const geometry = new THREE.IcosahedronGeometry(1, 0);
-    geometry.scale(scale, scale * 1.08, scale);
-    geometry.translate(x, y, z);
-    const values = new Float32Array(geometry.getAttribute('position').count * 3);
-    for (let i = 0; i < values.length; i += 3) {
-      values[i] = shade; values[i + 1] = Math.min(1, shade * 1.015); values[i + 2] = shade * .97;
+  const random = randomGenerator(3771);
+  const parts: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 200; i++) {
+    const angle = random() * Math.PI * 2;
+    const radius = Math.sqrt(random()) * .95;
+    const leaf = new THREE.PlaneGeometry(.20 + random() * .09, .09 + random() * .05);
+    leaf.rotateX(random() * Math.PI);
+    leaf.rotateY(random() * Math.PI * 2);
+    leaf.rotateZ(random() * Math.PI);
+    leaf.translate(Math.cos(angle) * radius, (random() - .5) * 1.35, Math.sin(angle) * radius);
+    const shade = .8 + random() * .2;
+    const values = new Float32Array(leaf.getAttribute('position').count * 3);
+    for (let j = 0; j < values.length; j += 3) {
+      values[j] = shade; values[j + 1] = Math.min(1, shade * 1.02); values[j + 2] = shade * .95;
     }
-    geometry.setAttribute('color', new THREE.BufferAttribute(values, 3));
-    return geometry;
-  });
-  const merged = mergeGeometries(geometries);
-  for (const geometry of geometries) geometry.dispose();
+    leaf.setAttribute('color', new THREE.BufferAttribute(values, 3));
+    parts.push(leaf);
+  }
+  const merged = mergeGeometries(parts);
+  for (const part of parts) part.dispose();
   if (!merged) throw new Error('Unable to merge original foliage geometry');
-  merged.name = 'campus-original-foliage-clusters';
+  merged.name = 'campus-original-fine-leaves';
   return merged;
 }
