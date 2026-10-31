@@ -4,6 +4,8 @@ import { campuses } from '../../src/campus-data/campuses';
 
 async function waitForCampus(canvas: Locator, id: 'yingxi' | 'huyu') {
   await expect(canvas).toHaveAttribute('data-campus-ready', id, { timeout: 30000 });
+  const frame = Number(await canvas.getAttribute('data-frame'));
+  await expect.poll(async () => Number(await canvas.getAttribute('data-frame')), { timeout: 30000 }).toBeGreaterThanOrEqual(frame + 2);
 }
 
 async function aimAt(page: Page, canvas: Locator, target: [number, number]) {

@@ -233,7 +233,9 @@ export class PlayerController {
     const running = this.runHeld || this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
     const speed = running ? 6.5 : 3.4;
     const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
-    const movement = new THREE.Vector3((input.x * cos + input.y * sin) * speed, 0, (-input.x * sin + input.y * cos) * speed);
+    // The camera is behind the player, looking along (sin(yaw), 0, cos(yaw)).
+    // Its screen-right is forward × world-up = (-cos(yaw), 0, sin(yaw)).
+    const movement = new THREE.Vector3((-input.x * cos + input.y * sin) * speed, 0, (input.x * sin + input.y * cos) * speed);
     if (this.jumpQueued && this.grounded) { this.velocityY = 5.5; this.grounded = false; }
     this.jumpQueued = false;
     // At very low rendering rates a whole jump can fit between two frames and

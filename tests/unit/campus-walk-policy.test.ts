@@ -8,8 +8,8 @@ describe('test-side campus walking policy', () => {
     for (let dx = -2; dx <= 2; dx += .05) for (let dz = -2; dz <= 2; dz += .05) {
       if (Math.hypot(dx, dz) >= .9) for (const yaw of [0, -Math.PI / 2, Math.PI, .7]) expect(waypointKeys(dx, dz, yaw).length).toBeGreaterThan(0);
     }
-    expect(waypointKeys(1, 0, 0)).toEqual(['KeyD']);
-    expect(waypointKeys(1, 0, Math.PI)).toEqual(['KeyA']);
+    expect(waypointKeys(1, 0, 0)).toEqual(['KeyA']);
+    expect(waypointKeys(1, 0, Math.PI)).toEqual(['KeyD']);
   });
   it('finds a test-side route between the two scenic view points', () => {
     expect(walkRoute(campuses.yingxi, PHOTO_POINTS[0]!.position, PHOTO_POINTS[1]!.position).at(-1)).toEqual(PHOTO_POINTS[1]!.position);

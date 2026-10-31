@@ -70,7 +70,7 @@ async function steerPhotoZ(page: Page, canvas: Locator, target: number, info: Te
       if (!Number.isFinite(yaw) || Math.abs(yaw+Math.PI/2)>.02) throw Error(`Unexpected camera yaw ${yaw} during Z steering`);
       const error=target-z; const entry:{attempt:number;x:number;z:number;key?:string}={attempt,x,z}; observations.push(entry);
       if (Math.abs(error)<.3) return;
-      const key=error<0?'a':'d';entry.key=key;
+      const key=error<0?'d':'a';entry.key=key;
       await page.keyboard.down(key);
       try { await page.waitForTimeout(70); } finally { await page.keyboard.up(key); }
     }
@@ -93,7 +93,7 @@ async function touchWalkTo(page: Page, canvas: Locator, target: [number,number],
       const before=await position(canvas),dx=waypoint[0]-before[0],dz=waypoint[1]-before[2];
       if(Math.hypot(dx,dz)<.9||Math.hypot(target[0]-before[0],target[1]-before[2])<4.5)break;
       const yaw=Number(await canvas.getAttribute('data-camera-yaw'));if(!Number.isFinite(yaw))throw Error('Missing camera yaw');
-      const distance=Math.hypot(dx,dz),stick={x:(dx*Math.cos(yaw)-dz*Math.sin(yaw))/distance,y:-(dx*Math.sin(yaw)+dz*Math.cos(yaw))/distance};
+      const distance=Math.hypot(dx,dz),stick={x:(-dx*Math.cos(yaw)+dz*Math.sin(yaw))/distance,y:-(dx*Math.sin(yaw)+dz*Math.cos(yaw))/distance};
       const holdMs=Math.max(80,Math.min(300,distance/3.4*500));
       await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...center,id:12}]});
       try {

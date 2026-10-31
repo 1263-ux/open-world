@@ -29,6 +29,8 @@ for (const mode of ['desktop', 'landscape touch'] as const) {
       for (const id of ['yingxi', 'huyu', 'yingxi'] as const) {
         await page.getByTestId(`campus-${id}`).click();
         await expect(canvas).toHaveAttribute('data-campus-ready', id, {timeout:30000});
+        const frame = Number(await canvas.getAttribute('data-frame'));
+        await expect.poll(async () => Number(await canvas.getAttribute('data-frame')), {timeout:30000}).toBeGreaterThanOrEqual(frame + 2);
         await expect(campusLabel).toHaveAttribute('data-campus', id);
         await expect(button).toBeVisible(); await checkMarker(canvas, marker);
         const minimapBox = await button.boundingBox(), viewport = page.viewportSize();
