@@ -1,0 +1,29 @@
+name: Gate shadow diagnostic only
+on:
+  push:
+    branches: [dev/gate-shadow-diagnostic-20261031]
+permissions:
+  contents: read
+jobs:
+  gate-shadow-ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix games/hks ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Same-camera natural-pose gate shadow A/B
+        run: RUN_GATE_SHADOW_DIAGNOSTIC=1 npm run test:e2e -- tests/e2e/gate-shadow-diagnostic.spec.ts --output=test-results/gate-shadow
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gate-shadow-ab-report
+          path: |
+            playwright-report/
+            test-results/gate-shadow/
+          retention-days: 7
