@@ -391,7 +391,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const fieldMat = material(0x829d77);
     const facadeMats = [material(0xd4cbb8), material(0xb6b8aa), material(0xb59580), material(0xc3bba9)];
     const roofMat = material(0xa5a89d);
-    const windowMat = new THREE.MeshStandardMaterial({ color: 0x91a2a2, roughness: 0.62, metalness: 0.02 });
+    const windowMat = new THREE.MeshStandardMaterial({ color: 0x7f9293, roughness: 0.55, metalness: 0.04 });
     const buildings = data.features.filter((f) => f.kind === 'building' && cleanPolygon(f.polygon).length >= 3);
     const windowTransforms: THREE.Matrix4[] = [];
     const modelWindowRanges = new Map<string, [number, number]>();
@@ -468,7 +468,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
             const t = (j + 0.5) / count;
             dummy.position.set(a[0] + dx * t + nx * 0.04, (floor + 0.5) * floorHeight, a[1] + dz * t + nz * 0.04);
             dummy.rotation.set(0, Math.atan2(-dz, dx), 0);
-            dummy.scale.set(Math.min(1.5, len / count * 0.45), Math.min(1.6, floorHeight * 0.55), 0.12);
+            dummy.scale.set(Math.min(1.8, len / count * 0.5), Math.min(1.6, floorHeight * 0.55), 0.12);
             dummy.updateMatrix();
             windowTransforms.push(dummy.matrix.clone());
           }
