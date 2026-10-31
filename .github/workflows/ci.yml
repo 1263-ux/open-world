@@ -34,10 +34,6 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e -- tests/e2e/explore.spec.ts --output=test-results/http
-      - name: Two-campus desktop and landscape touch release journeys
-        run: npm run test:e2e -- tests/e2e/two-campus-release.spec.ts --output=test-results/two-campus
-      - name: Current-campus minimap desktop and landscape touch
-        run: npm run test:e2e -- tests/e2e/minimap.spec.ts --output=test-results/minimap
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -46,6 +42,32 @@ jobs:
             playwright-report/
             test-results/
             survival-playwright-report/
+          retention-days: 7
+
+  two-campus-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix games/hks ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Two-campus desktop and landscape touch release journeys
+        run: npm run test:e2e -- tests/e2e/two-campus-release.spec.ts --output=test-results/two-campus
+      - name: Current-campus minimap desktop and landscape touch
+        if: always()
+        run: npm run test:e2e -- tests/e2e/minimap.spec.ts --output=test-results/minimap
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: campus-two-campus-release-report
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 7
 
   offline:
