@@ -24,7 +24,8 @@ window.__gateDiagnostic = (mode) => {
   model.updateMatrixWorld(true); const nodes = [];
   model.traverse(object => {
     if (!(object instanceof THREE.Mesh)) return;
-    const target = object.name === 'Suspended rectangular plaque' || object.name.startsWith('Vertical structural rib');
+    const normalized = object.name.replaceAll('_',' ');
+    const target = normalized === 'Suspended rectangular plaque' || normalized.startsWith('Vertical structural rib');
     if (mode === 'receive-off' && target) object.receiveShadow = false;
     const material = Array.isArray(object.material) ? object.material.map(m=>m.name).join(',') : object.material.name;
     nodes.push({name:object.name,material,cast:object.castShadow,receive:object.receiveShadow,matrix:object.matrixWorld.toArray()});
@@ -64,7 +65,7 @@ test('gate plaque and ribs receive-shadow same-camera A/B',async({page},info)=>{
   await expect(canvas).toHaveAttribute('data-render-ratio','0.50',{timeout:90000});await hook(page,'freeze');await frames(canvas,40);
   const baseline=await hook(page,'read');await canvas.screenshot({path:info.outputPath('gate-A-baseline.png')});
   await hook(page,'receive-off');await frames(canvas,3);const changed=await hook(page,'read');await canvas.screenshot({path:info.outputPath('gate-B-plaque-ribs-receive-off.png')});
-  const targets=changed.nodes.filter(n=>n.name==='Suspended rectangular plaque'||n.name.startsWith('Vertical structural rib'));
+  const targets=changed.nodes.filter(n=>{const name=n.name.replaceAll('_',' ');return name==='Suspended rectangular plaque'||name.startsWith('Vertical structural rib');});
   expect(targets.length).toBeGreaterThanOrEqual(2);expect(targets.every(n=>!n.receive&&n.cast)).toBe(true);
   expect(baseline.nodes.every(n=>n.cast&&n.receive)).toBe(true);
   for(const n of changed.nodes.filter(n=>!targets.includes(n)))expect(n.receive).toBe(true);
