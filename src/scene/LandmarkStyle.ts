@@ -41,3 +41,13 @@ export function styleLandmarkMaterials(group: Group, landmarkId: string): void {
     }
   });
 }
+
+/** Apply after the scene's generic shadow setup; preserve casting and geometry. */
+export function applyLandmarkShadowStyle(group: Group, landmarkId: string): void {
+  if (landmarkId !== 'hy-north-gate') return;
+  group.traverse(object => {
+    if (object instanceof Mesh && (object.name === 'Suspended_rectangular_plaque' || /^Vertical_structural_rib(?:\d+)?$/.test(object.name))) {
+      object.receiveShadow = false;
+    }
+  });
+}

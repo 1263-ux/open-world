@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { landmarkModels, loadLandmarkModel } from './LandmarkModels';
+import { applyLandmarkShadowStyle } from './LandmarkStyle';
 import { PlayerController } from './PlayerController';
 import { createQingzeFallback, QINGZE_DECORATION_BOUNDS } from './QingzeGarden';
 import { createFoliageGeometry, createSurfaceMaterial } from './SurfaceStyle';
@@ -752,6 +753,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
             pickables.push(object);
           }
         });
+        applyLandmarkShadowStyle(model, config.landmarkId);
         model.userData.landmarkId = config.landmarkId;
         if (config.landmarkId === 'yx-garden-setting' && gardenFallback) gardenFallback.visible = false;
         ownerWorld.add(model);
