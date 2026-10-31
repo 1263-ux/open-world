@@ -126,14 +126,31 @@ test('scenic diary: genuine walk, framing, two captures, Hks round-trip and loca
   await page.getByRole('button',{name:'返回人物视角'}).click(); await expect(canvas).toHaveAttribute('data-view','player');
   await page.getByTestId('open-directory').click(); await page.keyboard.press('e'); expect(await stampIds(page)).toEqual([]);
   await page.getByTestId('landmark-close').click(); await expect(hint).toContainText('构图就绪',{timeout:15000});
-  // A source-derived tree-occluded candidate: move ~5m north within the
-  // first 8m observation radius, then aim at the actual clock/tower.
-  // This must be verified by actual input and visible feedback, not by
-  // injecting a blocker or directly calling the scene inspection API.
-  await canvas.focus();await steerPhotoZ(page,canvas,170.5,info,'photo-obstruction-approach');
-  const blockedAt=await position(canvas);
-  expect(Math.hypot(blockedAt[0]-PHOTO_POINTS[0]!.position[0],blockedAt[2]-PHOTO_POINTS[0]!.position[1])).toBeLessThan(PHOTO_POINTS[0]!.radius);
-  await rotateTo(page,canvas,-1.416,-.25);await canvas.focus();await page.keyboard.press('e');
+  // Search a bounded set of genuine positions and camera pitches for a real
+  // tree-obstructed composition. Foliage geometry can change between visual
+  // versions, so a single hard-coded pose is not an invariant. No scene state
+  // is injected; the visible status and screenshot are the evidence.
+  const obstructionAttempts: unknown[] = []; let foundObstruction = false;
+  for (const z of [170.5, 169, 172, 174]) {
+    await rotateTo(page,canvas,-Math.PI/2,-.15); await canvas.focus();
+    await steerPhotoZ(page,canvas,z,info,`photo-obstruction-approach-${z}`);
+    const p = await position(canvas);
+    expect(Math.hypot(p[0]-PHOTO_POINTS[0]!.position[0],p[2]-PHOTO_POINTS[0]!.position[1])).toBeLessThan(PHOTO_POINTS[0]!.radius);
+    const target = PHOTO_POINTS[0]!.target, desiredYaw = Math.atan2(target[0]-p[0],target[2]-p[2]);
+    for (const pitch of [-.15,-.2,-.25,-.3,-.35,-.4,-.45,-.5,-.55,-.6]) {
+      const frame = Number(await canvas.getAttribute('data-frame'));
+      await rotateTo(page,canvas,desiredYaw,pitch);
+      await expect.poll(async()=>Number(await canvas.getAttribute('data-frame')),{timeout:15000}).toBeGreaterThanOrEqual(frame+6);
+      await page.waitForTimeout(300);
+      const framed = await guide.getAttribute('data-photo-framed'), obstructed = await guide.getAttribute('data-photo-obstructed');
+      obstructionAttempts.push({position:p,pitch,framed,obstructed});
+      if (framed === 'true' && obstructed === 'true') { foundObstruction = true; break; }
+    }
+    if (foundObstruction) break;
+  }
+  await info.attach('photo-real-obstruction-search',{body:JSON.stringify(obstructionAttempts,null,2),contentType:'application/json'});
+  expect(foundObstruction,'A natural tree obstruction must be demonstrated, not injected').toBe(true);
+  await canvas.focus();await page.keyboard.press('e');
   await expect(hint).toContainText('被景物遮住',{timeout:10000});expect(await stampIds(page)).toEqual([]);
   await page.screenshot({path:info.outputPath('photo-real-tree-obstruction.png')});
   await rotateTo(page,canvas,-Math.PI/2,-.15);await canvas.focus();await steerPhotoZ(page,canvas,175.5,info,'photo-obstruction-return');

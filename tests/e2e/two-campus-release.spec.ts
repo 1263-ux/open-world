@@ -2,6 +2,13 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { position, walkTo } from './campus-walk';
 import { campuses } from '../../src/campus-data/campuses';
 
+async function waitForCampusStart(canvas: Locator, campus: typeof campuses.huyu) {
+  await expect.poll(async () => {
+    try { const p = await position(canvas); return Math.hypot(p[0] - campus.start[0], p[2] - campus.start[1]); }
+    catch { return Infinity; }
+  }, { timeout: 30000 }).toBeLessThan(1);
+}
+
 async function aimAt(page: Page, canvas: Locator, target: [number, number]) {
   const [x,,z] = await position(canvas), yaw = Number(await canvas.getAttribute('data-camera-yaw'));
   const pitch = Number(await canvas.getAttribute('data-camera-pitch'));
@@ -29,6 +36,7 @@ test.describe('two-campus release journeys', () => {
     for (const campus of ['yingxi', 'huyu', 'yingxi', 'huyu'] as const) {
       await page.getByTestId(`campus-${campus}`).click();
       await expect(page.getByTestId(`campus-${campus}`)).toHaveAttribute('aria-pressed', 'true');
+      await waitForCampusStart(canvas, campuses[campus]);
       await expect(canvas).toBeVisible();
       await expect.poll(() => canvas.getAttribute('data-player-x'), { timeout: 15000 }).not.toBeNull();
       const before = await position(canvas);
@@ -58,6 +66,7 @@ test.describe('two-campus release journeys', () => {
     await page.goto('/');
     await page.getByTestId('campus-huyu').click();
     const canvas = page.getByTestId('campus-canvas');
+    await waitForCampusStart(canvas, campuses.huyu);
     await expect(canvas).toBeVisible();
     await expect.poll(() => canvas.getAttribute('data-player-x'), { timeout: 15000 }).not.toBeNull();
     const observations: unknown[] = [];
@@ -71,6 +80,19 @@ test.describe('two-campus release journeys', () => {
       observations.push({ id, before, after, target: landmark.arrival });
       await aimAt(page, canvas, landmark.position);
       await page.screenshot({ path: info.outputPath(`huyu-route-${id}.png`) });
+      // Arrival positions demonstrate gameplay. Additional genuinely walked,
+      // more distant viewpoints provide context rather than cropped facades.
+      const wide: Record<string, [number, number]> = {
+        'hy-north-gate': [12, -170], 'hy-library': [75, -47], 'hy-meihua': [-75, -8],
+      };
+      if (wide[id]) {
+        await walkTo(page, canvas, campuses.huyu, wide[id]);
+        const viewpoint = await position(canvas);
+        expect(Math.hypot(viewpoint[0] - wide[id][0], viewpoint[2] - wide[id][1])).toBeLessThan(4.5);
+        await aimAt(page, canvas, landmark.position);
+        observations.push({ id, wideViewpoint: viewpoint, target: wide[id] });
+        await page.screenshot({ path: info.outputPath(`huyu-wide-${id}.png`) });
+      }
     }
     expect(errors).toEqual([]);
     await info.attach('huyu-route-positions', { body: JSON.stringify(observations, null, 2), contentType: 'application/json' });
@@ -82,6 +104,7 @@ test.describe('two-campus release journeys', () => {
     await page.goto('/');
     await page.getByTestId('campus-yingxi').click();
     const canvas = page.getByTestId('campus-canvas');
+    await waitForCampusStart(canvas, campuses.yingxi);
     await expect(canvas).toBeVisible();
     await expect.poll(() => canvas.getAttribute('data-player-x'), { timeout: 15000 }).not.toBeNull();
     for (const id of ['yx-mechanical', 'yx-garden', 'yx-library']) {
@@ -108,6 +131,7 @@ test.describe('two-campus release journeys', () => {
       for (const campus of ['yingxi', 'huyu', 'yingxi', 'huyu'] as const) {
         await page.getByTestId(`campus-${campus}`).tap();
         await expect(page.getByTestId(`campus-${campus}`)).toHaveAttribute('aria-pressed', 'true');
+        await waitForCampusStart(canvas, campuses[campus]);
         await expect(canvas).toBeVisible();
         await expect.poll(() => canvas.getAttribute('data-player-x'), { timeout: 15000 }).not.toBeNull();
         const before = await position(canvas), box = await canvas.boundingBox();
