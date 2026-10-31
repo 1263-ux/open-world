@@ -68,7 +68,7 @@ export async function position(canvas: Locator): Promise<[number, number, number
 }
 export function waypointKeys(dx: number, dz: number, yaw: number): string[] {
   // Invert the camera-relative movement transform used by PlayerController.
-  const x = dx * Math.cos(yaw) - dz * Math.sin(yaw);
+  const x = -dx * Math.cos(yaw) + dz * Math.sin(yaw);
   const y = dx * Math.sin(yaw) + dz * Math.cos(yaw);
   const keys: string[] = [];
   if (Math.abs(x) > .6) keys.push(x > 0 ? 'KeyD' : 'KeyA');

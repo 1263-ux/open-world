@@ -1,6 +1,7 @@
 name: Campus prototype checks
 on:
   push:
+    branches-ignore: ['dev/control-direction-qa-*']
   pull_request:
 permissions:
   contents: read

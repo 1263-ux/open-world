@@ -56,7 +56,7 @@ describe('step resolution using the controller and collision Octree',()=>{
   });
   it('retains diagonal sliding around the island rather than sticking to its edge',()=>{
     useYingxi();controller.setPosition([35.85,200]);inputs.yaw=0;down('KeyW');frames(180);
-    const atRim=controller.avatar.position.clone();down('KeyD');frames(120);up('KeyD');up('KeyW');
+    const atRim=controller.avatar.position.clone();down('KeyA');frames(120);up('KeyA');up('KeyW');
     const around=controller.avatar.position;
     expect(around.x).toBeGreaterThan(atRim.x+2);expect(around.z).toBeGreaterThan(206.72);
   });
@@ -68,7 +68,7 @@ describe('step resolution using the controller and collision Octree',()=>{
     expect(p.y).toBeGreaterThan(.39);expect(p.y).toBeLessThan(.43);
   });
   it('retains the shallow three-step mechanical-hall approach',()=>{
-    useYingxi();controller.setPosition([-51.2,175.5]);inputs.yaw=Math.PI;down('KeyD');frames(120);up('KeyD');
+    useYingxi();controller.setPosition([-51.2,175.5]);inputs.yaw=Math.PI;down('KeyA');frames(120);up('KeyA');
     const p=controller.avatar.position;expect(p.x).toBeLessThan(-52.1);expect(p.y).toBeGreaterThan(.33);expect(p.y).toBeLessThan(.4);
   });
   it('still stops at the Huyu main-building wall and Yingxi campus boundary',()=>{

@@ -1,0 +1,30 @@
+name: Screen-relative controls targeted QA
+on:
+  push:
+    branches: ['dev/control-direction-qa-*']
+permissions:
+  contents: read
+jobs:
+  projected-controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix games/hks ci --ignore-scripts
+      - run: npm run typecheck && npm run lint && npm run test
+      - run: npx playwright install --with-deps chromium
+      - name: Real screen projection, keys and touch at multiple headings
+        run: npm run test:e2e -- tests/e2e/control-direction.spec.ts --output=test-results/control-direction
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: control-direction-qa-report
+          path: |
+            playwright-report/
+            test-results/control-direction/
+          retention-days: 7
