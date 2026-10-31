@@ -4,6 +4,7 @@ import { applyLandmarkShadowStyle } from './LandmarkStyle';
 import { PlayerController } from './PlayerController';
 import { createQingzeFallback, QINGZE_DECORATION_BOUNDS } from './QingzeGarden';
 import { createFoliageGeometry, createSurfaceMaterial } from './SurfaceStyle';
+import { createHuyuCourtyards } from './HuyuCourtyards';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
@@ -678,6 +679,27 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         proxy.position.set(x, .45, z); proxy.rotation.y = angle; collisionProps.add(proxy);
       });
       for (const mesh of [seat, back, legs]) { mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); mesh.castShadow = true; mesh.receiveShadow = true; world.add(mesh); }
+    }
+
+    if (data.id === 'huyu') {
+      // Exact point-to-edge clearance for the whole footprint disk, not only
+      // centre-point containment; route buffer includes player walking room.
+      const edgeDistance = (x: number, z: number, polygon: Point2[]): number => {
+        let nearest = Infinity;
+        for (let i = 0; i < polygon.length; i++) {
+          const a = polygon[i], b = polygon[(i + 1) % polygon.length];
+          const dx = b[0] - a[0], dz = b[1] - a[1], length2 = dx * dx + dz * dz;
+          const t = length2 ? THREE.MathUtils.clamp(((x - a[0]) * dx + (z - a[1]) * dz) / length2, 0, 1) : 0;
+          nearest = Math.min(nearest, Math.hypot(x - a[0] - t * dx, z - a[1] - t * dz));
+        }
+        return nearest;
+      };
+      const garden = createHuyuCourtyards((x, z, radius) =>
+        inside(x, z, boundary) && edgeDistance(x, z, boundary) >= radius &&
+        clearsRoutes(x, z, radius + 2) &&
+        buildings.every(feature => !inside(x, z, feature.polygon) && edgeDistance(x, z, feature.polygon) >= radius));
+      world.add(garden.visual);
+      collisionProps.add(garden.colliders);
     }
 
     markerNormal = material(0xe7e0c9, 0.45);

@@ -87,7 +87,11 @@ test.describe('two-campus release journeys', () => {
         const viewpoint = await position(canvas);
         expect(Math.hypot(viewpoint[0] - wide[id][0], viewpoint[2] - wide[id][1])).toBeLessThan(4.5);
         await aimAt(page, canvas, landmark.position);
-        observations.push({ id, wideViewpoint: viewpoint, target: wide[id] });
+        observations.push({ id, wideViewpoint: viewpoint, target: wide[id],
+          drawCalls: Number(await canvas.getAttribute('data-draw-calls')),
+          triangles: Number(await canvas.getAttribute('data-triangles')),
+          renderRatio: Number(await canvas.getAttribute('data-render-ratio')),
+          frame: Number(await canvas.getAttribute('data-frame')) });
         await page.screenshot({ path: info.outputPath(`huyu-wide-${id}.png`) });
       }
     }

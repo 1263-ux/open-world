@@ -1,0 +1,8 @@
+# Huyu interpretive pocket gardens: asset research and inventory
+
+Checked 2026-10-31. The courtyard furnishings and planting are interpretive visual design, not surveyed campus facts. They use the project's existing procedural bench vocabulary (warm wood slats and dark teal legs) and low planter language. No new third-party binary is redistributed by this module.
+
+* [Quaternius Stylized Nature MegaKit](https://quaternius.com/packs/stylizednaturemegakit.html), Quaternius, CC0; formats include glTF. The author states the free version is 60–70% of the kit, not all 116 models. [Official itch listing](https://quaternius.itch.io/stylized-nature-megakit) lists the free Standard zip as 99 MB and paid Pro/Source separately. The free contents, triangle counts, texture sizes and file hashes remain unverified: no model from this pack is shipped. Do not claim the whole kit was acquired.
+* [Kenney City Kit (Roads)](https://kenney.nl/assets/city-kit-roads), Kenney, CC0. The official page lists 90 files; individual lightpost availability and geometry are unverified. The direct environment request returned HTTP 403. No model from this kit is shipped.
+
+Runtime inventory: procedural Three.js box and low-poly sphere geometries only; no new texture files, downloaded models, binary assets, or third-party runtime bytes. Existing project dependencies and license notices remain unchanged. The module never loads external resources; its synchronous visuals and solid bench proxies are constructed together. Beds are low, deliberately traversable groundcover; benches have matching box proxies. Admission is delegated to the scene's boundary, building, route and view checks. Positions are designed suggestions, filtered rather than asserted to exist in reality.
