@@ -97,6 +97,16 @@ test.describe('two-campus release journeys', () => {
           renderRatio: Number(await canvas.getAttribute('data-render-ratio')),
           frame: Number(await canvas.getAttribute('data-frame')) });
         await page.screenshot({ path: info.outputPath(`huyu-wide-${id}.png`) });
+        // A second actual camera look from the same walked location samples
+        // the admitted furniture/planting pocket; it does not move game state.
+        const pocket: Record<string, [number, number]> = {
+          'hy-north-gate': [1, -177], 'hy-library': [79, -40], 'hy-meihua': [-90, -6],
+        };
+        if (pocket[id]) {
+          await aimAt(page, canvas, pocket[id]);
+          observations.push({ id, pocketLookTarget: pocket[id], from: await position(canvas), frame: Number(await canvas.getAttribute('data-frame')) });
+          await page.screenshot({ path: info.outputPath(`huyu-pocket-${id}.png`) });
+        }
       }
     }
     expect(errors).toEqual([]);

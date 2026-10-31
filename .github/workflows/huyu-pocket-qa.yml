@@ -19,6 +19,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Genuine connected Huyu journey and wide views
         run: npm run test:e2e -- tests/e2e/two-campus-release.spec.ts --grep 'Huyu connected landmark journey' --output=test-results/huyu-pocket
+      - name: Texture failure and delayed campus teardown
+        if: always()
+        run: npm run test:e2e -- tests/e2e/huyu-tree-lifecycle.spec.ts --output=test-results/huyu-tree-lifecycle
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -26,4 +29,5 @@ jobs:
           path: |
             playwright-report/
             test-results/huyu-pocket/
+            test-results/huyu-tree-lifecycle/
           retention-days: 7

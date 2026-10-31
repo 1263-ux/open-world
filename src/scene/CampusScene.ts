@@ -234,6 +234,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
 
   let data = initialData;
   let campusGeneration = 0;
+  let courtyard: ReturnType<typeof createHuyuCourtyards> | null = null;
   let state: SceneState = { selectedId: null, targetId: null };
   let world = new THREE.Group();
   let routeLayer = new THREE.Group();
@@ -318,6 +319,10 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
 
   function buildCampus(): void {
     delete canvas.dataset.campusReady;
+    delete canvas.dataset.playerX; delete canvas.dataset.playerY; delete canvas.dataset.playerZ;
+    delete canvas.dataset.cameraYaw; delete canvas.dataset.cameraPitch;
+    delete canvas.dataset.huyuTreeTexture; delete canvas.dataset.huyuTreeCount;
+    courtyard?.dispose(); courtyard = null;
     const generation = ++campusGeneration;
     const models = landmarkModels.filter(item => item.campusId === data.id);
     const modelStatuses = new Map(models.map(item => [item.landmarkId, 'loading']));
@@ -698,6 +703,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         inside(x, z, boundary) && edgeDistance(x, z, boundary) >= radius &&
         clearsRoutes(x, z, radius + 2) &&
         buildings.every(feature => !inside(x, z, feature.polygon) && edgeDistance(x, z, feature.polygon) >= radius));
+      courtyard = garden;
+      canvas.dataset.huyuTreeCount = String(garden.visual.userData.treeCount);
+      canvas.dataset.huyuTreeTexture = String(garden.visual.userData.treeTextureStatus);
       world.add(garden.visual);
       collisionProps.add(garden.colliders);
     }
@@ -744,7 +752,6 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       gardenFallback = garden.visual; world.add(garden.visual); collisionProps.add(garden.colliders);
     }
     player.setCampus(data, collisionProps);
-    canvas.dataset.campusReady = data.id;
     disposeObject(collisionProps);
     world.add(pawn, player.shadow);
     renderer.shadowMap.needsUpdate = true;
@@ -992,6 +999,10 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       // they are not a selection or position-setting interface.
       canvas.dataset.mapMarkers = JSON.stringify(projected);
     }
+    // Readiness denotes a rendered frame whose player coordinates and yaw
+    // belong to the current campus, not merely synchronous world assembly.
+    if (canvas.dataset.playerX !== undefined && canvas.dataset.cameraYaw !== undefined) canvas.dataset.campusReady = data.id;
+    if (courtyard) canvas.dataset.huyuTreeTexture = String(courtyard.visual.userData.treeTextureStatus);
     canvas.dataset.frame = String(++frameCount);
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
     canvas.dataset.triangles = String(renderer.info.render.triangles);
@@ -1081,6 +1092,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (disposed) return;
     disposed = true;
     delete canvas.dataset.campusReady;
+    delete canvas.dataset.huyuTreeTexture; delete canvas.dataset.huyuTreeCount;
+    courtyard?.dispose(); courtyard = null;
     cancelAnimationFrame(raf);
     travel = null; tween = null; pointer = null;
     resizeObserver?.disconnect();
