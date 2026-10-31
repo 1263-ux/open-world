@@ -2,11 +2,8 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { position, walkTo } from './campus-walk';
 import { campuses } from '../../src/campus-data/campuses';
 
-async function waitForCampusStart(canvas: Locator, campus: typeof campuses.huyu) {
-  await expect.poll(async () => {
-    try { const p = await position(canvas); return Math.hypot(p[0] - campus.start[0], p[2] - campus.start[1]); }
-    catch { return Infinity; }
-  }, { timeout: 30000 }).toBeLessThan(1);
+async function waitForCampus(canvas: Locator, id: 'yingxi' | 'huyu') {
+  await expect(canvas).toHaveAttribute('data-campus-ready', id, { timeout: 30000 });
 }
 
 async function aimAt(page: Page, canvas: Locator, target: [number, number]) {
@@ -33,12 +30,10 @@ test.describe('two-campus release journeys', () => {
     page.on('pageerror', error => errors.push(error.message));
     await page.goto('/');
     const canvas = page.getByTestId('campus-canvas');
-    let previous = 'yingxi';
     for (const campus of ['yingxi', 'huyu', 'yingxi', 'huyu'] as const) {
       await page.getByTestId(`campus-${campus}`).click();
       await expect(page.getByTestId(`campus-${campus}`)).toHaveAttribute('aria-pressed', 'true');
-      if (campus !== previous) await waitForCampusStart(canvas, campuses[campus]);
-      previous = campus;
+      await waitForCampus(canvas, campus);
       await expect(canvas).toBeVisible();
       await expect.poll(() => canvas.getAttribute('data-player-x'), { timeout: 15000 }).not.toBeNull();
       const before = await position(canvas);
@@ -68,7 +63,7 @@ test.describe('two-campus release journeys', () => {
     await page.goto('/');
     await page.getByTestId('campus-huyu').click();
     const canvas = page.getByTestId('campus-canvas');
-    await waitForCampusStart(canvas, campuses.huyu);
+    await waitForCampus(canvas, 'huyu');
     await expect(canvas).toBeVisible();
     await expect.poll(() => canvas.getAttribute('data-player-x'), { timeout: 15000 }).not.toBeNull();
     const observations: unknown[] = [];
@@ -106,6 +101,7 @@ test.describe('two-campus release journeys', () => {
     await page.goto('/');
     await page.getByTestId('campus-yingxi').click();
     const canvas = page.getByTestId('campus-canvas');
+    await waitForCampus(canvas, 'yingxi');
     await expect(canvas).toBeVisible();
     await expect.poll(() => canvas.getAttribute('data-player-x'), { timeout: 15000 }).not.toBeNull();
     for (const id of ['yx-mechanical', 'yx-garden', 'yx-library']) {
@@ -129,12 +125,10 @@ test.describe('two-campus release journeys', () => {
       await page.goto('/');
       const canvas = page.getByTestId('campus-canvas');
       const touch = await page.context().newCDPSession(page);
-      let previous = 'yingxi';
-      for (const campus of ['yingxi', 'huyu', 'yingxi', 'huyu'] as const) {
+        for (const campus of ['yingxi', 'huyu', 'yingxi', 'huyu'] as const) {
         await page.getByTestId(`campus-${campus}`).tap();
         await expect(page.getByTestId(`campus-${campus}`)).toHaveAttribute('aria-pressed', 'true');
-        if (campus !== previous) await waitForCampusStart(canvas, campuses[campus]);
-        previous = campus;
+        await waitForCampus(canvas, campus);
         await expect(canvas).toBeVisible();
         await expect.poll(() => canvas.getAttribute('data-player-x'), { timeout: 15000 }).not.toBeNull();
         const before = await position(canvas), box = await canvas.boundingBox();

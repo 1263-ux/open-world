@@ -316,6 +316,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
 
   function buildCampus(): void {
+    delete canvas.dataset.campusReady;
     const generation = ++campusGeneration;
     const models = landmarkModels.filter(item => item.campusId === data.id);
     const modelStatuses = new Map(models.map(item => [item.landmarkId, 'loading']));
@@ -720,6 +721,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       gardenFallback = garden.visual; world.add(garden.visual); collisionProps.add(garden.colliders);
     }
     player.setCampus(data, collisionProps);
+    canvas.dataset.campusReady = data.id;
     disposeObject(collisionProps);
     world.add(pawn, player.shadow);
     renderer.shadowMap.needsUpdate = true;
@@ -1055,6 +1057,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   function dispose(): void {
     if (disposed) return;
     disposed = true;
+    delete canvas.dataset.campusReady;
     cancelAnimationFrame(raf);
     travel = null; tween = null; pointer = null;
     resizeObserver?.disconnect();

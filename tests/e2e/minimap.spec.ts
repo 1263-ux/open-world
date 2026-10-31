@@ -1,6 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { position } from './campus-walk';
-import { campuses } from '../../src/campus-data/campuses';
 
 // Only genuine input changes state. The minimap exposes its marker's raw world
 // coordinates as read-only attributes to compare with the real player.
@@ -27,14 +26,9 @@ for (const mode of ['desktop', 'landscape touch'] as const) {
       await page.goto('/');
       const canvas = page.getByTestId('campus-canvas'), button = page.getByTestId('campus-minimap');
       const marker = page.getByTestId('minimap-player'), campusLabel = page.getByTestId('minimap-campus');
-      let previous = 'yingxi';
       for (const id of ['yingxi', 'huyu', 'yingxi'] as const) {
         await page.getByTestId(`campus-${id}`).click();
-        if (id !== previous) await expect.poll(async () => {
-          try { const p = await position(canvas); return Math.hypot(p[0] - campuses[id].start[0], p[2] - campuses[id].start[1]); }
-          catch { return Infinity; }
-        }, {timeout:30000}).toBeLessThan(1);
-        previous = id;
+        await expect(canvas).toHaveAttribute('data-campus-ready', id, {timeout:30000});
         await expect(campusLabel).toHaveAttribute('data-campus', id);
         await expect(button).toBeVisible(); await checkMarker(canvas, marker);
         const minimapBox = await button.boundingBox(), viewport = page.viewportSize();
