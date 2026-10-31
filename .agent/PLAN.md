@@ -12,14 +12,15 @@ App.vue创建createCampusScene→CampusScene.ts:317 buildCampus数据驱动双�
 | 场景 unify_two_campus_scenes | src/scene/CampusScene.ts、SurfaceStyle.ts；必要新增CampusDecor.ts | 两校园灯光/表面/细叶/家具/通用楼统一，兼容原导出；自己集成新模块，不让其他人写CampusScene |
 | 地标 refine_campus_landmarks | src/scene/LandmarkModels.ts；必要新增src/scene/LandmarkStyle.ts | 仅运行时语义材质/色板；保留几何、边界、坐标、featureID、节点契约；不改生成器/GLB/metadata，确有必要先由主控授权 |
 | QA/集成 integrate_two_campus_release | 主控分配的tests/config/发布面 | 保留本地未发布hks.spec.ts；读资产新hash、核候选身份、全部受影响验收。App/style必要修复先领单写权 |
+| UI add_campus_minimap | src/app/App.vue、src/style.css、必要新增src/components/CampusMinimap.vue | 左上SVG小地图点击既有全景模式；复用当前校区与状态、返回人物不丢位置；不建第二WebGL；worker做针对性官方UI文档核验 |
 | 计划 plan_two_campus_build | 仅.agent/{DESIGN,PLAN,CURRENT_STATE,RESULT}.md | 不改AGENTS、源码、资产、测试或远端 |
 
-保持现有UI即可，不为增加并行创建无必要第四实现lane。共享contracts/App/style默认不改；若需要由主控独占分配。本轮不再生成已验证模型；二进制/生成器默认冻结。
+用户新要求授权第四UI lane，其他UI不额外扩建。共享contracts默认不改；App/style仅UI lane写。本轮不再生成已验证模型；二进制/生成器默认冻结。
 
 ## 实施顺序与停止条件
 1. 场景与地标并行各形成完整两校区风格，不陷单个窗/参数永续小修。先保留几何身份，再统一材质、路边/叶冠，最后补关键人尺度细节。
 2. 集成同一树；核spatial/ID/存档/摄影与Hks契约未变，检查GLB边界与许可、资源体积与清理。保持诊断显式且不进入普通发布路径。
-3. npm run typecheck/lint/test/build与受影响模型/空间验证；运行最终候选正常E2E、quality、offline、focus、Hks回归（以package真实脚本/CI为准）。真实输入完整两校区旅程与手机横屏；截图不能替代试玩。
+3. npm run typecheck/lint/test/build与受影响模型/空间验证；运行最终候选正常E2E、quality、offline、focus、Hks回归（以package真实脚本/CI为准）。真实输入完整两校区旅程与手机横屏；新增小地图需验证两校区左上显示、点击全景与返回保位，SVG无第二WebGL；截图不能替代试玩。
 4. 主控与独立fresh reviewer按DESIGN六项验收。阻断/风格不统一定点修复后复核；非阻断建议不扩大本轮。两次同假设无新证据转RETHINK，不无限调参。
 5. 在既有main与既有公开校园站授权内，核final diff/秘密/许可→推main→等同身份CI终态→候选公开资源和关键路径→升级原URL→查部署身份/资源/Hks/回退。失败恢复保存的上一正常部署，不把旧源码重构建冒充回滚。
 

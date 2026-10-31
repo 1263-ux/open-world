@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import CampusMinimap from '../components/CampusMinimap.vue';
 import HksOverlay from '../components/HksOverlay.vue';
 import PhotoJournal from '../components/PhotoJournal.vue';
 import { PHOTO_POINTS, loadPhotoStamps, savePhotoStamps } from '../games/photography';
@@ -59,6 +60,21 @@ const sceneError = ref('');
 const modelErrors = ref<Record<string, string>>({});
 const modelNotice = computed(() => Object.values(modelErrors.value).join(' '));
 const sceneElement = ref<HTMLElement | null>(null);
+const mapOpen = ref(false);
+const playerPosition = ref<[number, number] | null>(null);
+function syncMinimap() {
+  if (hksOpen.value || photoCompleteOpen.value || document.hidden) return;
+  const canvas = sceneElement.value?.querySelector('canvas');
+  if (!canvas) return;
+  mapOpen.value = canvas.dataset.view === 'map';
+  const x = Number(canvas.dataset.playerX), z = Number(canvas.dataset.playerZ);
+  if (canvas.dataset.playerX !== undefined && canvas.dataset.playerZ !== undefined && Number.isFinite(x) && Number.isFinite(z) && (playerPosition.value?.[0] !== x || playerPosition.value?.[1] !== z)) playerPosition.value = [x, z];
+}
+function toggleOverview() {
+  if (!scene || sceneError.value) return;
+  if (mapOpen.value) { scene.resetView(); focusScene(); } else scene.overview();
+  syncMinimap();
+}
 const questButton = ref<HTMLButtonElement | null>(null);
 let returnFocus: HTMLElement | null = null;
 let scene: CampusSceneHandle | null = null;
@@ -209,6 +225,7 @@ function switchCampus(id: CampusId) {
   clearJourneyView();
   selectedId.value = null;
   campusId.value = id;
+  playerPosition.value = null; mapOpen.value = false;
   try { window.localStorage.setItem(CAMPUS_PREFERENCE_KEY, id); } catch { /* Keep the in-memory choice. */ }
   panel.value = 'quest';
   panelOpen.value = false;
@@ -331,7 +348,7 @@ function onKeydown(event: KeyboardEvent) {
 }
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
-  photoTimer = window.setInterval(updatePhotoStatus, 250);
+  photoTimer = window.setInterval(() => { updatePhotoStatus(); syncMinimap(); }, 250);
   if (!sceneElement.value) return;
   try {
     scene = createCampusScene(sceneElement.value, campus.value, onSceneEvent);
@@ -368,6 +385,7 @@ onBeforeUnmount(() => {
     <main class="scene-area" aria-label="校园漫游场景">
       <div ref="sceneElement" class="scene-canvas" aria-label="校园三维场景"></div>
       <div class="scene-shade" aria-hidden="true"></div>
+      <CampusMinimap :campus="campus" :position="playerPosition" :map-open="mapOpen" :disabled="!!sceneError" @toggle="toggleOverview" />
       <div class="chapter-title" :class="{ 'photo-chapter': campusId === 'yingxi' }">
         <span class="eyebrow">CAMPUS CHAPTER <span class="eyebrow-line"></span> {{ campus.id === 'huyu' ? '01' : '02' }}</span>
         <h1>沿着校园，<br>慢慢走</h1>

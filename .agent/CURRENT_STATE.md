@@ -10,6 +10,8 @@
 - 既有数据确认 yingxi155features/16roads，huyu95features/2roads；保留占地/ID/高度状态、Hks/摄影/存档与真实控制。
 - 四工件已改为本轮双校区范围；具体单写边界见PLAN。此文档不证明实现完成。
 
+- 用户新指示采用六角色设计方向+批准样例，并增加左上小地图点击全景。第四UI lane独占App/style/新CampusMinimap.vue，复用既有全景模式与校区状态，SVG非第二WebGL；需两校区桌面/触屏开关保位验收。
+
 ## Evidence / Baseline
 - 集成人独立核对远端main14a8877/tree6b48b9f，dev9034aea/tree4e924e0；本地无HEAD，除 tests/e2e/hks.spec.ts 未发布自然手机升级修改外与dev字节一致，禁止reset。
 - 已有公开站 https://tyut-campus-world-private-preview.aglowswan513.chatgpt.site 为历史版本4，应用main14a源；旧部署与源码身份需集成人发布前重新核对，旧CI不覆盖本轮。
