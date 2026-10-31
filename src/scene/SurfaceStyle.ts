@@ -97,7 +97,14 @@ export function createFoliageGeometry(): THREE.BufferGeometry {
   for (let i = 0; i < 200; i++) {
     const angle = random() * Math.PI * 2;
     const radius = Math.sqrt(random()) * .95;
-    const leaf = new THREE.PlaneGeometry(.20 + random() * .09, .09 + random() * .05);
+    const width = .16 + random() * .06, height = .07 + random() * .035;
+    // Six-point tapered leaf silhouette; opaque geometry avoids alpha overdraw.
+    const shape = new THREE.Shape();
+    shape.moveTo(-width / 2, 0); shape.lineTo(-width * .24, height / 2);
+    shape.lineTo(width * .24, height / 2); shape.lineTo(width / 2, 0);
+    shape.lineTo(width * .24, -height / 2); shape.lineTo(-width * .24, -height / 2);
+    shape.closePath();
+    const leaf = new THREE.ShapeGeometry(shape);
     leaf.rotateX(random() * Math.PI);
     leaf.rotateY(random() * Math.PI * 2);
     leaf.rotateZ(random() * Math.PI);

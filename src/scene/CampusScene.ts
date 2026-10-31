@@ -574,6 +574,15 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         }
       }
     }
+    // Every decorative collider must clear every route segment, including
+    // nearby crossing/return segments, not just the segment it was derived from.
+    const clearsRoutes = (x: number, z: number, clearance: number): boolean => gamePaths.every(path =>
+      path.points.slice(1).every((b, index) => {
+        const a = path.points[index], dx = b[0] - a[0], dz = b[1] - a[1];
+        const length2 = dx * dx + dz * dz;
+        const t = length2 ? THREE.MathUtils.clamp(((x - a[0]) * dx + (z - a[1]) * dz) / length2, 0, 1) : 0;
+        return Math.hypot(x - (a[0] + t * dx), z - (a[1] + t * dz)) >= clearance;
+      }));
     // Designed route-side planting, not mapped roads or surveyed trees.
     // Large offsets retain walkable path width and conservative building clearance.
     for (const path of gamePaths) for (let i = 1; i < path.points.length && treePositions.length < 270; i++) {
@@ -584,8 +593,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         const x = (a[0] + b[0]) / 2 - side * dz / length * 7;
         const z = (a[1] + b[1]) / 2 + side * dx / length * 7;
         const samples: Point2[] = [[x, z], [x + 3, z], [x - 3, z], [x, z + 3], [x, z - 3]];
-        const gardenConflict = data.id === 'yingxi' && x >= QINGZE_DECORATION_BOUNDS.minX && x <= QINGZE_DECORATION_BOUNDS.maxX && z >= QINGZE_DECORATION_BOUNDS.minZ && z <= QINGZE_DECORATION_BOUNDS.maxZ;
-        if (!gardenConflict && samples.every(([sx, sz]) => inside(sx, sz, boundary) && !buildings.some(f => inside(sx, sz, f.polygon))) && treePositions.every(([tx, tz]) => Math.hypot(tx - x, tz - z) > 10)) treePositions.push([x, z]);
+        const gardenConflict = data.id === 'yingxi' && ((x >= QINGZE_DECORATION_BOUNDS.minX && x <= QINGZE_DECORATION_BOUNDS.maxX && z >= QINGZE_DECORATION_BOUNDS.minZ && z <= QINGZE_DECORATION_BOUNDS.maxZ) || (x >= -8 && x <= 8 && z >= 174 && z <= 190));
+        if (!gardenConflict && clearsRoutes(x, z, 4.5) && samples.every(([sx, sz]) => inside(sx, sz, boundary) && !buildings.some(f => inside(sx, sz, f.polygon))) && treePositions.every(([tx, tz]) => Math.hypot(tx - x, tz - z) > 10)) treePositions.push([x, z]);
       }
     }
     const collisionProps = new THREE.Group();
@@ -628,8 +637,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       const x = (a[0] + b[0]) / 2 - dz / length * 3.4;
       const z = (a[1] + b[1]) / 2 + dx / length * 3.4;
       const samples: Point2[] = [[x, z], [x + 2, z], [x - 2, z], [x, z + 2], [x, z - 2]];
-      const gardenConflict = data.id === 'yingxi' && x >= QINGZE_DECORATION_BOUNDS.minX && x <= QINGZE_DECORATION_BOUNDS.maxX && z >= QINGZE_DECORATION_BOUNDS.minZ && z <= QINGZE_DECORATION_BOUNDS.maxZ;
-      if (gardenConflict || !samples.every(([sx, sz]) => inside(sx, sz, boundary) && !buildings.some(f => inside(sx, sz, f.polygon))) || benchSites.some(site => Math.hypot(site.x - x, site.z - z) < 18) || treePositions.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < 3)) continue;
+      const gardenConflict = data.id === 'yingxi' && ((x >= QINGZE_DECORATION_BOUNDS.minX && x <= QINGZE_DECORATION_BOUNDS.maxX && z >= QINGZE_DECORATION_BOUNDS.minZ && z <= QINGZE_DECORATION_BOUNDS.maxZ) || (x >= -8 && x <= 8 && z >= 174 && z <= 190));
+      if (gardenConflict || !clearsRoutes(x, z, 2.8) || !samples.every(([sx, sz]) => inside(sx, sz, boundary) && !buildings.some(f => inside(sx, sz, f.polygon))) || benchSites.some(site => Math.hypot(site.x - x, site.z - z) < 18) || treePositions.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < 3)) continue;
       benchSites.push({ x, z, angle: Math.atan2(-dz, dx) });
     }
     if (benchSites.length) {

@@ -14,7 +14,7 @@ const roads = computed(() => props.campus.roads.map(road => ({ id: road.id, poin
 const features = computed(() => props.campus.features.map(feature => ({ id: feature.id, kind: feature.kind, points: points(feature.polygon) }))); 
 </script>
 <template>
-  <button type="button" class="campus-minimap" data-testid="campus-minimap" :data-campus="campus.id" :disabled="disabled" :aria-label="mapOpen ? '关闭校园全景预览，返回人物视角' : `打开${campus.name}全景预览`" :aria-pressed="mapOpen" @click="$emit('toggle')">
+  <button type="button" class="campus-minimap" data-testid="campus-minimap" :data-campus="campus.id" :disabled="disabled" :aria-label="mapOpen ? '关闭校园全景预览' : `打开${campus.name}全景预览`" :aria-pressed="mapOpen" @click="$emit('toggle')">
     <span class="minimap-label"><b>{{ campus.name }}</b><span>{{ mapOpen ? '返回人物 ↙' : '全景预览 ↗' }}</span></span>
     <svg :viewBox="viewBox" preserveAspectRatio="xMidYMid meet" aria-hidden="true" data-testid="minimap-campus" :data-campus="campus.id">
       <polygon :points="boundary" class="minimap-boundary" />
