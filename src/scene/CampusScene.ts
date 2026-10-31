@@ -175,7 +175,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xb7d5de);
-  const distanceFog = new THREE.Fog(0xb7d5de, 380, 1300);
+  const distanceFog = new THREE.Fog(0xb7d5de, 45, 320);
   scene.fog = distanceFog;
   const camera = new THREE.OrthographicCamera(-250, 250, 250, -250, 0.1, 6000);
   const controls = new OrbitControls(camera, renderer.domElement);
