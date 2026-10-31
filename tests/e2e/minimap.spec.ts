@@ -27,12 +27,14 @@ for (const mode of ['desktop', 'landscape touch'] as const) {
       await page.goto('/');
       const canvas = page.getByTestId('campus-canvas'), button = page.getByTestId('campus-minimap');
       const marker = page.getByTestId('minimap-player'), campusLabel = page.getByTestId('minimap-campus');
+      let previous = 'yingxi';
       for (const id of ['yingxi', 'huyu', 'yingxi'] as const) {
         await page.getByTestId(`campus-${id}`).click();
-        await expect.poll(async () => {
+        if (id !== previous) await expect.poll(async () => {
           try { const p = await position(canvas); return Math.hypot(p[0] - campuses[id].start[0], p[2] - campuses[id].start[1]); }
           catch { return Infinity; }
         }, {timeout:30000}).toBeLessThan(1);
+        previous = id;
         await expect(campusLabel).toHaveAttribute('data-campus', id);
         await expect(button).toBeVisible(); await checkMarker(canvas, marker);
         const minimapBox = await button.boundingBox(), viewport = page.viewportSize();

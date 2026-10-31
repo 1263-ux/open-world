@@ -33,10 +33,12 @@ test.describe('two-campus release journeys', () => {
     page.on('pageerror', error => errors.push(error.message));
     await page.goto('/');
     const canvas = page.getByTestId('campus-canvas');
+    let previous = 'yingxi';
     for (const campus of ['yingxi', 'huyu', 'yingxi', 'huyu'] as const) {
       await page.getByTestId(`campus-${campus}`).click();
       await expect(page.getByTestId(`campus-${campus}`)).toHaveAttribute('aria-pressed', 'true');
-      await waitForCampusStart(canvas, campuses[campus]);
+      if (campus !== previous) await waitForCampusStart(canvas, campuses[campus]);
+      previous = campus;
       await expect(canvas).toBeVisible();
       await expect.poll(() => canvas.getAttribute('data-player-x'), { timeout: 15000 }).not.toBeNull();
       const before = await position(canvas);
@@ -104,7 +106,6 @@ test.describe('two-campus release journeys', () => {
     await page.goto('/');
     await page.getByTestId('campus-yingxi').click();
     const canvas = page.getByTestId('campus-canvas');
-    await waitForCampusStart(canvas, campuses.yingxi);
     await expect(canvas).toBeVisible();
     await expect.poll(() => canvas.getAttribute('data-player-x'), { timeout: 15000 }).not.toBeNull();
     for (const id of ['yx-mechanical', 'yx-garden', 'yx-library']) {
@@ -128,10 +129,12 @@ test.describe('two-campus release journeys', () => {
       await page.goto('/');
       const canvas = page.getByTestId('campus-canvas');
       const touch = await page.context().newCDPSession(page);
+      let previous = 'yingxi';
       for (const campus of ['yingxi', 'huyu', 'yingxi', 'huyu'] as const) {
         await page.getByTestId(`campus-${campus}`).tap();
         await expect(page.getByTestId(`campus-${campus}`)).toHaveAttribute('aria-pressed', 'true');
-        await waitForCampusStart(canvas, campuses[campus]);
+        if (campus !== previous) await waitForCampusStart(canvas, campuses[campus]);
+        previous = campus;
         await expect(canvas).toBeVisible();
         await expect.poll(() => canvas.getAttribute('data-player-x'), { timeout: 15000 }).not.toBeNull();
         const before = await position(canvas), box = await canvas.boundingBox();

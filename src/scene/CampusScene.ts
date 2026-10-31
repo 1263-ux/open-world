@@ -583,6 +583,38 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         const t = length2 ? THREE.MathUtils.clamp(((x - a[0]) * dx + (z - a[1]) * dz) / length2, 0, 1) : 0;
         return Math.hypot(x - (a[0] + t * dx), z - (a[1] + t * dz)) >= clearance;
       }));
+    if (data.id === 'huyu') {
+      // Designed, unsurveyed arrival paving: ground-only accents below mapped
+      // roads and route strips, with no changes to geometry or navigation.
+      const court = createSurfaceMaterial('paving', 0xd7d0bb);
+      for (const polygon of [
+        [[-8, -202], [36, -202], [36, -180], [-8, -180]],
+        [[-63.5, -42], [-56, -42], [-56, -30], [-63.5, -30]],
+        [[52, -57], [64, -57], [64, -39], [52, -39]],
+      ] as Point2[][]) {
+        const surface = addSurface(world, polygon, .05, court);
+        if (surface) { surface.receiveShadow = true; surface.userData.photoIgnore = true; }
+      }
+      // Low designed planters are set away from all graph routes and sampled
+      // building footprints. They are ankle-height, non-blocking scenery, not
+      // mapped planting or collision substitutes for existing solid objects.
+      const sites: Point2[] = [[-4, -190], [-62, -30], [58, -48]];
+      const safeSites = sites.filter(([x, z]) => clearsRoutes(x, z, 5) &&
+        [[x, z], [x - 1.5, z - 1], [x + 1.5, z + 1], [x - 1.5, z + 1], [x + 1.5, z - 1]].every(([sx, sz]) => inside(sx, sz, boundary) && !buildings.some(f => inside(sx, sz, f.polygon))));
+      if (safeSites.length) {
+        const edges = new THREE.InstancedMesh(new THREE.BoxGeometry(2.8, .16, 1.3), material(0xeee2d0), safeSites.length);
+        const soil = new THREE.InstancedMesh(new THREE.BoxGeometry(2.5, .04, 1.0), material(0x756956), safeSites.length);
+        const shrubs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), material(0x86a182), safeSites.length * 5);
+        safeSites.forEach(([x, z], i) => {
+          dummy.rotation.set(0, 0, 0); dummy.position.set(x, .13, z); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); edges.setMatrixAt(i, dummy.matrix);
+          dummy.position.y = .23; dummy.updateMatrix(); soil.setMatrixAt(i, dummy.matrix);
+          for (let j = 0; j < 5; j++) {
+            dummy.position.set(x - .95 + j * .47, .28, z + (j % 2 ? .17 : -.17)); dummy.scale.set(.26, .13, .25); dummy.updateMatrix(); shrubs.setMatrixAt(i * 5 + j, dummy.matrix);
+          }
+        });
+        for (const mesh of [edges, soil, shrubs]) { mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); mesh.receiveShadow = true; mesh.userData.photoIgnore = true; world.add(mesh); }
+      }
+    }
     const collisionProps = new THREE.Group();
     if (treePositions.length) {
       const chunks = new Map<string, number[]>();
