@@ -2,21 +2,17 @@
 
 2026-10-31 UTC。C2 + R-ui + R-runtime + R-architecture + A3。
 
-## Goal / Phase
-用户已批准真实风格样例并要求建设迎西/虎峪两校区。本轮进入并行实施；目标为同风格、校园身份不同、连续可用的完整双校区里程碑，不再只修迎西单段。无新后端/多人/室内/BIM。
+## 当前成果与身份
+- 用户批准的样例风格已作为双校区首版可玩风格修订落地：迎西与虎峪共用温暖清晰材质、窗框/檐口、细叶及有界前场设计；两校区身份、地理轮廓、交互/保存 ID 保留。左上 SVG 小地图显示当前校区和人物，点击使用既有全景/返回，不新增第二 WebGL renderer。
+- 已验证应用源码 `6c5fb3fd4034537a402e4fff13990dae2a235745`，Git tree `3b86bd42eb25eb1597eaa7301437656939c2c806`；235 个源码 blob 与本地构建前逐项匹配。main 已 fast-forward 到该身份，后续如有仅文档提交必须说明不改变应用字节。
+- 公开站 `https://tyut-campus-world-private-preview.aglowswan513.chatgpt.site` 已部署 v5，站点源码 `582ee5d726ccbcd85f11dc17034212e1117b5375`、部署 `appgdep_6ae5a80d2c3c8191b470d7d0905ede91`。之前 v4 部署 `appgdep_6ae563c3f27081919c0aceca4d7e202d`、站点源码 `fa0465b6b2508100a80fb3f7765fbc318a99cbc9` 为回滚锚点；独立风格样例站未覆盖。
 
-## Decision / Implemented
-- 计划前已读原计划、AGENTS、四工件、实际数据/场景与样例源码，亲看样例desktop-close像素，并完成官方有界新调研（DESIGN列URL/边界）。
-- 既有数据确认 yingxi155features/16roads，huyu95features/2roads；保留占地/ID/高度状态、Hks/摄影/存档与真实控制。
-- 四工件已改为本轮双校区范围；具体单写边界见PLAN。此文档不证明实现完成。
+## 验证与限制
+- 精确应用身份 CI `41183734400` 全部适用 jobs 成功：typecheck/lint/70 单测/build、真实输入两校区多点连续行走与截图、模拟手机横屏左右控制和停止/切校区/地图返回、小地图跟随与点击往返、摄影/存档/Hks 往返、离线、焦点。自然 Hks 后期 Boss/420 秒胜利未重新证明，历史自然对局仅至失败；诊断/深玩 jobs 有意跳过。
+- CI 是 Linux 无头 Chromium + SwiftShader，模拟手机非实体机。迎西机械馆 1440×960 DPR1 的 5 秒暖机样本约 2.84 FPS、113 draw calls、172211 triangles、ratio .5；不能外推真实设备 FPS，30 FPS 目标及实体手机体验未验证。
+- 匿名 HTTP 对公开 URL 返回 200，live index、JS、CSS SHA256 与已验证构建字节一致；Hks HTML 和两校区关键 GLB 返回 200。线上真实 3D 操控未单独重跑，不能由静态 HTTP 冒充。
+- 独立复核和主控检查最终截图接受为首版功能/统一材质与前场修订；非全校园精修或样例庭院细腻度完成。虎峪仍较稀疏，边缘绿植与生活细节不足，普通背景楼窗重复。门牌阴影 A/B 排除黑齿后，定向关闭北门牌匾/七肋接收阴影，保留投影与几何。
+- 前场及绿植是游戏设计而非实测；楼高、门锚点与未核外观保持估计/待核语义。未调用付费生成 API；实际路由/余额/费用未知，不写为零。
 
-- 用户新指示采用六角色设计方向+批准样例，并增加左上小地图点击全景。第四UI lane独占App/style/新CampusMinimap.vue，复用既有全景模式与校区状态，SVG非第二WebGL；需两校区桌面/触屏开关保位验收。
-
-## Evidence / Baseline
-- 集成人独立核对远端main14a8877/tree6b48b9f，dev9034aea/tree4e924e0；本地无HEAD，除 tests/e2e/hks.spec.ts 未发布自然手机升级修改外与dev字节一致，禁止reset。
-- 已有公开站 https://tyut-campus-world-private-preview.aglowswan513.chatgpt.site 为历史版本4，应用main14a源；旧部署与源码身份需集成人发布前重新核对，旧CI不覆盖本轮。
-- 风格样例是另站/另资产，不改该站，不把它的虚构书屋放入真实校区当事实。
-- 历史Hks真实局自然败、未到Boss/420秒胜利；云浏览器3D WebGL失败、2D短流程可用，不能抹掉限制。新回归尚未执行。
-
-## Blocker / Next
-当前无规划阻断。等待授权范围内实现；集成人保留pending诊断/测试修复，最终新身份按DESIGN验收并闭环CI/现网。实际API路由/费用/余额未知，不写$0或仍剩$90；无新增批量付费API任务。
+## 后续
+- 用户作重大成果/体验验证；后续按真实反馈继续艺术细化和真实硬件性能评估。不要把这一版说成全校园已精修、真实导航或 Tiny Glade 等同品质。

@@ -1,20 +1,14 @@
-# 双校区建设结果 · 实施中
+# 双校区首版风格与小地图 · 已部署，艺术仍部分完成
 
-2026-10-31 UTC。code_identity：本地无HEAD，基线dev9034aea/tree4e924e0 + 未发布 tests/e2e/hks.spec.ts；最终候选尚未产生。plan_ref：PLAN.md。
+2026-10-31 UTC。应用源码 `6c5fb3fd4034537a402e4fff13990dae2a235745` / tree `3b86bd42eb25eb1597eaa7301437656939c2c806`；plan_ref：PLAN.md。
 
-## Changed / Verification
-- claim：计划前已核对原计划/规则/实际数据/样例 → evidence：读AGENTS与三原稿、场景/材质/模型/数据源码、main.js/style.css，并亲看campus-sample-final-evidence/desktop-close.png。
-- claim：已完成本轮官方新调研 → evidence：官方校园导览、虎峪梅花历史页live200与Three InstancedMesh官方文档；结论/URL/不确定项见DESIGN。
-- claim：双校区建设已获明确方向授权 → evidence：用户“那你就按照这个风格建设两个校区吧”；计划取消旧单段范围限制，不发明校园书屋。
-- claim：已建立可实施单写计划 → evidence：PLAN列场景、4GLB地标、QA/集成、四文档边界与同身份验收。
+## 改动与证据
+- 迎西/虎峪统一暖灰米、青绿窗、细叶、建筑细部与人尺度前场，保留原数据、地标/存档 ID、碰撞、摄影和 Hks。虎峪新增前场/花池为设计，不是测绘事实。
+- 左上小地图复用当前校区数据和位置，点击进入既有全景并可返回人物原位。精确应用身份 CI [41183734400](https://github.com/1263-ux/open-world/actions/runs/41183734400) 所有适用 jobs 成功；测试含两校区真实键盘多点连续行走、桌面/模拟横屏触控、重复切换、地图/小地图往返、摄影、存档、Hks 返回、资源回退和离线。三处虎峪及三处迎西截图与实际输入记录随 CI 工件保存。
+- 北门牌匾黑齿由同机位 SwiftShader A/B 找到接收阴影贡献；只对北门牌匾及七根肋关闭 receiveShadow，保留 cast/几何。最终截图复核黑齿消失；focused unit 测试验证范围。
+- 已发布公开站 v5：`https://tyut-campus-world-private-preview.aglowswan513.chatgpt.site`，站点源码 `582ee5d726ccbcd85f11dc17034212e1117b5375`，部署 `appgdep_6ae5a80d2c3c8191b470d7d0905ede91`。匿名 HTTP 200，live index/JS/CSS hashes 与构建相同，Hks HTML 和两校区关键模型 HTTP 200。回滚为 v4 部署 `appgdep_6ae563c3f27081919c0aceca4d7e202d`、站点源码 `fa0465b6b2508100a80fb3f7765fbc318a99cbc9`；样例站未修改。
 
-- claim：已补齐用户左上小地图点击全景与六角色美术方向 → evidence：最新用户指示/主控分派，DESIGN新增同身份交互验收，PLAN新增UI单写lane；尚不宣称功能实现。
-
-## Runtime evidence / State
-本轮尚无最终游戏构建、真实输入、性能、CI或新版部署证据；上述仅规划成果。不得报告两个校区已建成/已上线。既有main/公开版保持历史身份至集成验证后升级。
-
-## Known issues / Delivery gate
-- 官方页只确认身份/参考，不提供现状测绘；楼高/门锚点/园景仍按估计或设计说明。
-- 历史Hks自然Boss/420秒胜利未验证，不为本轮美术无依据重复长局。
-- 软件渲染/移动模拟与实体设备分开声明；无WebGL浏览器不能证明线上3D正常。
-- 待同身份完成两校区真实行走、手机横屏、地图/摄影/存档/Hks回归、fresh review、CI终态与现网健康/回滚核对，再填写最终结果。
+## 准确边界
+- 首版修订可交重大体验验证，但不是全校园艺术精修完成：虎峪仍稀疏、背景楼重复，尚未达到批准样例的局部庭院细腻度。
+- 验收浏览器为 CI 无头 Chromium/SwiftShader，触屏为模拟；非实体手机。迎西机械馆五秒暖机采样约 2.84 FPS、113 draw calls、172211 triangles、ratio .5，不能外推物理设备；30 FPS 目标未验证。线上静态健康检查不等于线上真实 3D 旅程。
+- 本轮不声称 Hks 自然打到 Boss 或 420 秒胜利；先前自然局有失败。官方公开信息与来源不等于实测或无条件图片再分发许可。预算及实际 API 账单未知。
