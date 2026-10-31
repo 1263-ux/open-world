@@ -1,7 +1,7 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import {
-  chooseMovement, GAME_SECONDS, TRIAL_MS, validateOutcome, validateSurvivalState,
+  chooseDisplayedUpgrade, chooseMovement, GAME_SECONDS, isDisplayedCard, TRIAL_MS, validateOutcome, validateSurvivalState,
   type Point, type SurvivalState,
 } from './hks-survival-policy';
 
@@ -24,13 +24,13 @@ async function logicalSize(canvas: Locator) {
 
 // Opt in explicitly and select this file. Ordinary CSS/feature CI skips the long trial.
 // RUN_HKS_SURVIVAL=1 npm run test:e2e -- tests/e2e/hks-survival.spec.ts --workers=1 --retries=0
+// RUN_HKS_DEEPPLAY=1 npm run test:e2e -- tests/e2e/hks-survival.spec.ts --workers=1 --retries=0
 // No evaluate(), injected events, debug keys, network fixtures, clock changes or game-state writes.
-test('Hks natural survival: real controls, bounded one-attempt evidence @survival', async ({ page }, testInfo) => {
-  test.skip(process.env.RUN_HKS_SURVIVAL !== '1', 'Run once for a final gameplay candidate with RUN_HKS_SURVIVAL=1');
-  test.setTimeout(TRIAL_MS + 90_000);
+async function runNaturalTrial(page: Page, testInfo: TestInfo, orbitRadius: number) {
+  testInfo.setTimeout(TRIAL_MS + 90_000);
   const errors: string[] = [];
   const history: Array<{ wallMs: number; state: SurvivalState }> = [];
-  const actions: Array<{ wallMs: number; kind: string; keys?: string[]; target?: Point }> = [];
+  const actions: Array<{ wallMs: number; kind: string; keys?: string[]; target?: Point; candidates?: unknown; chosen?: unknown; structures?: unknown }> = [];
   const milestones: string[] = [];
   const held = new Set<string>();
   let trialStartedAt: number | null = null;
@@ -134,10 +134,13 @@ test('Hks natural survival: real controls, bounded one-attempt evidence @surviva
         if (upgradeScreenshots < 8) await screenshot(`upgrade-${++upgradeScreenshots}`);
         if (wallMs() >= TRIAL_MS) { stopReason = 'purpose-window-no-outcome'; break; }
         if (!state.upgradeCards.length) throw new Error('Upgrade panel reports active but no real available card is exposed');
-        // Pick a real available card, rotating offered positions; do not inject a skill.
-        const card = state.upgradeCards[(upgradeScreenshots - 1) % state.upgradeCards.length]!;
+        // Choose only among active cards actually shown in the panel. Names,
+        // levels and descriptions are read-only mirrors of the visible text.
+        if (!state.upgradeCards.every(isDisplayedCard)) throw new Error('Active upgrade cards are missing displayed text');
+        const candidates = state.upgradeCards;
+        const card = chooseDisplayedUpgrade(candidates, state.building.structures);
         if (!await clickLogical(page, canvas, card, trialStartedAt + TRIAL_MS)) { stopReason = 'purpose-window-no-outcome'; break; }
-        actions.push({ wallMs: wallMs(), kind: 'select-available-upgrade', target: card });
+        actions.push({ wallMs: wallMs(), kind: 'select-available-upgrade', target: {x:card.x,y:card.y}, candidates, chosen:card.displayed, structures:state.building.structures });
         await page.waitForTimeout(Math.min(500, Math.max(1, TRIAL_MS - wallMs())));
       } else if (state.paused) {
         await setKeys([]);
@@ -157,7 +160,7 @@ test('Hks natural survival: real controls, bounded one-attempt evidence @surviva
         if (lastCommandMoved && moved < 3) stuckSince ??= now; else stuckSince = null;
         if (stuckSince !== null && now - stuckSince > 2000) { evadeUntil = now + 1800; stuckSince = null; }
         lastPlayerPosition = { x: state.x, y: state.y };
-        const movement = chooseMovement(now < evadeUntil ? { ...state, nearestXP: null } : state);
+        const movement = chooseMovement(now < evadeUntil ? { ...state, nearestXP: null } : state, orbitRadius);
         const pressed = await setKeys(movement.keys, trialStartedAt + TRIAL_MS);
         actions.push({ wallMs: wallMs(), kind: movement.kind, keys: pressed, target: movement.target });
         lastCommandMoved = movement.keys.length > 0;
@@ -192,8 +195,9 @@ test('Hks natural survival: real controls, bounded one-attempt evidence @surviva
     await setKeys([]).catch(() => undefined);
     const summary = {
       codeIdentity: process.env.HKS_TRIAL_CODE_IDENTITY ?? process.env.GITHUB_SHA ?? 'not supplied; do not associate with another candidate',
-      strategy: 'Nearest XP within 270px player / 310px building with a collision-free direct path; otherwise 240px near-building orbit; genuine offered-card/popup clicks.',
-      scope: 'One random, unseeded, real-input bot attempt. Natural loss is valid evidence, not a CI failure. This is not proof of game balance, human difficulty, or general winnability.',
+      strategy: `Nearest XP within 270px player / 310px building with a collision-free direct path; otherwise ${orbitRadius}px near-building orbit; rank only actual displayed cards, genuine input.`,
+      orbitRadius,
+      scope: 'One random, unseeded, real-input bot attempt. Natural loss is valid evidence, not a CI failure. A passing trial alone is not a victory, Boss encounter, balance or general winnability claim.',
       stopReason, purposeWindowMs: TRIAL_MS, wallElapsedMs: wallMs(), terminalObservedWallMs,
       gameElapsedSeconds: lastState ? GAME_SECONDS - lastState.remaining : null,
       outcome: lastState?.outcome ?? null, level: lastState?.level ?? null, kills: lastState?.kills ?? null,
@@ -212,4 +216,19 @@ test('Hks natural survival: real controls, bounded one-attempt evidence @surviva
     console.log(`HKS_NATURAL_TRIAL ${JSON.stringify(summary)}`);
   }
   if (failure) throw failure;
+}
+
+// Ordinary playtrial remains exactly one natural life. Deepplay uses three
+// independently launched serial lives and predetermined radii. Serial mode
+// skips later lives on timeout or error; a running life is never reset.
+test('Hks natural survival: real controls, bounded one-attempt evidence @survival',async({page},info)=>{
+  test.skip(process.env.RUN_HKS_SURVIVAL !== '1' || process.env.RUN_HKS_DEEPPLAY === '1','Opt in to the single natural trial');
+  await runNaturalTrial(page,info,240);
+});
+test.describe.serial('Hks bounded natural deepplay',()=>{
+  test.describe.configure({ retries: 0 });
+  test.skip(process.env.RUN_HKS_DEEPPLAY !== '1','Opt in to at most three serial natural lives');
+  for (const radius of [240,190,220]) test(`natural life: ${radius}px orbit @deepplay`,async({page},info)=>{
+    await runNaturalTrial(page,info,radius);
+  });
 });

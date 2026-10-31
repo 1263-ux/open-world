@@ -72,7 +72,8 @@ export function crossesBase(from: Point, to: Point, base: Point): boolean {
   return true;
 }
 
-export function chooseMovement(s: SurvivalState): Movement {
+export function chooseMovement(s: SurvivalState, orbitRadius = 240): Movement {
+  if (!Number.isFinite(orbitRadius) || orbitRadius <= 0) throw new Error('Invalid orbit radius');
   const player = { x: s.x, y: s.y }, base = s.building;
   const xp = s.nearestXP;
   const xpDistance = xp ? Math.hypot(xp.x - s.x, xp.y - s.y) : Infinity;
@@ -81,7 +82,7 @@ export function chooseMovement(s: SurvivalState): Movement {
   const reachableXP = xp && xpDistance <= 270
     && (xpDistance < 120 || Math.hypot(xp.x - base.x, xp.y - base.y) <= 310) && !crossesBase(player, xp, base);
   const angle = Math.atan2(s.y - base.y, s.x - base.x) + 0.55;
-  const target = reachableXP ? xp : { x: base.x + Math.cos(angle) * 240, y: base.y + Math.sin(angle) * 240 };
+  const target = reachableXP ? xp : { x: base.x + Math.cos(angle) * orbitRadius, y: base.y + Math.sin(angle) * orbitRadius };
   const dx = target.x - s.x, dy = target.y - s.y, distance = Math.hypot(dx, dy);
   // Within the existing 120px attraction radius, wait briefly for actual collection.
   const settle = reachableXP && distance < 65;
@@ -126,4 +127,32 @@ export function validateOutcome(s: SurvivalState): void {
   const destroyed = Object.values(s.outcomeStructures).some(hp => hp.currentHp <= 0);
   if (s.outcome === 'victory' && (s.remaining > 0.001 || destroyed)) throw new Error('Victory telemetry contradicts the original timer/structure rule');
   if (s.outcome === 'defeat' && !destroyed) throw new Error('Defeat telemetry contradicts the original structure rule');
+}
+
+
+/** Only the text mirrored from an active, clickable, actually displayed card. */
+export type DisplayedCard = Point & { displayed: { name: string; level: number; description: string } };
+export function isDisplayedCard(card: Point): card is DisplayedCard {
+  const value = (card as Partial<DisplayedCard>).displayed;
+  return !!value && typeof value.name === 'string' && value.name.length > 0
+    && Number.isInteger(value.level) && value.level > 0 && typeof value.description === 'string' && value.description.length > 0;
+}
+/** Deterministic exploratory preference, not a claim of optimal play. It only
+ * ranks offered cards; a full structure-health deficit increases the priority
+ * of real repair tiers. Lower tiers are never treated as healing skills. */
+export function chooseDisplayedUpgrade(cards: DisplayedCard[], structures: Structures): DisplayedCard {
+  if (!cards.length || cards.some(card => !isDisplayedCard(card))) throw new Error('No valid displayed upgrade choices');
+  const deficit = (type: keyof Structures) => 1 - Math.max(0, Math.min(1, structures[type].currentHp / structures[type].maxHp));
+  const score = (card: DisplayedCard) => {
+    const {name,level} = card.displayed;
+    if (['石材修补','石粉填补','表层加固'].includes(name)) return 5 + (level >= 3 ? 10 * deficit('stone') : 0);
+    if (['彩绘修复','颜料补绘','壁画护色'].includes(name)) return 4 + (level >= 3 ? 10 * deficit('painting') : 0);
+    if (['木构加固','梁柱补强','榫卯强化'].includes(name)) return 4 + (level >= 2 ? 10 * deficit('wood') : 0);
+    if (['防水封护','排水导流','防渗保护层'].includes(name)) return 4 + (level >= 3 ? 10 * Math.max(deficit('stone'),deficit('tile')) : 0);
+    if (['防虫处理','虫害清查','木构驱虫'].includes(name)) return 3 + (level >= 3 ? 10 * deficit('wood') : 0);
+    if (['雷电链','奔雷锁链','九霄雷网'].includes(name)) return 5;
+    if (['旋风斩','烈风轮斩','青岚风暴'].includes(name)) return 5;
+    return 0;
+  };
+  return cards.reduce((best,card) => score(card) > score(best) ? card : best);
 }

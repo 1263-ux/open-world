@@ -171,3 +171,27 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  hks-deepplay:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[deepplay]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix games/hks ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Bounded natural lives, no game-state injection
+        run: RUN_HKS_DEEPPLAY=1 HKS_TRIAL_CODE_IDENTITY="$GITHUB_SHA" npm run test:e2e -- tests/e2e/hks-survival.spec.ts --workers=1 --retries=0 --output=test-results/deepplay
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: campus-hks-deepplay-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

@@ -28,8 +28,8 @@
     },
     {
       "path": "src/HUD.ts",
-      "sha256": "6dfda099d5c7f08cf916f596dbc7b938f09a42028e182614929348dafd5e56d7",
-      "bytes": 34580
+      "sha256": "c793ca837f3098fa7cb06cfa3d6e90aebbb7b4c231f0c9e778d4ba089d6d81f1",
+      "bytes": 34944
     },
     {
       "path": "src/MenuScene.ts",
@@ -83,8 +83,8 @@
     },
     {
       "path": "src/main.ts",
-      "sha256": "eaa90f8263b0a0af1fc89142e1a551edb786c81741c114470c5d65f69c388e86",
-      "bytes": 5246
+      "sha256": "2947fe92c48f864df25ff378df28bc56eaace435007510018189617e1292f08e",
+      "bytes": 5401
     },
     {
       "path": "src/pickupRules.ts",

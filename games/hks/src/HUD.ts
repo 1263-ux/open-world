@@ -436,6 +436,7 @@ export class HUD {
 
       // 风味行 — 17px bold
       const flavorWrapped = this.wrapCJK(flavor, '17px', descW);
+      let displayedDescription = flavorWrapped;
       const flavorText = this.scene.add.text(cx, curY, flavorWrapped, {
         fontFamily: FONT.body.fontFamily, fontSize: '17px', fontStyle: 'bold',
         color: PALETTE.PARCHMENT, align: 'center',
@@ -447,6 +448,7 @@ export class HUD {
       // 数据行 — 12px regular
       if (stats) {
         const statsWrapped = this.wrapCJK(stats, '12px', descW);
+        displayedDescription += `\n${statsWrapped}`;
         const statsText = this.scene.add.text(cx, curY, statsWrapped, {
           fontFamily: FONT.body.fontFamily, fontSize: '12px',
           color: '#C0B090', align: 'center',
@@ -455,6 +457,9 @@ export class HUD {
         }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(depth + 2);
         this.levelUpElements.push(statsText);
       }
+      // Mirrors the actual rendered text of this exact clickable background;
+      // this metadata cannot select a card or change the offered pool.
+      bg.setData('displayedCard', { name: nameText.text, level: opt.level, description: displayedDescription });
       // 像素按钮
       const btnW = Math.ceil(100 / 2), btnH = Math.ceil(28 / 2);
       const btnKey = `btn_card_${opt.id}_${cardGridW}_${i}`;

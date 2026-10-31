@@ -39,7 +39,7 @@ try {
       lastOutcome?: 'victory' | 'defeat' | null;
       settlementButton?: { x: number; y: number } | null;
       lastOutcomeStructures?: Record<string, { currentHp: number; maxHp: number }> | null;
-      hud?: { levelUpElements?: Array<{ x: number; y: number; active: boolean; texture?: { key: string }; input?: { enabled: boolean } }> };
+      hud?: { levelUpElements?: Array<{ x: number; y: number; active: boolean; visible: boolean; alpha: number; texture?: { key: string }; input?: { enabled: boolean }; getData?: (key: string) => unknown }> };
       bossSpawned?: boolean; bossKilled?: boolean;
       boss?: { hp: number; maxHp: number; isActive: boolean; isDead: boolean } | null;
     };
@@ -60,8 +60,8 @@ try {
       settlementButton: scene?.settlementButton ?? null,
       outcome: scene?.lastOutcome ?? null, outcomeStructures: scene?.lastOutcomeStructures ?? null,
       upgradeCards: scene?.levelUpPanelActive ? (scene.hud?.levelUpElements ?? [])
-        .filter(card => card.active && card.input?.enabled && card.texture?.key.startsWith('card_'))
-        .map(card => ({ x: card.x, y: card.y })) : [],
+        .filter(card => card.active && card.visible && card.alpha > 0 && card.input?.enabled && card.texture?.key.startsWith('card_'))
+        .map(card => ({ x: card.x, y: card.y, displayed: card.getData?.('displayedCard') ?? null })) : [],
       building: scene?.building ? { x: scene.building.x, y: scene.building.y,
         structures: Object.fromEntries([...scene.building.structures].map(([type, hp]) => [type, { currentHp: hp.currentHp, maxHp: hp.maxHp }])) } : null,
       boss: { spawned: scene?.bossSpawned ?? false, killed: scene?.bossKilled ?? false,
