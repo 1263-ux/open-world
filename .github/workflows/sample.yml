@@ -1,0 +1,23 @@
+name: Isolated campus sample screenshots
+on: [push]
+permissions:
+  contents: read
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm --prefix qa install --ignore-scripts
+      - run: cd qa && npx playwright install --with-deps chromium
+      - run: python3 -m http.server 4173 --directory dist >/tmp/sample-http.log 2>&1 &
+      - run: node qa/check.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: campus-style-sample-evidence
+          path: evidence/
+          retention-days: 7
