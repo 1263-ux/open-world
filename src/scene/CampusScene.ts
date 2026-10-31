@@ -590,9 +590,10 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       // roads and route strips, with no changes to geometry or navigation.
       const court = createSurfaceMaterial('paving', 0xd7d0bb);
       for (const polygon of [
-        [[-8, -202], [36, -202], [36, -180], [-8, -180]],
-        [[-63.5, -42], [-56, -42], [-56, -30], [-63.5, -30]],
-        [[52, -57], [64, -57], [64, -39], [52, -39]],
+        [[-8, -202], [36, -202], [36, -165], [-8, -165]],
+        [[-63.5, -42], [-56, -42], [-56, -18], [-63.5, -18]],
+        [[-99, -18], [-56, -18], [-56, -1.2], [-99, -1.2]],
+        [[52, -62], [80, -62], [80, -32], [52, -32]],
       ] as Point2[][]) {
         const surface = addSurface(world, polygon, .05, court);
         if (surface) { surface.receiveShadow = true; surface.userData.photoIgnore = true; }
@@ -600,7 +601,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       // Low designed planters are set away from all graph routes and sampled
       // building footprints. They are ankle-height, non-blocking scenery, not
       // mapped planting or collision substitutes for existing solid objects.
-      const sites: Point2[] = [[-4, -190], [-62, -30], [58, -48]];
+      const sites: Point2[] = [[-4, -190], [-62, -30], [-94, -8], [-63, -8], [58, -48]];
       const safeSites = sites.filter(([x, z]) => clearsRoutes(x, z, 5) &&
         [[x, z], [x - 1.5, z - 1], [x + 1.5, z + 1], [x - 1.5, z + 1], [x + 1.5, z - 1]].every(([sx, sz]) => inside(sx, sz, boundary) && !buildings.some(f => inside(sx, sz, f.polygon))));
       if (safeSites.length) {
