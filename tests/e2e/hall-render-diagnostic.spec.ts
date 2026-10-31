@@ -9,7 +9,7 @@ import { position, walkTo } from './campus-walk';
 test.skip(process.env.RUN_HALL_RENDER_DIAGNOSTIC !== '1', 'Explicit diagnostic CI only');
 test.setTimeout(600_000);
 
-type Mode = 'read' | 'freeze' | 'clock-receive-off' | 'stone-cast-off';
+type Mode = 'read' | 'freeze' | 'clock-receive-off' | 'stone-cast-off' | 'clock-cast-off' | 'trim-cast-off';
 type Snapshot = {
   ratio:number; shadowType:number; shadowsEnabled:boolean; depthBits:number;
   cameraPosition:number[]; cameraQuaternion:number[]; projection:number[]; viewMatrix:number[];
@@ -40,9 +40,10 @@ window.__hallDiagnostic = (mode) => {
       if (object.name === 'clock') object.receiveShadow = true;
       if (object.name === 'stone') object.castShadow = false;
     }
+    if (mode === 'clock-cast-off' || mode === 'trim-cast-off') { object.receiveShadow = true; object.castShadow = object.name !== (mode === 'clock-cast-off' ? 'clock' : 'trim'); }
     nodes.push({name: object.name, material: object.material.name, cast: object.castShadow, receive: object.receiveShadow, matrix: object.matrixWorld.toArray()});
   });
-  if (mode === 'clock-receive-off' || mode === 'stone-cast-off') renderer.shadowMap.needsUpdate = true;
+  if (mode === 'clock-receive-off' || mode === 'stone-cast-off' || mode === 'clock-cast-off' || mode === 'trim-cast-off') renderer.shadowMap.needsUpdate = true;
   player.camera.updateMatrixWorld(true);
   return {ratio: renderRatio, shadowType: renderer.shadowMap.type, shadowsEnabled: renderer.shadowMap.enabled,
     depthBits: renderer.getContext().getParameter(renderer.getContext().DEPTH_BITS),
@@ -90,7 +91,7 @@ async function aimAtDoor(page:Page, canvas:Locator):Promise<void> {
   await page.mouse.move(sx-turn/.005,sy+(-.15-pitch)/.004,{steps:12}); await page.mouse.up();
 }
 
-test('same-camera mechanical hall doorway shadow A/B/C experiment', async ({page}, info) => {
+test('same-camera mechanical hall doorway shadow A/B/C/D/E experiment', async ({page}, info) => {
   const sha256 = createHash('sha256').update(await readFile('public/assets/campuses/yingxi/mechanical-hall.glb')).digest('hex');
   expect(sha256).toBe('2db71a1046b775e826e8504f4be93fbcc2f5578837d3e73078955b2b6dcb17ec');
   const moduleCount = await installDiagnostic(page);
@@ -107,9 +108,9 @@ test('same-camera mechanical hall doorway shadow A/B/C experiment', async ({page
   await expect(canvas).toHaveAttribute('data-render-ratio','0.50',{timeout:90000});
   await hook(page,'freeze');
   await waitFrames(canvas,40); // Normal camera damping settles before comparisons.
-  const screenshots = ['A-baseline.png','B-clock-receive-off.png','C-stone-cast-off.png'];
+  const screenshots = ['A-baseline.png','B-clock-receive-off.png','C-stone-cast-off.png','D-clock-cast-off.png','E-trim-cast-off.png'];
   const snapshots:Snapshot[] = [];
-  for (const [i,mode] of (['read','clock-receive-off','stone-cast-off'] as const).entries()) {
+  for (const [i,mode] of (['read','clock-receive-off','stone-cast-off','clock-cast-off','trim-cast-off'] as const).entries()) {
     await hook(page,mode); await waitFrames(canvas,3);
     snapshots.push(await hook(page,'read'));
     await canvas.screenshot({path:info.outputPath(screenshots[i]!)});
@@ -134,5 +135,10 @@ test('same-camera mechanical hall doorway shadow A/B/C experiment', async ({page
   expect(snapshots[1]!.nodes.every(n=>n.cast)).toBe(true);
   expect(snapshots[2]!.nodes.filter(n=>!n.cast).map(n=>n.name)).toEqual(['stone']);
   expect(snapshots[2]!.nodes.every(n=>n.receive)).toBe(true);
+  expect(snapshots[3]!.nodes.filter(n=>!n.cast).map(n=>n.name)).toEqual(['clock']);
+  expect(snapshots[3]!.nodes.every(n=>n.receive)).toBe(true);
+  expect(baseline.nodes.find(n=>n.name==='trim')?.material).toBe('trim');
+  expect(snapshots[4]!.nodes.filter(n=>!n.cast).map(n=>n.name)).toEqual(['trim']);
+  expect(snapshots[4]!.nodes.every(n=>n.receive)).toBe(true);
   await info.attach('hall-render-diagnostic',{body:JSON.stringify({sha256,screenshots,snapshots,scope:'Test-only hall shadow flag changes; no gameplay or aesthetic acceptance.'},null,2),contentType:'application/json'});
 });
