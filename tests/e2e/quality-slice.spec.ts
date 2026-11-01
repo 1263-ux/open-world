@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { campuses } from '../../src/campus-data/campuses';
 import { PHOTO_POINTS } from '../../src/games/photography';
 import { position, walkRoute, walkTo } from './campus-walk';
-import { ascend, descend, planePose, planeState, screenRightDisplacement, waitForSimulatedAdvance, waitForSettledCamera, waitForFlightSuccess, STATION_ROUTE_STAGING, stationApproachRoute } from './complete-release-helpers';
+import { ascend, descend, planePose, planeState, screenRightDisplacement, authoredTouchMagnitude, waitForSimulatedAdvance, waitForSettledCamera, waitForFlightSuccess, STATION_ROUTE_STAGING, stationApproachRoute } from './complete-release-helpers';
 import { VIEWING_PLATFORM } from '../../src/scene/OriginalViewingPlatform';
 
 // Read-only telemetry supplements actual input and screenshots; it never controls the game.
@@ -85,7 +85,7 @@ async function touchWalkTo(page: Page, canvas: Locator, target: [number,number],
   // The visible fixed stick is left:38px, bottom:70px, diameter:90px.
   const center={x:box.x+83,y:box.y+box.height-115};
   const touch=await page.context().newCDPSession(page);
-  const observations:Array<{waypoint:[number,number];before:[number,number,number];after:[number,number,number];holdMs:number;stick:{x:number;y:number}}>=[];
+  const observations:Array<{waypoint:[number,number];before:[number,number,number];after:[number,number,number];holdMs:number;pulseMs:number;magnitude:number;stick:{x:number;y:number}}>=[];
   const started=Date.now(),startFrame=Number(await canvas.getAttribute('data-frame'));
   console.log(`[TOUCH_ROUTE_START] ${JSON.stringify({target,start:[startX,startZ],authoredSegment,wall:started,frame:startFrame})}`);
   let stagnant=0, previous:[number,number]=[startX,startZ];
@@ -96,12 +96,13 @@ async function touchWalkTo(page: Page, canvas: Locator, target: [number,number],
       const yaw=Number(await canvas.getAttribute('data-camera-yaw'));if(!Number.isFinite(yaw))throw Error('Missing camera yaw');
       const distance=Math.hypot(dx,dz),stick={x:(-dx*Math.cos(yaw)+dz*Math.sin(yaw))/distance,y:-(dx*Math.sin(yaw)+dz*Math.cos(yaw))/distance};
       const holdMs=authoredSegment?Math.max(20,Math.min(80,distance/3.4*450)):Math.max(80,Math.min(300,distance/3.4*500));
+      const magnitude=authoredSegment?authoredTouchMagnitude(distance):1,pulseStart=Date.now();
       await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...center,id:12}]});
       try {
-        await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:center.x+stick.x*50,y:center.y+stick.y*50,id:12}]});
+        await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:center.x+stick.x*50*magnitude,y:center.y+stick.y*50*magnitude,id:12}]});
         await page.waitForTimeout(holdMs);
       } finally { await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]}); }
-      const after=await position(canvas);observations.push({waypoint,before,after,holdMs,stick});
+      const after=await position(canvas);observations.push({waypoint,before,after,holdMs,pulseMs:Date.now()-pulseStart,magnitude,stick});
       if(Math.hypot(after[0]-previous[0],after[2]-previous[1])<.05)stagnant++;else stagnant=0;
       if(stagnant>=12)throw Error(`Touch movement stuck at ${after[0]},${after[2]} near ${waypoint}`);
       previous=[after[0],after[2]];
@@ -120,6 +121,8 @@ async function stampIds(page: Page): Promise<string[]> {
 }
 
 test('scenic diary: genuine walk, framing, three captures, Hks round-trip and local postcard', async ({ page }, info) => {
+  // Measured420s reaches final cross-campus recapture after3photos/postcard; keep that gate.
+  test.setTimeout(600000);
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   const canvas=await ready(page), guide=page.getByTestId('photo-guide'), hint=page.getByTestId('photo-hint');
   await expect(guide).toContainText('0 / 3');
@@ -327,6 +330,8 @@ test('delayed student load survives real campus switches without replacing the a
 test.describe('landscape touch diary',()=>{
   test.use({hasTouch:true,isMobile:true,viewport:{width:844,height:390}});
   test('real touch complete journal: three photos, stairs, both flight directions and saved success',async({page},info)=>{
+    // Measured327s to thirdphoto; remaining route+23.6simsec flight at2.1FPS needs bounded headroom.
+    test.setTimeout(660000);
     const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
     const canvas=await ready(page,true);await aimAtSubject(page,canvas,0,true,info);
     await expect(page.getByTestId('photo-hint')).toContainText('构图就绪',{timeout:30000});

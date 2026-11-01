@@ -30,6 +30,9 @@ export function stationApproachRoute():Point2[]{
   const link=PLATFORM_GROUND_LINKS[2]!;
   return link.map(p=>[p[0],p[1]] as Point2);
 }
+/** Calibrated to observed CDP pulse travel up to3.953m at full tilt.
+ * Analogue magnitude (not shorter wall waits) bounds near-corner overshoot. */
+export function authoredTouchMagnitude(distance:number){return Math.min(1,Math.max(0,distance)/6);}
 export async function walkAuthoredSegment(page:Page,canvas:Locator,target:Point2){
   let previous=await position(canvas),stagnant=0;
   for(let attempt=0;attempt<180;attempt++){

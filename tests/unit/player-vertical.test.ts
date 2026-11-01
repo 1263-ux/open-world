@@ -5,6 +5,7 @@ import { disposeObject } from '../../src/scene/CampusScene';
 import { PlayerController } from '../../src/scene/PlayerController';
 import { createOriginalViewingPlatform, VIEWING_PLATFORM, PLATFORM_GROUND_LINKS, PAPERPLANE_STATION } from '../../src/scene/OriginalViewingPlatform';
 import { StudentModel } from '../../src/scene/StudentModel';
+import { authoredTouchMagnitude } from '../e2e/complete-release-helpers';
 import { waypointKeys, walkRoute } from '../e2e/campus-walk';
 import { ElementDouble } from './controller-harness';
 // Isolated real Octree/controller regression, not a natural browser journey.
@@ -94,6 +95,25 @@ describe('vertical controller and finite world queries',()=>{
         expect(player.avatar.position.y).toBeLessThan(.2);
       }
       expect(reached,`Reach authored ground corner ${target} without climbing a solid`).toBe(true);
+    }
+    const p=player.avatar.position;expect(Math.hypot(p.x-PAPERPLANE_STATION.standing[0],p.z-PAPERPLANE_STATION.standing[2])).toBeLessThan(PAPERPLANE_STATION.interactionRadius);
+  });
+  it.each([[.52,.79,1.163,.9,.65],[1.5,1.65,1.7,1.4]])('analogue touch route converges under measured or slower pulse latencies %j',(...latencies:number[])=>{
+    const platform=createOriginalViewingPlatform();player.setCampus(campuses.yingxi,platform.colliders);platform.dispose();player.setPosition([60,170]);input.yaw=0;frames(30);
+    const joystick=(player as unknown as {joystick:{set:(x:number,y:number)=>void}}).joystick;
+    let pulse=0;
+    for(const target of PLATFORM_GROUND_LINKS[2]!){
+      let reached=false;
+      for(let attempt=0;attempt<180;attempt++){
+        const p=player.avatar.position,dx=target[0]-p.x,dz=target[1]-p.z,distance=Math.hypot(dx,dz);
+        if(distance<.25){reached=true;break;}
+        const magnitude=authoredTouchMagnitude(distance);expect(magnitude).toBeGreaterThan(0);expect(magnitude).toBeLessThanOrEqual(1);
+        joystick.set(-dx/distance*magnitude,-dz/distance*magnitude);
+        player.update(latencies[pulse++%latencies.length]!);joystick.set(0,0);
+        expect(player.avatar.position.y).toBeLessThan(.2);
+        expect(Math.hypot(target[0]-player.avatar.position.x,target[1]-player.avatar.position.z)).toBeLessThan(distance);
+      }
+      expect(reached,`Strict .25m arrival at ${target}`).toBe(true);
     }
     const p=player.avatar.position;expect(Math.hypot(p.x-PAPERPLANE_STATION.standing[0],p.z-PAPERPLANE_STATION.standing[2])).toBeLessThan(PAPERPLANE_STATION.interactionRadius);
   });
