@@ -24,7 +24,7 @@ test('complete fresh journal: three photographs, genuine ascent/descent, flight,
   // Genuine controls, a small right-left correction, not just a passive animation.
   await page.keyboard.down('KeyD');await page.waitForTimeout(100);await page.keyboard.up('KeyD');
   await page.keyboard.down('KeyA');await page.waitForTimeout(100);await page.keyboard.up('KeyA');
-  await waitForFlightSuccess(canvas,info,'flight-wall-and-simulated-time');
+  await waitForFlightSuccess(canvas,info,'flight-wall-and-simulated-time',true);
   expect((await planeState(canvas)).gatesPassed).toBe(3);await page.getByRole('button',{name:'返回手记',exact:true}).click();
   await expect(page.getByTestId('journey-panel')).toContainText('晴日手记 · 完成');
   const after=await position(canvas);expect(Math.hypot(...after.map((v,i)=>v-before[i]!))).toBeLessThan(.1);

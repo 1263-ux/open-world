@@ -128,17 +128,27 @@ export function screenRightDisplacement(before:{position:[number,number,number];
 /** Prior SwiftShader evidence was ~2.84 FPS. With the six-substep cap, flight
  * simulated seconds need not track wall seconds. This bounded wait records both;
  * it does not accelerate physics or waive the separate performance gate. */
-export async function waitForFlightSuccess(canvas:Locator,info:TestInfo,label:string){
+export async function waitForFlightSuccess(canvas:Locator,info:TestInfo,label:string,captureInFlight=false){
   const started=Date.now(),samples:Array<{wallSeconds:number;simulatedSeconds:number;gates:number;result:string|null}>=[];
-  let previous=0;
+  let previous=0,captured=false;
   try{
     await expect.poll(async()=>{
       const state=await planeState(canvas);
       expect(Number.isFinite(state.elapsed)).toBe(true);expect(state.elapsed).toBeGreaterThanOrEqual(previous);previous=state.elapsed;
       samples.push({wallSeconds:(Date.now()-started)/1000,simulatedSeconds:state.elapsed,gates:state.gatesPassed,result:state.result});
+      if(captureInFlight&&!captured&&state.phase==='flying'&&state.gatesPassed>=1&&state.gatesPassed<3){
+        const poseBefore=await planePose(canvas);
+        // Actual ongoing flight, no pause/camera/state manipulation for the image.
+        await canvas.page().screenshot({path:info.outputPath('paperplane-in-flight.png')});
+        const after=await planeState(canvas);
+        expect(after.phase,'Screenshot must precede landing, not substitute a result screen').toBe('flying');
+        await info.attach('paperplane-in-flight-state',{body:JSON.stringify({before:state,poseBefore,after,poseAfter:await planePose(canvas)},null,2),contentType:'application/json'});
+        captured=true;
+      }
       if(state.phase==='result'&&state.result!=='success')throw Error(`Flight ended unsuccessfully: ${state.result}`);
       return state.result;
     },{timeout:180000,intervals:[200,500,1000],message:'Actual flight must reach successful terminal state within the calibrated software-renderer window'}).toBe('success');
     expect((await planeState(canvas)).gatesPassed).toBe(3);
+    if(captureInFlight)expect(captured,'Required actual in-flight image was captured').toBe(true);
   }finally{await info.attach(label,{body:JSON.stringify({samples,wallSeconds:(Date.now()-started)/1000},null,2),contentType:'application/json'});}
 }

@@ -100,25 +100,81 @@ for (const [name, min, max] of stationBoxes) PLATFORM_BOXES.push({
   max: [max[0] + 65, max[1] + .12, max[2] + 179],
 });
 
+/** Local hand-authored surface finish, not a new Astra-generated asset.
+ * Subdivide and tint the EXISTING six box faces only. No decal offset, extra
+ * silhouette, transparent rail, raised trim, or new collision surface. */
+function finishedBox(box: PlatformBox): THREE.BufferGeometry {
+  const [x, y, z] = box.min, [X, Y, Z] = box.max;
+  const w = X - x, h = Y - y, d = Z - z;
+  const positions: number[] = [], normals: number[] = [], colors: number[] = [];
+  const ivory = new THREE.Color(0xe8e2d3), coping = new THREE.Color(0xeee8da);
+  const sage = new THREE.Color(0x82958a), base = new THREE.Color(0xc9cabb);
+  const joint = new THREE.Color(0x6f8277), floorJoint = new THREE.Color(0xc4c6b8);
+  const cuts = (length: number, seams: boolean): number[] => {
+    const result = [0, length];
+    if (seams) for (let v = 1.15; v < length - .2; v += 1.15) result.push(v - .009, v + .009);
+    return result.sort((a, b) => a - b);
+  };
+  const seam = (v: number): boolean => Math.abs(v / 1.15 - Math.round(v / 1.15)) * 1.15 < .0091 && v > .1;
+  const face = (origin: number[], u: number[], v: number[], normal: number[], width: number, height: number, top = false): void => {
+    const wall = box.kind === 'guard';
+    const uc = cuts(width, top ? box.kind === 'deck' : wall && width > 2);
+    const vc = top ? cuts(height, box.kind === 'deck') : [0, Math.max(0, height - (wall ? .065 : .035)), height];
+    for (let i = 1; i < uc.length; i++) for (let j = 1; j < vc.length; j++) {
+      const a = uc[i - 1], b = uc[i], c = vc[j - 1], e = vc[j];
+      if (b - a < 1e-8 || e - c < 1e-8) continue;
+      const midU = (a + b) / 2, midV = (c + e) / 2;
+      const color = top
+        ? (box.kind === 'deck' && (seam(midU) || seam(midV)) ? floorJoint : wall ? coping : ivory)
+        : midV >= height - (wall ? .065 : .035) ? coping : wall ? (seam(midU) && width > 2 ? joint : sage) : base;
+      for (const [s, t] of [[a, c], [b, c], [b, e], [a, c], [b, e], [a, e]]) {
+        positions.push(origin[0] + u[0] * s + v[0] * t, origin[1] + u[1] * s + v[1] * t, origin[2] + u[2] * s + v[2] * t);
+        normals.push(...normal); colors.push(color.r, color.g, color.b);
+      }
+    }
+  };
+  // u × v is the outward normal; extrema match BoxGeometry's local bounds.
+  face([-w / 2, -h / 2, d / 2], [1, 0, 0], [0, 1, 0], [0, 0, 1], w, h);
+  face([w / 2, -h / 2, -d / 2], [-1, 0, 0], [0, 1, 0], [0, 0, -1], w, h);
+  face([w / 2, -h / 2, d / 2], [0, 0, -1], [0, 1, 0], [1, 0, 0], d, h);
+  face([-w / 2, -h / 2, -d / 2], [0, 0, 1], [0, 1, 0], [-1, 0, 0], d, h);
+  face([-w / 2, h / 2, d / 2], [1, 0, 0], [0, 0, -1], [0, 1, 0], w, d, true);
+  // Bottom stays the original unadorned plane; never part of the walking view.
+  const bottom = new THREE.BoxGeometry(w, h, d);
+  const p = bottom.getAttribute('position'), n = bottom.getAttribute('normal'), index = bottom.index!;
+  for (let i = 0; i < index.count; i++) {
+    const k = index.getX(i); if (n.getY(k) !== -1) continue;
+    positions.push(p.getX(k), p.getY(k), p.getZ(k)); normals.push(0, -1, 0); colors.push(base.r, base.g, base.b);
+  }
+  bottom.dispose();
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeBoundingBox(); geometry.computeBoundingSphere();
+  return geometry;
+}
+
 export function createOriginalViewingPlatform(): {
   visual: THREE.Group; colliders: THREE.Group; stationVisual: THREE.Group; dispose: () => void;
 } {
   const visual = new THREE.Group(), colliders = new THREE.Group(), stationVisual = new THREE.Group();
-  visual.name = 'original-viewing-platform-GRAYBOX';
-  visual.userData.designStatus = 'Temporary original graybox; not a surveyed campus facility';
+  visual.name = 'original-viewing-platform-local-finish';
+  visual.userData.designStatus = 'Original graybox geometry with local hand-authored surface finish; not Astra-generated final art or a surveyed campus facility';
   colliders.name = 'original-viewing-platform-solids';
   stationVisual.name = 'paperplane-station-fallback';
   visual.add(stationVisual);
   const stone = new THREE.MeshStandardMaterial({ color: 0xcdcbc0, roughness: 1 });
-  const guard = new THREE.MeshStandardMaterial({ color: 0x71857a, roughness: 1 });
+  const finish = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 });
   const wood = new THREE.MeshStandardMaterial({ color: 0x95704d, roughness: 1 });
   const proxyMaterial = new THREE.MeshBasicMaterial();
   const geometries: THREE.BufferGeometry[] = [];
   for (const box of PLATFORM_BOXES) {
     const [x, y, z] = box.min, [X, Y, Z] = box.max;
-    const geometry = new THREE.BoxGeometry(X - x, Y - y, Z - z);
-    const proxyGeometry = geometry.clone(); geometries.push(geometry, proxyGeometry);
-    const mesh = new THREE.Mesh(geometry, box.kind === 'guard' ? guard : box.kind === 'station' ? wood : stone);
+    const proxyGeometry = new THREE.BoxGeometry(X - x, Y - y, Z - z);
+    const geometry = box.kind === 'station' ? proxyGeometry.clone() : finishedBox(box);
+    geometries.push(geometry, proxyGeometry);
+    const mesh = new THREE.Mesh(geometry, box.kind === 'station' ? wood : finish);
     mesh.name = box.name; mesh.position.set((x + X) / 2, (y + Y) / 2, (z + Z) / 2);
     mesh.castShadow = mesh.receiveShadow = true;
     (box.kind === 'station' ? stationVisual : visual).add(mesh);
@@ -146,7 +202,7 @@ export function createOriginalViewingPlatform(): {
     if (disposed) return; disposed = true;
     visual.removeFromParent(); colliders.removeFromParent();
     for (const geometry of geometries) geometry.dispose();
-    for (const material of [stone, guard, wood, proxyMaterial]) material.dispose();
+    for (const material of [stone, finish, wood, proxyMaterial]) material.dispose();
     stationVisual.clear(); visual.clear(); colliders.clear();
   } };
 }
