@@ -384,7 +384,19 @@ test.describe('landscape touch diary',()=>{
     await expect(canvas).toHaveAttribute('data-paused','true');await page.screenshot({path:info.outputPath('photo-touch-completion.png')});
     await complete.getByRole('button',{name:'继续漫游'}).tap();await expect(complete).toHaveCount(0);await expect(canvas).toHaveAttribute('data-paused','false');
     await touchStage('album-complete-descend');
-    await touchWalkTo(page,canvas,[VIEWING_PLATFORM.approach[0],VIEWING_PLATFORM.approach[2]],info,.9);expect((await position(canvas))[1]).toBeLessThan(.2);
+    await touchWalkTo(page,canvas,[VIEWING_PLATFORM.approach[0],VIEWING_PLATFORM.approach[2]],info,.9);
+    // Horizontal arrival can precede the last gravity step. Observe real rendered
+    // landing (same height bound), as the existing desktop descent helper does.
+    const landingStart=Date.now(),landingFrame=Number(await canvas.getAttribute('data-frame'));
+    const landingSamples:Array<{wallMs:number;frame:number;y:number;motion:string|null}>=[];
+    try{
+      await expect.poll(async()=>{
+        const sample=await canvas.evaluate(element=>({frame:Number((element as HTMLElement).dataset.frame),y:Number((element as HTMLElement).dataset.playerY),motion:(element as HTMLElement).dataset.playerMotion??null}));
+        landingSamples.push({wallMs:Date.now()-landingStart,...sample});
+        return sample.frame>landingFrame?sample.y:Infinity;
+      },{timeout:10000,intervals:[200]}).toBeLessThan(.2);
+    }finally{console.log(`[TOUCH_DESCENT_LANDING] ${JSON.stringify({landingFrame,landingSamples})}`);}
+
     // Hks touch round-trip remains in its dedicated landscape regression;
     // this combined core journey avoids a duplicate optional iframe startup.
     // Simulated landscape touch, not a physical phone. Every route move above
