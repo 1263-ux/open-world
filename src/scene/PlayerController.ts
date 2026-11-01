@@ -25,6 +25,14 @@ export class PlayerController {
   private grounded = true;
   private yaw = 0;
   private pitch = .24;
+  private cameraAtTarget = false;
+  private cameraTargetYaw = NaN;
+  private cameraTargetPitch = NaN;
+  private readonly cameraTargetPawn = new THREE.Vector3(NaN, NaN, NaN);
+  /** Read-only: desired angles alone do not imply the damped camera has arrived. */
+  get cameraSettled(): boolean {
+    return this.cameraAtTarget && this.cameraTargetYaw === this.yaw && this.cameraTargetPitch === this.pitch && this.cameraTargetPawn.equals(this.avatar.position);
+  }
   private gait = 0;
   private paused = false;
   private enabled = true;
@@ -68,6 +76,7 @@ export class PlayerController {
     if (p.kind === 'look') {
       this.yaw -= (e.clientX - p.x) * .005;
       this.pitch = THREE.MathUtils.clamp(this.pitch + (e.clientY - p.y) * .004, -.7, .8);
+      this.canvas.dataset.cameraSettled = String(this.cameraSettled);
     } else {
       const x = (e.clientX - p.startX) / 50, y = (e.clientY - p.startY) / 50;
       this.joystick.set(x, y).clampLength(0, 1);
@@ -226,6 +235,7 @@ export class PlayerController {
     this.shadow.position.set(p[0], .135, p[1]);
     this.collider.start.set(p[0], .46, p[1]); this.collider.end.set(p[0], 1.5, p[1]);
     this.velocityY = 0; this.grounded = true;
+    this.canvas.dataset.cameraSettled = String(this.cameraSettled);
   }
   /** Read-only finite point-proxy query against the existing world Octree. */
   segmentHit(from: [number, number, number], to: [number, number, number]): { fraction: number } | null {
@@ -369,6 +379,16 @@ export class PlayerController {
     if (hit && obstructed) desired.copy(target).addScaledVector(delta, Math.max(.1, hit.distance - .12));
     // Pull in immediately to avoid interpolating through a wall; ease back out when clear.
     if (immediate || obstructed || this.camera.position.lengthSq() === 0) this.camera.position.copy(desired); else this.camera.position.lerp(desired, .22);
+    // End the asymptotic tail within 5 mm, then judge photographs at the exact
+    // collision-adjusted camera pose. This does not relax framing or sight rays.
+    if (this.camera.position.distanceToSquared(desired) <= .005 ** 2) this.camera.position.copy(desired);
+    this.cameraAtTarget = this.camera.position.equals(desired);
+    this.cameraTargetYaw = this.yaw; this.cameraTargetPitch = this.pitch;
+    this.cameraTargetPawn.copy(this.avatar.position);
+    this.canvas.dataset.cameraSettled = String(this.cameraSettled);
+    this.canvas.dataset.cameraX = this.camera.position.x.toFixed(6);
+    this.canvas.dataset.cameraY = this.camera.position.y.toFixed(6);
+    this.canvas.dataset.cameraZ = this.camera.position.z.toFixed(6);
     const lookTarget = target.clone().add(new THREE.Vector3(0, Math.max(0, -.15 - this.pitch) * 9, 0));
     this.camera.lookAt(lookTarget);
     this.applyAvatarFade(THREE.MathUtils.smoothstep(this.camera.position.distanceTo(target), 1, 1.8));

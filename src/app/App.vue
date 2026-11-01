@@ -12,7 +12,7 @@ import { campuses } from '../campus-data/campuses';
 import { emptyQuest, startQuest, visitQuest } from '../games/quest';
 import { loadProgress, saveProgress } from '../games/storage';
 import { createCampusScene } from '../scene/CampusScene';
-import type { CampusData, CampusId, CampusSceneHandle, Landmark, SceneEvent, PaperplaneSnapshot, PaperplaneInput } from '../shared/contracts';
+import type { CampusData, CampusId, CampusSceneHandle, Landmark, SceneEvent, PaperplaneSnapshot, PaperplaneInput, PhotoInspection } from '../shared/contracts';
 
 type QuestState = ReturnType<typeof emptyQuest>;
 type Panel = 'quest' | 'directory' | 'detail';
@@ -108,7 +108,7 @@ const photoStamps = ref(loadPhotoStamps());
 const photoImages = ref<Record<string, string>>({});
 const photoPointId = ref(PHOTO_POINTS.find(point => !journey.value?.photos.includes(point.id as 'hall'|'garden'|'platform'))?.id ?? PHOTO_POINTS[0]!.id);
 const photoPoint = computed(() => PHOTO_POINTS.find(point => point.id === photoPointId.value) ?? PHOTO_POINTS[0]!);
-const photoStatus = ref<{ inRange: boolean; framed: boolean; obstructed: boolean; distance: number } | null>(null);
+const photoStatus = ref<PhotoInspection | null>(null);
 const photoFeedback = ref('');
 const photoViewAvailable = ref(true);
 type PhotoModelStatus = 'loading' | 'ready' | 'fallback';
@@ -201,6 +201,7 @@ function recordPhoto() {
   const status = photoStatus.value;
   if (!status) { photoMessage('请先返回人物视角，再继续取景。'); return; }
   if (!status.inRange) { photoMessage(`还未到观察处，继续靠近 · 约 ${Math.round(status.distance)} 米`); return; }
+  if (status.settling) { photoMessage('稍候片刻，让镜头稳定后再记录。'); return; }
   if (status.obstructed) { photoMessage(`${photoPoint.value.subject}被景物遮住了，换个位置看看。`); return; }
   if (!status.framed) { photoMessage(`${photoPoint.value.frameHint}。`); return; }
   const image = scene?.capturePhoto();

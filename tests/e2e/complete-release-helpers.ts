@@ -58,6 +58,10 @@ export async function reachStation(page:Page,canvas:Locator){
 export async function planeState(canvas:Locator):Promise<PaperplaneSnapshot>{
   const raw=await canvas.getAttribute('data-paperplane');if(!raw)throw Error('Missing read-only flight snapshot');return JSON.parse(raw) as PaperplaneSnapshot;
 }
+/** Observe genuine fixed-step progress; wall-clock waits are not simulation time on SwiftShader. */
+export async function waitForSimulatedAdvance(canvas:Locator,elapsed:number,seconds=.3){
+  await expect.poll(async()=>{const state=await planeState(canvas);expect(state.phase).toBe('flying');expect(state.paused).toBe(false);return state.elapsed;},{timeout:10000,intervals:[100]}).toBeGreaterThanOrEqual(elapsed+seconds);
+}
 export async function launch(page:Page){await page.getByRole('button',{name:'开始放飞',exact:true}).click();await page.getByTestId('campus-canvas').focus();}
 export async function dragLook(page: Page, canvas: Locator, dx: number, dy=0, touch=false) {
   const box = await canvas.boundingBox(); if (!box) throw new Error('No campus canvas bounds');
@@ -81,6 +85,14 @@ export async function rotateTo(page: Page, canvas: Locator, targetYaw: number, t
 /** Bounded real-input search. Yaw points toward each published subject, while
  * each pitch is tried by a mouse/touch gesture and judged by live read-only
  * framing/occlusion feedback after the camera has rendered and settled. */
+export async function waitForSettledCamera(page:Page,canvas:Locator){
+  await expect(canvas).toHaveAttribute('data-camera-settled','true',{timeout:20000});
+  const frame=Number(await canvas.getAttribute('data-frame'));
+  await expect.poll(async()=>Number(await canvas.getAttribute('data-frame')),{timeout:10000,intervals:[100]}).toBeGreaterThan(frame);
+  // Allow the existing 250ms guide refresh to observe the exact settled pose.
+  await page.waitForTimeout(300);
+  await expect(canvas).toHaveAttribute('data-camera-settled','true');
+}
 export async function aimAtSubject(page: Page, canvas: Locator, pointIndex: number, touch=false, info?: TestInfo) {
   const guide=page.getByTestId('photo-guide'),target=PHOTO_POINTS[pointIndex]!.target;
   await expect(guide).toHaveAttribute('data-photo-in-range','true',{timeout:15000});
@@ -91,12 +103,8 @@ export async function aimAtSubject(page: Page, canvas: Locator, pointIndex: numb
       if (![x,z,yaw,pitch,...target].every(Number.isFinite)) throw Error('Missing camera/player/subject coordinates');
       const desiredYaw=Math.atan2(target[0]-x,target[2]-z);
       const turn=Math.atan2(Math.sin(desiredYaw-yaw),Math.cos(desiredYaw-yaw));
-      const frame=Number(await canvas.getAttribute('data-frame'));
       await dragLook(page,canvas,-turn/.005,(pitchTarget-pitch)/.004,touch);
-      // Inspect after genuine rendered frames, not stale pre-drag state; this
-      // also allows camera damping and the UI's 250ms status update to settle.
-      await expect.poll(async()=>Number(await canvas.getAttribute('data-frame')),{timeout:15000,intervals:[100]}).toBeGreaterThanOrEqual(frame+6);
-      await page.waitForTimeout(300);
+      await waitForSettledCamera(page,canvas);
       const framed=await guide.getAttribute('data-photo-framed'),obstructed=await guide.getAttribute('data-photo-obstructed');
       attempts.push({pitchTarget,yaw:Number(await canvas.getAttribute('data-camera-yaw')),pitch:Number(await canvas.getAttribute('data-camera-pitch')),framed,obstructed});
       if(framed==='true' && obstructed==='false') return;

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { campuses } from '../../src/campus-data/campuses';
 import { PHOTO_POINTS } from '../../src/games/photography';
 import { position, walkRoute, walkTo } from './campus-walk';
-import { ascend, descend, planePose, planeState, screenRightDisplacement, waitForFlightSuccess, STATION_ROUTE_STAGING, stationApproachRoute } from './complete-release-helpers';
+import { ascend, descend, planePose, planeState, screenRightDisplacement, waitForSimulatedAdvance, waitForSettledCamera, waitForFlightSuccess, STATION_ROUTE_STAGING, stationApproachRoute } from './complete-release-helpers';
 import { VIEWING_PLATFORM } from '../../src/scene/OriginalViewingPlatform';
 
 // Read-only telemetry supplements actual input and screenshots; it never controls the game.
@@ -49,12 +49,8 @@ async function aimAtSubject(page: Page, canvas: Locator, pointIndex: number, tou
       if (![x,z,yaw,pitch,...target].every(Number.isFinite)) throw Error('Missing camera/player/subject coordinates');
       const desiredYaw=Math.atan2(target[0]-x,target[2]-z);
       const turn=Math.atan2(Math.sin(desiredYaw-yaw),Math.cos(desiredYaw-yaw));
-      const frame=Number(await canvas.getAttribute('data-frame'));
       await dragLook(page,canvas,-turn/.005,(pitchTarget-pitch)/.004,touch);
-      // Inspect after genuine rendered frames, not stale pre-drag state; this
-      // also allows camera damping and the UI's 250ms status update to settle.
-      await expect.poll(async()=>Number(await canvas.getAttribute('data-frame')),{timeout:15000,intervals:[100]}).toBeGreaterThanOrEqual(frame+6);
-      await page.waitForTimeout(300);
+      await waitForSettledCamera(page,canvas);
       const framed=await guide.getAttribute('data-photo-framed'),obstructed=await guide.getAttribute('data-photo-obstructed');
       attempts.push({pitchTarget,yaw:Number(await canvas.getAttribute('data-camera-yaw')),pitch:Number(await canvas.getAttribute('data-camera-pitch')),framed,obstructed});
       if(framed==='true' && obstructed==='false') return;
@@ -146,10 +142,8 @@ test('scenic diary: genuine walk, framing, three captures, Hks round-trip and lo
     expect(Math.hypot(p[0]-PHOTO_POINTS[0]!.position[0],p[2]-PHOTO_POINTS[0]!.position[1])).toBeLessThan(PHOTO_POINTS[0]!.radius);
     const target = PHOTO_POINTS[0]!.target, desiredYaw = Math.atan2(target[0]-p[0],target[2]-p[2]);
     for (const pitch of [-.15,-.2,-.25,-.3,-.35,-.4,-.45,-.5,-.55,-.6]) {
-      const frame = Number(await canvas.getAttribute('data-frame'));
       await rotateTo(page,canvas,desiredYaw,pitch);
-      await expect.poll(async()=>Number(await canvas.getAttribute('data-frame')),{timeout:15000}).toBeGreaterThanOrEqual(frame+6);
-      await page.waitForTimeout(300);
+      await waitForSettledCamera(page,canvas);
       const framed = await guide.getAttribute('data-photo-framed'), obstructed = await guide.getAttribute('data-photo-obstructed');
       obstructionAttempts.push({position:p,pitch,framed,obstructed});
       if (framed === 'true' && obstructed === 'true') { foundObstruction = true; break; }
@@ -167,16 +161,16 @@ test('scenic diary: genuine walk, framing, three captures, Hks round-trip and lo
   // tower's upper edge is cut off in the source geometry. The UI must reject;
   // preserve a screenshot so the visible clipping is independently reviewed.
   const towardClock=Number(await canvas.getAttribute('data-camera-yaw'));
-  await rotateTo(page,canvas,towardClock,0);await canvas.focus();await page.keyboard.press('e');
+  await rotateTo(page,canvas,towardClock,0);await waitForSettledCamera(page,canvas);await canvas.focus();await page.keyboard.press('e');
   await expect(hint).toContainText('调整视角',{timeout:10000});expect(await stampIds(page)).toEqual([]);
   await page.screenshot({path:info.outputPath('photo-clipped-tower-rejected.png')});
   await aimAtSubject(page,canvas,0,false,info);await expect(hint).toContainText('构图就绪',{timeout:15000});
   // A real rightward camera drag puts the target outside the frame. The game
   // must reject E instead of granting progress. Restore the view by dragging back.
-  await dragLook(page,canvas,300); await canvas.focus(); await page.keyboard.press('e');
+  await dragLook(page,canvas,300); await waitForSettledCamera(page,canvas); await canvas.focus(); await page.keyboard.press('e');
   await expect(hint).toContainText('调整视角', {timeout:10000}); expect(await stampIds(page)).toEqual([]);
   await page.screenshot({path:info.outputPath('photo-wrong-framing.png')});
-  await dragLook(page,canvas,-300); await expect(hint).toContainText('构图就绪',{timeout:15000});
+  await dragLook(page,canvas,-300); await waitForSettledCamera(page,canvas); await expect(hint).toContainText('构图就绪',{timeout:15000});
   await canvas.focus(); await page.keyboard.press('e');
   await expect(guide).toContainText('1 / 3'); expect(await stampIds(page)).toEqual(['hall']);
   // E at the first site cannot record the distant second point.
@@ -196,7 +190,7 @@ test('scenic diary: genuine walk, framing, three captures, Hks round-trip and lo
   // a garden stamp. The real garden subject is a different authored landmark.
   const clock = PHOTO_POINTS[0]!.target;
   const clockYaw = Math.atan2(clock[0]-there[0],clock[2]-there[2]);
-  await rotateTo(page,canvas,clockYaw,-.2);await expect(guide).toHaveAttribute('data-photo-framed','false',{timeout:15000});
+  await rotateTo(page,canvas,clockYaw,-.2);await waitForSettledCamera(page,canvas);await expect(guide).toHaveAttribute('data-photo-framed','false',{timeout:15000});
   await canvas.focus();await page.keyboard.press('e');
   await expect(hint).toContainText('调整视角',{timeout:10000});expect(await stampIds(page)).toEqual(['hall']);
   await page.screenshot({path:info.outputPath('photo-garden-wrong-subject.png')});
@@ -358,7 +352,7 @@ test.describe('landscape touch diary',()=>{
         return {
           frame:canvas?.dataset.frame??null,
           playerXYZ:['playerX','playerY','playerZ'].map(key=>canvas?.dataset[key]??null),
-          camera:{yaw:canvas?.dataset.cameraYaw??null,pitch:canvas?.dataset.cameraPitch??null},
+          camera:{yaw:canvas?.dataset.cameraYaw??null,pitch:canvas?.dataset.cameraPitch??null,settled:canvas?.dataset.cameraSettled??null,xyz:[canvas?.dataset.cameraX??null,canvas?.dataset.cameraY??null,canvas?.dataset.cameraZ??null]},
           view:canvas?.dataset.view??null,paused:canvas?.dataset.paused??null,
           inRange:guide?.getAttribute('data-photo-in-range')??null,
           framed:guide?.getAttribute('data-photo-framed')??null,
@@ -400,7 +394,7 @@ test.describe('landscape touch diary',()=>{
       await page.getByTestId('begin-paperplane').tap();await page.getByRole('button',{name:'开始放飞',exact:true}).tap();
       const before=await planePose(canvas),button=page.getByRole('button',{name:label,exact:true}),box=await button.boundingBox();if(!box)throw Error('Missing flight touch control');
       const client=await page.context().newCDPSession(page),x=box.x+box.width/2,y=box.y+box.height/2;
-      await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:22}]});await page.waitForTimeout(700);
+      await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:22}]});await waitForSimulatedAdvance(canvas,(await planeState(canvas)).elapsed);
       await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await client.detach();
       expect(screenRightDisplacement(before,await planePose(canvas))*sign).toBeGreaterThan(.01);
       await page.getByRole('button',{name:/退出放飞/}).tap();expect(await position(canvas)).toEqual(stationPose);

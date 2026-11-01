@@ -1,16 +1,16 @@
 import { expect, test } from '@playwright/test';
 import { position } from './campus-walk';
-import { launch, planePose, planeState, reachStation, ready, screenRightDisplacement, waitForFlightSuccess } from './complete-release-helpers';
+import { launch, planePose, planeState, reachStation, ready, screenRightDisplacement, waitForSimulatedAdvance, waitForFlightSuccess } from './complete-release-helpers';
 test('flight failure, retry, resize pause, cancel, and campus/Hks mutual exclusion use real input',async({page},info)=>{
   test.setTimeout(360000);const canvas=await ready(page);await page.getByRole('button',{name:'先去漫游',exact:true}).click();await reachStation(page,canvas);
   const pose=await position(canvas);await page.getByTestId('begin-paperplane').click();await page.keyboard.press('Escape');
   await expect(page.getByTestId('paperplane-panel')).toHaveCount(0);expect(await position(canvas)).toEqual(pose);
   await page.getByTestId('begin-paperplane').click();await launch(page);
-  const rightBefore=await planePose(canvas);await page.keyboard.down('KeyD');await page.waitForTimeout(700);expect(screenRightDisplacement(rightBefore,await planePose(canvas))).toBeGreaterThan(.01);try{await expect.poll(async()=>(await planeState(canvas)).phase,{timeout:60000}).toBe('result');}finally{await page.keyboard.up('KeyD');}
+  const rightBefore=await planePose(canvas);await page.keyboard.down('KeyD');await waitForSimulatedAdvance(canvas,(await planeState(canvas)).elapsed);expect(screenRightDisplacement(rightBefore,await planePose(canvas))).toBeGreaterThan(.01);try{await expect.poll(async()=>(await planeState(canvas)).phase,{timeout:60000}).toBe('result');}finally{await page.keyboard.up('KeyD');}
   expect((await planeState(canvas)).result).not.toBe('success');await page.screenshot({path:info.outputPath('flight-deliberate-failure.png')});
   await page.getByRole('button',{name:'再飞一次',exact:true}).click();expect((await planeState(canvas)).gatesPassed).toBe(0);await launch(page);
   await waitForFlightSuccess(canvas,info,'flight-wall-and-simulated-time');await page.getByRole('button',{name:'返回手记',exact:true}).click();
-  await page.getByTestId('begin-paperplane').click();await launch(page);const leftBefore=await planePose(canvas);await page.keyboard.down('KeyA');await page.waitForTimeout(300);await page.getByRole('button',{name:'抬头',exact:true}).click();const heldKeyHeading=(await planePose(canvas)).heading;await page.waitForTimeout(400);expect((await planePose(canvas)).heading).toBeLessThan(heldKeyHeading-.03);await page.keyboard.up('KeyA');expect(screenRightDisplacement(leftBefore,await planePose(canvas))).toBeLessThan(-.01);
+  await page.getByTestId('begin-paperplane').click();await launch(page);const leftBefore=await planePose(canvas);await page.keyboard.down('KeyA');await waitForSimulatedAdvance(canvas,(await planeState(canvas)).elapsed);await page.getByRole('button',{name:'抬头',exact:true}).click();const heldKeyHeading=(await planePose(canvas)).heading;await waitForSimulatedAdvance(canvas,(await planeState(canvas)).elapsed);expect((await planePose(canvas)).heading).toBeLessThan(heldKeyHeading-.03);await page.keyboard.up('KeyA');expect(screenRightDisplacement(leftBefore,await planePose(canvas))).toBeLessThan(-.01);
   await page.setViewportSize({width:1430,height:950});await expect.poll(async()=>(await planeState(canvas)).paused).toBe(true);
   const paused=await planeState(canvas);await page.waitForTimeout(1200);expect((await planeState(canvas)).elapsed).toBe(paused.elapsed);
   await page.getByRole('button',{name:'继续飞行',exact:true}).click();await canvas.focus();
@@ -29,6 +29,7 @@ test.describe('landscape touch flight',()=>{
     await page.getByTestId('begin-paperplane').tap();await page.getByRole('button',{name:'开始放飞',exact:true}).tap();
     const right=page.getByRole('button',{name:'向右转',exact:true}),box=await right.boundingBox();if(!box)throw Error('Missing touch flight control');
     expect(box.width).toBeGreaterThanOrEqual(44);expect(box.height).toBeGreaterThanOrEqual(44);
+    console.log(`[FLIGHT_BROWSER] ${page.context().browser()?.version()??'unknown'}`);
     // Passive DOM observations only; never dispatch synthetic DOM events or write app state.
     const pointerEvents:Array<{type:string;id:number;label:string;time:number}>=[];
     await page.exposeFunction('recordFlightPointer', (event:{type:string;id:number;label:string;time:number})=>{pointerEvents.push(event);});
@@ -47,14 +48,15 @@ test.describe('landscape touch flight',()=>{
       await advanceFrom((await planeState(canvas)).elapsed);expect(screenRightDisplacement(before,await planePose(canvas))).toBeGreaterThan(.01);
       const pitchBox=await page.getByRole('button',{name:'抬头',exact:true}).boundingBox();if(!pitchBox)throw Error('Missing pitch touch control');
       const second={x:pitchBox.x+pitchBox.width/2,y:pitchBox.y+pitchBox.height/2,id:2};
-      // CDP changes the active list with touchMove; touchEnd requires an empty list.
+      // Pinned Chromium156 default WebTouch branch adds provided missing IDs on move.
+      // Unlike its disabled SyntheticPointerActions branch, partial end names RELEASED IDs.
       await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y,id:1},second]});
       await advanceFrom((await planeState(canvas)).elapsed);await evidence('two-held');
       const rightId=pointerEvents.find(e=>e.type==='pointerdown'&&e.label==='向右转')?.id;
       const pitchId=pointerEvents.find(e=>e.type==='pointerdown'&&e.label==='抬头')?.id;
       expect(rightId).toBeDefined();expect(pitchId).toBeDefined();expect(pitchId).not.toBe(rightId);
       const releaseStart=pointerEvents.length;
-      await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y,id:1}]});
+      await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[second]});
       await expect.poll(()=>pointerEvents.slice(releaseStart).some(e=>e.type==='pointerup'&&e.id===pitchId)).toBe(true);
       const stillHeld=await evidence('pitch-released');await advanceFrom(stillHeld.state.elapsed);
       const retained=await evidence('right-retained');

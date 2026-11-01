@@ -19,7 +19,7 @@ const noopHandle = (): CampusSceneHandle => ({
   focusLandmark() {}, overview() {}, resetView() {}, pause() {}, resume() {}, dispose() {},
   canBeginPaperplane: () => false, beginPaperplane: () => false,
   setPaperplaneInput() {}, launchPaperplane() {}, retryPaperplane() {}, pausePaperplane() {}, resumePaperplane() {}, endPaperplane() {},
-  inspectPhoto: () => ({ inRange: false, framed: false, obstructed: false, distance: Infinity }), capturePhoto: () => null,
+  inspectPhoto: () => ({ settling: true, inRange: false, framed: false, obstructed: false, distance: Infinity }), capturePhoto: () => null,
 });
 
 /** Optional vertical gate preserves legacy ground-level photography. */
@@ -1101,8 +1101,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
   function inspectPhoto(point: PhotoPoint): PhotoInspection {
     const distance = validPoint(point.position) ? Math.hypot(pawn.position.x - point.position[0], pawn.position.z - point.position[1]) : Infinity;
-    const result: PhotoInspection = { distance, inRange: Number.isFinite(point.radius) && point.radius > 0 && distance <= point.radius && isPhotoHeightEligible(pawn.position.y, point.heightRange), framed: false, obstructed: false };
+    const result: PhotoInspection = { settling: !player.cameraSettled, distance, inRange: Number.isFinite(point.radius) && point.radius > 0 && distance <= point.radius && isPhotoHeightEligible(pawn.position.y, point.heightRange), framed: false, obstructed: false };
     if (disposed || paused || plane || mapMode || !validPoint(point.position) || !Array.isArray(point.target) || point.target.length !== 3 || !point.target.every(Number.isFinite) || !Number.isFinite(point.radius) || point.radius <= 0 || !result.inRange) return result;
+    if (result.settling) return result;
     player.camera.updateMatrixWorld(true);
     const visibleInFrame = (xyz: [number, number, number], maxX: number, maxY: number): boolean => {
       if (!Array.isArray(xyz) || xyz.length !== 3 || !xyz.every(Number.isFinite)) return false;
@@ -1141,7 +1142,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     return result;
   }
   function capturePhoto(): string | null {
-    if (disposed || paused || plane || mapMode) return null;
+    if (disposed || paused || plane || mapMode || !player.cameraSettled) return null;
     try {
       // The default WebGL buffer need not persist after a frame; render and
       // read synchronously rather than returning a blank canvas.

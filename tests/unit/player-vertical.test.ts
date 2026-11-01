@@ -20,6 +20,24 @@ function stairs(){const g=new Group();for(let i=0;i<6;i++){const h=.3+i*.18;box(
 beforeEach(()=>{vi.stubGlobal('Element',ElementDouble);vi.stubGlobal('document',Object.assign(new EventTarget(),{createElement:()=>new ElementDouble()}));vi.stubGlobal('window',new EventTarget());vi.spyOn(performance,'now').mockReturnValue(0);vi.spyOn(StudentModel,'load').mockReturnValue(new Promise<StudentModel>(()=>{}));player=new PlayerController(new ElementDouble() as unknown as HTMLElement,new ElementDouble() as unknown as HTMLCanvasElement);input=player as unknown as typeof input;});
 afterEach(()=>{player.dispose();vi.restoreAllMocks();vi.unstubAllGlobals();});
 describe('vertical controller and finite world queries',()=>{
+  it('invalidates settled camera synchronously on a real pointer-look handler and converges in finite frames',()=>{
+    world(new Group());frames(60);player.updateCamera(true);expect(player.cameraSettled).toBe(true);
+    const controls=player as unknown as {canvas:HTMLElement;onPointerDown:(e:PointerEvent)=>void;onPointerMove:(e:PointerEvent)=>void;onPointerUp:(e:PointerEvent)=>void};
+    Object.assign(controls.canvas,{getBoundingClientRect:()=>({left:0,top:0,width:1000,height:600})});
+    const event=(x:number)=>({pointerId:1,pointerType:'mouse',button:0,clientX:x,clientY:200,preventDefault(){}} as PointerEvent);
+    controls.onPointerDown(event(500));controls.onPointerMove(event(700));
+    expect(player.cameraSettled).toBe(false);expect(controls.canvas.dataset.cameraSettled).toBe('false');controls.onPointerUp(event(700));
+    let count=0;while(!player.cameraSettled&&count<80){player.updateCamera(false);count++;}
+    expect(count).toBeGreaterThan(6);expect(count).toBeLessThan(80);expect(player.cameraSettled).toBe(true);
+    const settled=player.camera.position.clone();player.updateCamera(true);expect(player.camera.position.distanceTo(settled)).toBeLessThan(1e-10);
+    player.updateCamera(false);expect(player.camera.position.equals(settled)).toBe(true);
+  });
+  it('invalidates the settled camera when pawn height changes, then settles at the new exact target',()=>{
+    world(new Group());frames(60);player.updateCamera(true);player.avatar.position.y+=1.2;expect(player.cameraSettled).toBe(false);
+    for(let i=0;i<80&&!player.cameraSettled;i++)player.updateCamera(false);
+    expect(player.cameraSettled).toBe(true);expect(player.camera.position.toArray().every(Number.isFinite)).toBe(true);
+    const settled=player.camera.position.clone();player.updateCamera(true);expect(player.camera.position.distanceTo(settled)).toBeLessThan(1e-10);
+  });
   it.each([false,true])('walks six 0.18m rises and descends without jumping (run=%s)',run=>{
     world(stairs());if(run)down('ShiftLeft');down('KeyW');frames(run?45:86);up('KeyW');up('ShiftLeft');frames(30);
     expect(player.avatar.position.y).toBeCloseTo(1.201,2);expect(player.shadow.visible).toBe(true);expect(player.shadow.position.y).toBeCloseTo(1.215,2);

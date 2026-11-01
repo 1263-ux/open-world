@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { PHOTO_POINTS, type PhotoPoint } from '../games/photography';
+import type { PhotoInspection } from '../shared/contracts';
 
 const props = defineProps<{
   point: PhotoPoint;
   stamps: string[];
   photos: Record<string, string>;
-  status: { inRange: boolean; framed: boolean; obstructed: boolean; distance: number } | null;
+  status: PhotoInspection | null;
   disabled: boolean;
   viewAvailable: boolean;
   modelStatus: 'loading' | 'ready' | 'fallback';
@@ -39,6 +40,7 @@ const hint = computed(() => {
   if (props.modelStatus === 'loading') return `${props.point.modelLabel}正在加载，稍候即可取景`;
   if (!props.status) return '正在寻找观察位置…';
   if (!props.status.inRange) return props.point.heightRange && props.status.distance <= props.point.radius ? '请沿台阶登上观景低台，再拍摄高处的花园' : `向观察处靠近 · 约 ${Math.round(props.status.distance)} 米`;
+  if (props.status.settling) return '稍候片刻，让镜头稳定后再记录';
   if (props.status.obstructed) return `${props.point.subject}被景物遮住了，换个位置看看`;
   if (!props.status.framed) return props.point.frameHint;
   return '构图就绪 · 按 E 或轻触记录';
@@ -84,7 +86,7 @@ async function downloadPostcard() {
 </script>
 
 <template>
-  <div class="photo-guide" data-testid="photo-guide" :data-photo-in-range="String(status?.inRange ?? false)" :data-photo-framed="String(status?.framed ?? false)" :data-photo-obstructed="String(status?.obstructed ?? false)">
+  <div class="photo-guide" data-testid="photo-guide" :data-photo-in-range="String(status?.inRange ?? false)" :data-photo-settling="String(status?.settling ?? false)" :data-photo-framed="String(status?.framed ?? false)" :data-photo-obstructed="String(status?.obstructed ?? false)">
     <div class="photo-guide-copy">
       <span class="photo-kicker">晴日 · 取景手记 <b>{{ count }} / {{ PHOTO_POINTS.length }}</b></span>
       <strong>{{ point.title }} <span v-if="point.designNote" class="photo-design-note">{{ point.designNote }}</span></strong>

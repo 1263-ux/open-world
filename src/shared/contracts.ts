@@ -25,7 +25,7 @@ export interface PaperplaneSnapshot { phase: 'ready'|'flying'|'result'; paused: 
 export type SceneEvent = {type:'paperplane';snapshot:PaperplaneSnapshot|null}| {type:'select';id:string}|{type:'arrive';id:string}|{type:'travel';progress:number}|{type:'error';reason:string}|{type:'modelstatus';id:string;name:string;status:'ready'|'fallback'};
 export interface SceneState {selectedId:string|null;targetId:string|null;}
 export interface PhotoPoint { heightRange?: [number, number]; position: Point2; target: [number, number, number]; frameExtent: [number, number, number][]; focusExtent: [number, number, number][]; radius: number; landmarkId?: string; }
-export interface PhotoInspection { inRange: boolean; framed: boolean; obstructed: boolean; distance: number; }
+export interface PhotoInspection { settling: boolean; inRange: boolean; framed: boolean; obstructed: boolean; distance: number; }
 export interface CampusSceneHandle {
   canBeginPaperplane(): boolean;
   beginPaperplane(): boolean;
