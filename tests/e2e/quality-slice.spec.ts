@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { campuses } from '../../src/campus-data/campuses';
 import { PHOTO_POINTS } from '../../src/games/photography';
 import { position, walkRoute, walkTo } from './campus-walk';
-import { ascend, descend, planePose, planeState, screenRightDisplacement, waitForFlightSuccess } from './complete-release-helpers';
-import { PAPERPLANE_STATION, VIEWING_PLATFORM } from '../../src/scene/OriginalViewingPlatform';
+import { ascend, descend, planePose, planeState, screenRightDisplacement, waitForFlightSuccess, STATION_ROUTE_STAGING, stationApproachRoute } from './complete-release-helpers';
+import { VIEWING_PLATFORM } from '../../src/scene/OriginalViewingPlatform';
 
 // Read-only telemetry supplements actual input and screenshots; it never controls the game.
 test.setTimeout(420000);
@@ -83,8 +83,8 @@ async function steerPhotoZ(page: Page, canvas: Locator, target: number, info: Te
   }
 }
 /** Real left-joystick gestures; source geometry chooses a route, only touch moves the player. */
-async function touchWalkTo(page: Page, canvas: Locator, target: [number,number], info: TestInfo, tolerance=4.5) {
-  const [startX,,startZ]=await position(canvas),route=walkRoute(campuses.yingxi,[startX,startZ],target);
+async function touchWalkTo(page: Page, canvas: Locator, target: [number,number], info: TestInfo, tolerance=4.5, authoredSegment=false) {
+  const [startX,,startZ]=await position(canvas),route=authoredSegment?[target]:walkRoute(campuses.yingxi,[startX,startZ],target);
   const box=await canvas.boundingBox();if(!box)throw Error('Missing campus canvas bounds');
   // The visible fixed stick is left:38px, bottom:70px, diameter:90px.
   const center={x:box.x+83,y:box.y+box.height-115};
@@ -92,12 +92,12 @@ async function touchWalkTo(page: Page, canvas: Locator, target: [number,number],
   const observations:Array<{waypoint:[number,number];before:[number,number,number];after:[number,number,number];holdMs:number;stick:{x:number;y:number}}>=[];
   let stagnant=0, previous:[number,number]=[startX,startZ];
   try {
-    for(const waypoint of route) for(let attempt=0;attempt<30;attempt++) {
+    for(const waypoint of route) for(let attempt=0;attempt<(authoredSegment?180:30);attempt++) {
       const before=await position(canvas),dx=waypoint[0]-before[0],dz=waypoint[1]-before[2];
-      if(Math.hypot(dx,dz)<.9||Math.hypot(target[0]-before[0],target[1]-before[2])<tolerance)break;
+      if(Math.hypot(dx,dz)<(authoredSegment?tolerance:.9)||Math.hypot(target[0]-before[0],target[1]-before[2])<tolerance)break;
       const yaw=Number(await canvas.getAttribute('data-camera-yaw'));if(!Number.isFinite(yaw))throw Error('Missing camera yaw');
       const distance=Math.hypot(dx,dz),stick={x:(-dx*Math.cos(yaw)+dz*Math.sin(yaw))/distance,y:-(dx*Math.sin(yaw)+dz*Math.cos(yaw))/distance};
-      const holdMs=Math.max(80,Math.min(300,distance/3.4*500));
+      const holdMs=authoredSegment?Math.max(20,Math.min(80,distance/3.4*450)):Math.max(80,Math.min(300,distance/3.4*500));
       await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...center,id:12}]});
       try {
         await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:center.x+stick.x*50,y:center.y+stick.y*50,id:12}]});
@@ -107,7 +107,7 @@ async function touchWalkTo(page: Page, canvas: Locator, target: [number,number],
       if(Math.hypot(after[0]-previous[0],after[2]-previous[1])<.05)stagnant++;else stagnant=0;
       if(stagnant>=12)throw Error(`Touch movement stuck at ${after[0]},${after[2]} near ${waypoint}`);
       previous=[after[0],after[2]];
-      if(attempt===29)throw Error(`Touch policy could not reach ${waypoint}`);
+      if(attempt===(authoredSegment?179:29))throw Error(`Touch policy could not reach ${waypoint}`);
     }
   } finally {
     await touch.detach();
@@ -385,7 +385,8 @@ test.describe('landscape touch diary',()=>{
     expect(await canvas.getAttribute('data-camera-yaw')).toBe(yaw);expect(await stampIds(page)).toEqual(['hall','garden','platform']);
     // Simulated landscape touch, not a physical phone. Every route move above
     // and below is a left-stick gesture; no keyboard or position injection.
-    await touchWalkTo(page,canvas,[PAPERPLANE_STATION.standing[0],PAPERPLANE_STATION.standing[2]],info,.9);
+    await touchWalkTo(page,canvas,STATION_ROUTE_STAGING,info,.9);
+    for(const point of stationApproachRoute())await touchWalkTo(page,canvas,point,info,.25,true);
     const stationPose=await position(canvas);
     for(const [label,sign] of [['向右转',1],['向左转',-1]] as const){
       await page.getByTestId('begin-paperplane').tap();await page.getByRole('button',{name:'开始放飞',exact:true}).tap();

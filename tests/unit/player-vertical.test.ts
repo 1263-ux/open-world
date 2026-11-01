@@ -3,8 +3,9 @@ import { BoxGeometry, Group, Mesh, MeshBasicMaterial, Raycaster, Vector3 } from 
 import { campuses } from '../../src/campus-data/campuses';
 import { disposeObject } from '../../src/scene/CampusScene';
 import { PlayerController } from '../../src/scene/PlayerController';
-import { createOriginalViewingPlatform, VIEWING_PLATFORM } from '../../src/scene/OriginalViewingPlatform';
+import { createOriginalViewingPlatform, VIEWING_PLATFORM, PLATFORM_GROUND_LINKS, PAPERPLANE_STATION } from '../../src/scene/OriginalViewingPlatform';
 import { StudentModel } from '../../src/scene/StudentModel';
+import { waypointKeys, walkRoute } from '../e2e/campus-walk';
 import { ElementDouble } from './controller-harness';
 // Isolated real Octree/controller regression, not a natural browser journey.
 let player:PlayerController;
@@ -49,6 +50,34 @@ describe('vertical controller and finite world queries',()=>{
     down('ShiftLeft');down('KeyW');frames(Math.ceil(.95/dt),dt);up('KeyW');up('ShiftLeft');frames(30);
     expect(player.avatar.position.y).toBeCloseTo(1.201,2);expect(player.avatar.position.toArray().every(Number.isFinite)).toBe(true);
     input.yaw=0;down('KeyD');frames(180);up('KeyD');expect(player.avatar.position.x).toBeGreaterThan(57.9);expect(player.avatar.position.y).toBeCloseTo(1.201,2);
+  });
+  it.each([[-20,175.5],[60.859,173.4]])('clears the new props on the existing A* staging route from %s,%s',(x,z)=>{
+    const platform=createOriginalViewingPlatform();player.setCampus(campuses.yingxi,platform.colliders);platform.dispose();player.setPosition([x,z]);input.yaw=-Math.PI/2;
+    for(const waypoint of walkRoute(campuses.yingxi,[x,z],[60,170])){
+      let reached=false;
+      for(let attempt=0;attempt<30;attempt++){
+        const p=player.avatar.position,dx=waypoint[0]-p.x,dz=waypoint[1]-p.z,distance=Math.hypot(dx,dz);
+        if(distance<.9||Math.hypot(p.x-60,p.z-170)<.9){reached=true;break;}
+        const keys=waypointKeys(dx,dz,input.yaw);down('ShiftLeft');keys.forEach(down);
+        frames(Math.ceil(Math.max(.08,Math.min(.3,distance/6.5*.5))*60));keys.forEach(up);up('ShiftLeft');
+      }
+      expect(reached,`Legacy staging waypoint ${waypoint}`).toBe(true);
+    }
+    expect(Math.hypot(player.avatar.position.x-60,player.avatar.position.z-170)).toBeLessThan(.9);
+  });
+  it('walks every unsnapped ground-link segment around the desk using the real controller',()=>{
+    const platform=createOriginalViewingPlatform();player.setCampus(campuses.yingxi,platform.colliders);platform.dispose();player.setPosition([60,170]);input.yaw=-.7;
+    for(const target of PLATFORM_GROUND_LINKS[2]!){
+      let reached=false;
+      for(let pulse=0;pulse<180;pulse++){
+        const p=player.avatar.position,dx=target[0]-p.x,dz=target[1]-p.z;
+        if(Math.hypot(dx,dz)<.25){reached=true;break;}
+        const keys=waypointKeys(dx*4,dz*4,input.yaw);keys.forEach(down);frames(4);keys.forEach(up);
+        expect(player.avatar.position.y).toBeLessThan(.2);
+      }
+      expect(reached,`Reach authored ground corner ${target} without climbing a solid`).toBe(true);
+    }
+    const p=player.avatar.position;expect(Math.hypot(p.x-PAPERPLANE_STATION.standing[0],p.z-PAPERPLANE_STATION.standing[2])).toBeLessThan(PAPERPLANE_STATION.interactionRadius);
   });
   it('offers a framed elevated garden view not blocked by the platform rail',()=>{
     const platform=createOriginalViewingPlatform();try{

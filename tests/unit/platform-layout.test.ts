@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Box3, Mesh } from 'three';
 import { campuses } from '../../src/campus-data/campuses';
 import { PHOTO_POINTS } from '../../src/games/photography';
-import { createOriginalViewingPlatform, PLATFORM_BOXES, VIEWING_PLATFORM, PAPERPLANE_STATION } from '../../src/scene/OriginalViewingPlatform';
+import { createOriginalViewingPlatform, PLATFORM_BOXES, VIEWING_PLATFORM, PAPERPLANE_STATION, PLATFORM_GROUND_LINKS } from '../../src/scene/OriginalViewingPlatform';
+import { walkRoute } from '../e2e/campus-walk';
 import type { Point2 } from '../../src/shared/contracts';
 const edges=(p:Point2[])=>p.map((a,i)=>[a,p[(i+1)%p.length]!] as const);
 const pointDistance=(p:Point2,a:Point2,b:Point2)=>{const dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dz)/(dx*dx+dz*dz||1)));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dz);};
@@ -41,4 +42,26 @@ describe('whole-footprint original platform layout',()=>{
     expect(PAPERPLANE_STATION.foldingDirection[2]).toBe(-1);expect(PAPERPLANE_STATION.launchDirection[2]).toBe(1);
     expect(PAPERPLANE_STATION.release[1]).toBeGreaterThan(1);
   });
+  it('keeps exact station-link segments clear of props including capsule and strict corner tolerance',()=>{
+    const radiusAndCorner=.34+.25;
+    const link=PLATFORM_GROUND_LINKS[2]!;
+    for(let i=1;i<link.length;i++)for(const {name,p} of footprints()){
+      const a=link[i-1]!,b=link[i]!;
+      expect(inside(a,p)||inside(b,p),`${name}: authored segment endpoint inside solid`).toBe(false);
+      expect(Math.min(...edges(p).map(e=>segmentDistance(a,b,...e))),`${name}: segment ${a}→${b}`).toBeGreaterThan(radiusAndCorner);
+    }
+    const end=link.at(-1)!;expect(Math.hypot(end[0]-PAPERPLANE_STATION.standing[0],end[1]-PAPERPLANE_STATION.standing[2])+.25).toBeLessThan(PAPERPLANE_STATION.interactionRadius);
+    expect(end[1]).toBeGreaterThan(PAPERPLANE_STATION.position[2]); // south/front, folding faces north
+  });
+  it('checks actual legacy A* staging paths before unsnapped local station routing',()=>{
+    const stage:Point2=[VIEWING_PLATFORM.approach[0],Math.floor(VIEWING_PLATFORM.stairs.minZ)-3];
+    for(const from of [[-20,175.5],[35,193],[60,173.4],[60.859,173.4],[59.2,173.4]] as Point2[]){
+      const route=[from,...walkRoute(campuses.yingxi,from,stage)];
+      for(let i=1;i<route.length;i++)for(const {name,p} of footprints()){
+        expect(inside(route[i-1]!,p)||inside(route[i]!,p),name).toBe(false);
+        expect(Math.min(...edges(p).map(e=>segmentDistance(route[i-1]!,route[i]!,...e))),`${name}: staging from ${from}`).toBeGreaterThan(.34);
+      }
+    }
+  });
+
 });

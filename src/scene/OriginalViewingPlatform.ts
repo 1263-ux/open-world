@@ -27,7 +27,9 @@ export const VIEWING_PLATFORM = {
 export const PLATFORM_GROUND_LINKS: [number, number][][] = [
   [[35, 180], [60, 172.8]],
   [[60, 172.8], [60, 173.8]],
-  [[60, 172.8], [65, 172.8], [65, 180]],
+  // Approach the table from its open +Z front, not through its rear/worktop.
+  // Extra east clearance also leaves room for a capsule at each path corner.
+  [[60, 172.8], [60, 172], [68, 172], [68, 182], [65, 182], [65, 180.4]],
 ];
 
 export const VIEWING_PLATFORM_PHOTO = VIEWING_PLATFORM.photo;

@@ -1,9 +1,9 @@
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { campuses } from '../../src/campus-data/campuses';
 import { PHOTO_POINTS } from '../../src/games/photography';
-import { VIEWING_PLATFORM, PAPERPLANE_STATION } from '../../src/scene/OriginalViewingPlatform';
-import type { PaperplaneSnapshot } from '../../src/shared/contracts';
-import { position, walkTo } from './campus-walk';
+import { VIEWING_PLATFORM, PAPERPLANE_STATION, PLATFORM_GROUND_LINKS } from '../../src/scene/OriginalViewingPlatform';
+import type { PaperplaneSnapshot, Point2 } from '../../src/shared/contracts';
+import { position, walkTo, waypointKeys } from './campus-walk';
 // Adapted from the existing quality-slice input policy. Never writes app state.
 export async function ready(page:Page){
   await page.goto('/');const canvas=page.getByTestId('campus-canvas');
@@ -22,8 +22,37 @@ export async function descend(page:Page,canvas:Locator){
   const a=VIEWING_PLATFORM.approach;await walkTo(page,canvas,campuses.yingxi,[a[0],a[2]],.9);
   await expect.poll(async()=>(await position(canvas))[1]).toBeLessThan(.2);
 }
+/** The legacy campus A* knows source buildings, not the new platform/desk
+ * props. Reach a north-clear staging point, then follow the visible authored
+ * ground link using unsnapped local segments (no new navigation engine). */
+export const STATION_ROUTE_STAGING:Point2=[VIEWING_PLATFORM.approach[0],Math.floor(VIEWING_PLATFORM.stairs.minZ)-3];
+export function stationApproachRoute():Point2[]{
+  const link=PLATFORM_GROUND_LINKS[2]!;
+  return link.map(p=>[p[0],p[1]] as Point2);
+}
+export async function walkAuthoredSegment(page:Page,canvas:Locator,target:Point2){
+  let previous=await position(canvas),stagnant=0;
+  for(let attempt=0;attempt<180;attempt++){
+    const before=await position(canvas),dx=target[0]-before[0],dz=target[1]-before[2],distance=Math.hypot(dx,dz);
+    if(distance<.25)return;
+    const yaw=Number(await canvas.getAttribute('data-camera-yaw'));if(!Number.isFinite(yaw))throw Error('Missing read-only yaw');
+    // Same established screen-relative transform; scaling lowers only the
+    // input deadzone .6→.15, below .25/sqrt(2), not any collision tolerance.
+    const keys=waypointKeys(dx*4,dz*4,yaw);
+    await canvas.focus();for(const key of keys)await page.keyboard.down(key);
+    try{await page.waitForTimeout(Math.max(20,Math.min(80,distance/3.4*450)));}
+    finally{for(const key of keys)await page.keyboard.up(key);}
+    const after=await position(canvas);
+    if(Math.hypot(after[0]-previous[0],after[2]-previous[2])<.01)stagnant++;else stagnant=0;
+    if(stagnant>=20)throw Error(`Authored walking segment blocked at ${after}; target ${target}`);
+    previous=after;
+  }
+  throw Error(`Authored walking segment did not reach ${target}`);
+}
 export async function reachStation(page:Page,canvas:Locator){
-  const s=PAPERPLANE_STATION.standing;await walkTo(page,canvas,campuses.yingxi,[s[0],s[2]],.9);
+  await walkTo(page,canvas,campuses.yingxi,STATION_ROUTE_STAGING,.9);
+  for(const point of stationApproachRoute())await walkAuthoredSegment(page,canvas,point);
+  await expect.poll(async()=>{const p=await position(canvas);return Math.hypot(p[0]-PAPERPLANE_STATION.standing[0],p[2]-PAPERPLANE_STATION.standing[2]);}).toBeLessThan(PAPERPLANE_STATION.interactionRadius);
   await expect(page.getByTestId('begin-paperplane')).toBeVisible({timeout:15000});
 }
 export async function planeState(canvas:Locator):Promise<PaperplaneSnapshot>{
