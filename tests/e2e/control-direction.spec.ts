@@ -39,6 +39,7 @@ async function orbit(page:Page,canvas:Locator,touch=false) {
 test('keyboard and arrows follow real screen projection across camera headings',async({page},info)=>{
   test.setTimeout(180000);const intercepted=await installProjection(page);await page.goto('/');expect(intercepted()).toBe(1);
   const canvas=page.getByTestId('campus-canvas');await expect(canvas).toHaveAttribute('data-campus-ready','yingxi',{timeout:30000});
+  await page.getByRole('button',{name:'先去漫游',exact:true}).click();
   for(let heading=0;heading<2;heading++){
     for(const [key,axis,sign] of [['d','right',1],['a','right',-1],['ArrowRight','right',1],['ArrowLeft','right',-1],['w','forward',1],['s','forward',-1]] as const) await moveProjected(page,canvas,'key',key,axis,sign);
     await page.screenshot({path:info.outputPath(`keyboard-heading-${heading}.png`)});if(heading===0)await orbit(page,canvas);
@@ -50,6 +51,7 @@ test.describe('landscape touch projection',()=>{
   test('left stick follows screen left/right before and after orbit',async({page},info)=>{
     test.setTimeout(180000);const intercepted=await installProjection(page);await page.goto('/');expect(intercepted()).toBe(1);
     const canvas=page.getByTestId('campus-canvas');await expect(canvas).toHaveAttribute('data-campus-ready','yingxi',{timeout:30000});
+    await page.getByRole('button',{name:'先去漫游',exact:true}).tap();
     for(let heading=0;heading<2;heading++){
       await moveProjected(page,canvas,'touch','right','right',1);await moveProjected(page,canvas,'touch','left','right',-1);
       await page.screenshot({path:info.outputPath(`touch-heading-${heading}.png`)});if(heading===0)await orbit(page,canvas,true);

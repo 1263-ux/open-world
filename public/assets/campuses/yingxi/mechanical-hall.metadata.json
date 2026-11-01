@@ -122,14 +122,16 @@
   },
   "height_m": 15,
   "height_status": "unverified display estimate, not survey; 9m wings / 15m tower are visual-relative estimates",
-  "triangles_authoring": 15603,
-  "glb_bytes": 827580,
+  "triangles_authoring": 18617,
+  "glb_bytes": 989908,
   "software": "4.3.2",
-  "generator": "scripts/art/mechanical_hall_refined.py",
+  "generator": "scripts/landmarks/mechanical-hall/generator.py",
   "attribution": "OpenStreetMap contributors; footprint ODbL, source data may be inaccurate or outdated",
-  "research_date": "2026-10-30",
+  "research_date": "2026-10-31",
   "not_included": "No image textures, people, invented signage or interior",
   "design_notes": "Original geometry based on observation only. Recessed window and portal openings, inset glazing, arched surrounds and approximate exterior steps projecting beyond the footprint. Dimensions and orientation remain visual estimates, not survey.",
-  "glb_triangles": 15603,
-  "artifactSha256": "2db71a1046b775e826e8504f4be93fbcc2f5578837d3e73078955b2b6dcb17ec"
+  "detail_revision": "mechanical-detail-next-local-only",
+  "detail_notes": "Paired portal oculi, segmented stone portal surround, front cornice/corbels/crenels, projecting front window sills and clock surround are original historical-photo interpretations. Measurements/current condition are not verified. No signage, security equipment or photographs included. All original source base corners and 9m/15m display-height semantics retained.",
+  "glb_triangles": 18617,
+  "artifactSha256": "909415d5968afede94bc64cc7a471fddf300e41455d0f6d260c2f3c9a1d674fb"
 }

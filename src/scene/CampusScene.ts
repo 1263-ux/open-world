@@ -1,9 +1,13 @@
+import { createOriginalViewingPlatform, VIEWING_PLATFORM, PAPERPLANE_STATION, PAPERPLANE_COURSE } from './OriginalViewingPlatform';
+import { PaperplaneActivity } from './PaperplaneActivity';
+import type { PaperplaneConfig } from '../games/paperplane';
 import * as THREE from 'three';
 import { landmarkModels, loadLandmarkModel } from './LandmarkModels';
 import { applyLandmarkShadowStyle } from './LandmarkStyle';
 import { PlayerController } from './PlayerController';
 import { createQingzeFallback, QINGZE_DECORATION_BOUNDS } from './QingzeGarden';
 import { createFoliageGeometry, createSurfaceMaterial } from './SurfaceStyle';
+import { createHuyuCourtyards } from './HuyuCourtyards';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
@@ -13,8 +17,15 @@ import type { CampusData, CampusRoad, CampusSceneHandle, Landmark, PhotoInspecti
 const noopHandle = (): CampusSceneHandle => ({
   setCampus() {}, setState() {}, navigateTo: () => false, resetJourney() {},
   focusLandmark() {}, overview() {}, resetView() {}, pause() {}, resume() {}, dispose() {},
+  canBeginPaperplane: () => false, beginPaperplane: () => false,
+  setPaperplaneInput() {}, launchPaperplane() {}, retryPaperplane() {}, pausePaperplane() {}, resumePaperplane() {}, endPaperplane() {},
   inspectPhoto: () => ({ inRange: false, framed: false, obstructed: false, distance: Infinity }), capturePhoto: () => null,
 });
+
+/** Optional vertical gate preserves legacy ground-level photography. */
+export function isPhotoHeightEligible(footY: number, range?: [number, number]): boolean {
+  return Number.isFinite(footY) && (range === undefined || (Array.isArray(range) && range.length === 2 && range.every(Number.isFinite) && range[0] <= range[1] && footY >= range[0] && footY <= range[1]));
+}
 
 function validPoint(p: Point2 | undefined): p is Point2 {
   return !!p && Number.isFinite(p[0]) && Number.isFinite(p[1]);
@@ -212,6 +223,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   labels.domElement.setAttribute('aria-hidden', 'true');
   container.appendChild(labels.domElement);
   const player = new PlayerController(container, canvas);
+  let plane: PaperplaneActivity | null = null;
+  let planeConfig: PaperplaneConfig | null = null;
+  let planeStation: { position: Point2; radius: number; heightRange: [number,number] } | null = null;
   let mapMode = false;
   controls.enabled = false;
 
@@ -233,6 +247,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
 
   let data = initialData;
   let campusGeneration = 0;
+  let courtyard: ReturnType<typeof createHuyuCourtyards> | null = null;
+  let platform: ReturnType<typeof createOriginalViewingPlatform> | null = null;
   let state: SceneState = { selectedId: null, targetId: null };
   let world = new THREE.Group();
   let routeLayer = new THREE.Group();
@@ -278,6 +294,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     labels.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight));
     refreshFrustum();
     player.resize(container.clientWidth, container.clientHeight);
+    plane?.resize(container.clientWidth, container.clientHeight);
   }
   const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
   resizeObserver?.observe(container);
@@ -316,7 +333,14 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
 
   function buildCampus(): void {
+    endPaperplane(); planeConfig = null; planeStation = null;
+    platform?.dispose(); platform = null;
+    delete canvas.dataset.viewingPlatform; delete canvas.dataset.paperplaneStation;
     delete canvas.dataset.campusReady;
+    delete canvas.dataset.playerX; delete canvas.dataset.playerY; delete canvas.dataset.playerZ;
+    delete canvas.dataset.cameraYaw; delete canvas.dataset.cameraPitch;
+    delete canvas.dataset.huyuTreeTexture; delete canvas.dataset.huyuTreeCount;
+    courtyard?.dispose(); courtyard = null;
     const generation = ++campusGeneration;
     const models = landmarkModels.filter(item => item.campusId === data.id);
     const modelStatuses = new Map(models.map(item => [item.landmarkId, 'loading']));
@@ -379,6 +403,15 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     paths.receiveShadow = true;
     world.add(paths);
     if (data.id === 'yingxi') {
+      // Interpretive ground-only arrival apron: join the entrance steps to the
+      // existing guide, stopping before the mapped north–south road verge.
+      // This is a design connection, not a surveyed campus path. It adds no
+      // solid obstacles, changes no routes, and remains below road/path tops.
+      const arrival = addSurface(world, [
+        [-51.7, 172.6], [-47, 172.6], [-43, 171.4], [-28.8, 171.4],
+        [-28.8, 175], [-43, 175], [-47, 178.6], [-51.7, 178.6],
+      ], .05, pathMaterial);
+      if (arrival) { arrival.receiveShadow = true; arrival.userData.photoIgnore = true; }
       // Designed link only: bridge the grass gap from the existing route to
       // the new garden approach without changing mapped roads or quest IDs.
       const linkGeometry = strips([{ id: 'qingze-designed-link', points: [[35, 173], [35, 188.4]], width: 3.4, source: 'Designed game path, not a mapped road' }], 0);
@@ -680,6 +713,30 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       for (const mesh of [seat, back, legs]) { mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); mesh.castShadow = true; mesh.receiveShadow = true; world.add(mesh); }
     }
 
+    if (data.id === 'huyu') {
+      // Exact point-to-edge clearance for the whole footprint disk, not only
+      // centre-point containment; route buffer includes player walking room.
+      const edgeDistance = (x: number, z: number, polygon: Point2[]): number => {
+        let nearest = Infinity;
+        for (let i = 0; i < polygon.length; i++) {
+          const a = polygon[i], b = polygon[(i + 1) % polygon.length];
+          const dx = b[0] - a[0], dz = b[1] - a[1], length2 = dx * dx + dz * dz;
+          const t = length2 ? THREE.MathUtils.clamp(((x - a[0]) * dx + (z - a[1]) * dz) / length2, 0, 1) : 0;
+          nearest = Math.min(nearest, Math.hypot(x - a[0] - t * dx, z - a[1] - t * dz));
+        }
+        return nearest;
+      };
+      const garden = createHuyuCourtyards((x, z, radius) =>
+        inside(x, z, boundary) && edgeDistance(x, z, boundary) >= radius &&
+        clearsRoutes(x, z, radius + 2) &&
+        buildings.every(feature => !inside(x, z, feature.polygon) && edgeDistance(x, z, feature.polygon) >= radius));
+      courtyard = garden;
+      canvas.dataset.huyuTreeCount = String(garden.visual.userData.treeCount);
+      canvas.dataset.huyuTreeTexture = String(garden.visual.userData.treeTextureStatus);
+      world.add(garden.visual);
+      collisionProps.add(garden.colliders);
+    }
+
     markerNormal = material(0xe7e0c9, 0.45);
     markerSelected = material(0x66d9d3, 0.4);
     markerTarget = material(0xe9b766, 0.4);
@@ -720,14 +777,41 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       addCorridor(world, collisionProps);
       const garden = createQingzeFallback();
       gardenFallback = garden.visual; world.add(garden.visual); collisionProps.add(garden.colliders);
+      platform = createOriginalViewingPlatform(); world.add(platform.visual); collisionProps.add(platform.colliders);
+      const vector = (p: readonly number[]) => ({x:p[0],y:p[1],z:p[2]});
+      planeConfig = {
+        id:PAPERPLANE_COURSE.id,
+        launch:{position:vector(PAPERPLANE_STATION.release),heading:PAPERPLANE_STATION.heading,pitch:0},
+        gates:PAPERPLANE_COURSE.gates.map(gate => ({center:vector(gate.center),normal:vector(gate.normal),radius:gate.radius})),
+        landing:{center:vector(PAPERPLANE_COURSE.landing.center),radius:PAPERPLANE_COURSE.landing.radius},
+        bounds:{min:vector(PAPERPLANE_COURSE.bounds.min),max:vector(PAPERPLANE_COURSE.bounds.max)},
+        groundY:PAPERPLANE_COURSE.groundY,speed:2.2,sinkRate:.055,liftRate:.6,turnRate:.45,pitchRate:.18,minPitch:-.25,maxPitch:.25,maxDuration:30,
+      };
+      planeStation = {position:[PAPERPLANE_STATION.standing[0],PAPERPLANE_STATION.standing[2]],radius:PAPERPLANE_STATION.interactionRadius,heightRange:PAPERPLANE_STATION.heightRange};
+      canvas.dataset.viewingPlatform = JSON.stringify({status:'graybox',deckTop:VIEWING_PLATFORM.deckTop,photo:VIEWING_PLATFORM.photo.position});
+      canvas.dataset.paperplaneStation = 'loading';
     }
     player.setCampus(data, collisionProps);
-    canvas.dataset.campusReady = data.id;
+    platform?.colliders.removeFromParent(); // Handle owns these resources.
     disposeObject(collisionProps);
     world.add(pawn, player.shadow);
     renderer.shadowMap.needsUpdate = true;
     updateHighlights();
     const ownerWorld = world;
+    if (platform) {
+      const platformOwner = platform;
+      void import('three/examples/jsm/loaders/GLTFLoader.js').then(({GLTFLoader}) => new GLTFLoader().loadAsync(PAPERPLANE_STATION.assetUrl)).then(gltf => {
+        if (disposed || generation !== campusGeneration || ownerWorld !== world || platform !== platformOwner) { disposeObject(gltf.scene); return; }
+        gltf.scene.position.set(...PAPERPLANE_STATION.position); gltf.scene.rotation.y = PAPERPLANE_STATION.rotationY;
+        gltf.scene.traverse(object => { if (object instanceof THREE.Mesh) object.castShadow = object.receiveShadow = true; });
+        platformOwner.stationVisual.visible = false; ownerWorld.add(gltf.scene); gltf.scene.updateMatrixWorld(true);
+        renderer.shadowMap.needsUpdate = true; canvas.dataset.paperplaneStation = 'ready';
+      }).catch(() => {
+        if (disposed || generation !== campusGeneration || platform !== platformOwner) return;
+        canvas.dataset.paperplaneStation = 'fallback';
+        onEvent({type:'modelstatus',id:'paperplane-station',name:'原创纸飞机桌',status:'fallback'});
+      });
+    }
     for (const config of models) {
       void loadLandmarkModel(config).then(model => {
         if (disposed || generation !== campusGeneration || ownerWorld !== world) {
@@ -820,22 +904,26 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     canvas.dataset.visibleMarkers = String([...markerMeshes.values()].filter(marker => marker.visible).length);
   }
   function showMap(): void {
+    if (plane) return;
     mapMode = true; labels.domElement.style.display = ''; syncMarkerVisibility();
     canvas.dataset.mapMarkers = '[]'; // Populated from the next rendered map frame.
     controls.enabled = true; player.setEnabled(false); updateSun(true); canvas.dataset.view = 'map';
   }
   function showPlayer(): void {
+    if (plane) return;
     mapMode = false; labels.domElement.style.display = 'none'; syncMarkerVisibility();
     delete canvas.dataset.mapMarkers;
     controls.enabled = false; player.setEnabled(true); player.updateCamera(true); updateSun(false, true); canvas.dataset.view = 'player';
   }
   function overview(): void {
+    if (plane) return;
     showMap();
     const points = cleanPolygon(data.boundary || []);
     const [x0, z0, x1, z1] = boundsOf(points.length ? points : data.features.flatMap((f) => f.polygon));
     animateView(new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2), Math.max(500, (x1 - x0) * 1.2, (z1 - z0) * 1.2));
   }
   function focusLandmark(id: string): void {
+    if (plane) return;
     showMap();
     const landmark = data.landmarks.find((item) => item.id === id);
     if (!landmark || !validPoint(landmark.position)) return;
@@ -862,6 +950,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (routeLayer.children.length === 1) { geometry.dispose(); beaconMaterial.dispose(); }
   }
   function navigateTo(id: string): boolean {
+    if (plane) return false;
     if (disposed || travel) return false;
     const landmark = data.landmarks.find((item) => item.id === id);
     if (!landmark || !validPoint(landmark.arrival)) return false;
@@ -922,9 +1011,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       refreshFrustum();
       if (t >= 1) tween = null;
     }
-    player.advance();
+    if (plane) plane.update(dt); else player.advance();
     if (!mapMode) updateSun(false);
-    if (travel) {
+    if (travel && !plane) {
       const current = travel;
       const distance = Math.hypot(pawn.position.x - current.arrival[0], pawn.position.z - current.arrival[1]);
       let advanced = false;
@@ -951,7 +1040,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       }
     }
     controls.update();
-    const activeCamera = mapMode ? camera : player.camera;
+    const activeCamera = plane?.camera ?? (mapMode ? camera : player.camera);
     scene.fog = mapMode ? null : distanceFog;
     labels.domElement.style.display = mapMode ? '' : 'none';
     labels.render(scene, activeCamera);
@@ -970,15 +1059,50 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       // they are not a selection or position-setting interface.
       canvas.dataset.mapMarkers = JSON.stringify(projected);
     }
+    // Readiness denotes a rendered frame whose player coordinates and yaw
+    // belong to the current campus, not merely synchronous world assembly.
+    if (canvas.dataset.playerX !== undefined && canvas.dataset.cameraYaw !== undefined) canvas.dataset.campusReady = data.id;
+    if (courtyard) canvas.dataset.huyuTreeTexture = String(courtyard.visual.userData.treeTextureStatus);
     canvas.dataset.frame = String(++frameCount);
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
     canvas.dataset.triangles = String(renderer.info.render.triangles);
     raf = requestAnimationFrame(tick);
   }
+  function canBeginPaperplane(): boolean {
+    return !disposed && !paused && !plane && !mapMode && data.id === 'yingxi' && !!planeConfig && !!planeStation
+      && Math.hypot(pawn.position.x-planeStation.position[0],pawn.position.z-planeStation.position[1]) <= planeStation.radius
+      && isPhotoHeightEligible(pawn.position.y,planeStation.heightRange);
+  }
+  function beginPaperplane(): boolean {
+    if (!canBeginPaperplane() || !planeConfig) return false;
+    // Disable/clear input before snapshot. The capsule, yaw and pitch remain
+    // untouched until exit; setPosition would incorrectly discard elevated Y.
+    player.setEnabled(false); controls.enabled = false; tween = null; pointer = null;
+    try {
+      plane = new PaperplaneActivity(planeConfig,player,(snapshot,pose) => {
+        canvas.dataset.paperplane = JSON.stringify(snapshot);
+        canvas.dataset.paperplanePose = JSON.stringify(pose);
+        onEvent({type:'paperplane',snapshot});
+      });
+      plane.resize(container.clientWidth,container.clientHeight); scene.add(plane.root);
+      canvas.dataset.view = 'paperplane'; previousTime = 0;
+      return true;
+    } catch {
+      plane?.dispose(); plane = null; showPlayer();
+      onEvent({type:'paperplane',snapshot:null}); return false;
+    }
+  }
+  function endPaperplane(): void {
+    if (!plane) return;
+    plane.dispose(); plane = null; previousTime = 0;
+    delete canvas.dataset.paperplane; delete canvas.dataset.paperplanePose;
+    if (!disposed) showPlayer();
+    onEvent({type:'paperplane',snapshot:null});
+  }
   function inspectPhoto(point: PhotoPoint): PhotoInspection {
-    const distance = Math.hypot(pawn.position.x - point.position[0], pawn.position.z - point.position[1]);
-    const result: PhotoInspection = { distance, inRange: distance <= point.radius, framed: false, obstructed: false };
-    if (disposed || paused || mapMode || !validPoint(point.position) || !point.target.every(Number.isFinite) || !Number.isFinite(point.radius) || point.radius <= 0 || !result.inRange) return result;
+    const distance = validPoint(point.position) ? Math.hypot(pawn.position.x - point.position[0], pawn.position.z - point.position[1]) : Infinity;
+    const result: PhotoInspection = { distance, inRange: Number.isFinite(point.radius) && point.radius > 0 && distance <= point.radius && isPhotoHeightEligible(pawn.position.y, point.heightRange), framed: false, obstructed: false };
+    if (disposed || paused || plane || mapMode || !validPoint(point.position) || !Array.isArray(point.target) || point.target.length !== 3 || !point.target.every(Number.isFinite) || !Number.isFinite(point.radius) || point.radius <= 0 || !result.inRange) return result;
     player.camera.updateMatrixWorld(true);
     const visibleInFrame = (xyz: [number, number, number], maxX: number, maxY: number): boolean => {
       if (!Array.isArray(xyz) || xyz.length !== 3 || !xyz.every(Number.isFinite)) return false;
@@ -1017,7 +1141,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     return result;
   }
   function capturePhoto(): string | null {
-    if (disposed || paused || mapMode) return null;
+    if (disposed || paused || plane || mapMode) return null;
     try {
       // The default WebGL buffer need not persist after a frame; render and
       // read synchronously rather than returning a blank canvas.
@@ -1057,8 +1181,12 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
 
   function dispose(): void {
     if (disposed) return;
+    endPaperplane();
     disposed = true;
     delete canvas.dataset.campusReady;
+    delete canvas.dataset.huyuTreeTexture; delete canvas.dataset.huyuTreeCount;
+    courtyard?.dispose(); courtyard = null;
+    platform?.dispose(); platform = null;
     cancelAnimationFrame(raf);
     travel = null; tween = null; pointer = null;
     resizeObserver?.disconnect();
@@ -1105,6 +1233,13 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       try { data = next; state = { selectedId: null, targetId: null }; buildCampus(); questView(true); showPlayer(); labels.render(scene, player.camera); }
       catch (error) { dispose(); onEvent({ type: 'error', reason: `Unable to build the 3D scene: ${error instanceof Error ? error.message : 'unknown error'}` }); }
     },
+    canBeginPaperplane, beginPaperplane,
+    setPaperplaneInput(input) { plane?.input(input); },
+    launchPaperplane() { plane?.launch(); },
+    retryPaperplane() { plane?.retry(); previousTime = 0; },
+    pausePaperplane() { plane?.pause(); previousTime = 0; },
+    resumePaperplane() { plane?.resume(); previousTime = 0; },
+    endPaperplane,
     inspectPhoto,
     capturePhoto,
     setState(next) { if (!disposed) { state = { selectedId: next.selectedId, targetId: next.targetId }; updateHighlights(); } },
@@ -1115,12 +1250,13 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     resetView() { if (!disposed) showPlayer(); },
     pause() {
       if (disposed || paused) return;
+      plane?.pause();
       paused = true; controls.enabled = false; player.setPaused(true); previousTime = 0;
       cancelAnimationFrame(raf); canvas.dataset.paused = 'true';
     },
     resume() {
       if (disposed || !paused) return;
-      paused = false; controls.enabled = mapMode; player.setPaused(false); previousTime = 0;
+      paused = false; controls.enabled = mapMode && !plane; player.setPaused(false); previousTime = 0;
       canvas.dataset.paused = 'false'; raf = requestAnimationFrame(tick);
     },
     dispose,

@@ -1,0 +1,290 @@
+{
+  "affordance_anchors_gltf": [
+    {
+      "direction": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "name": "standing_visitor",
+      "position": [
+        0.0,
+        0.0,
+        0.98
+      ],
+      "role": "Suggested foot position facing the folding surface"
+    },
+    {
+      "name": "folding_center",
+      "position": [
+        0.0,
+        0.95,
+        0.04
+      ],
+      "role": "Paper manipulation datum; no interaction implemented"
+    },
+    {
+      "direction": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "launch_edge",
+      "position": [
+        0.0,
+        0.95,
+        0.42
+      ],
+      "role": "Unobstructed front edge"
+    },
+    {
+      "direction": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "suggested_release",
+      "position": [
+        0.0,
+        1.3,
+        0.85
+      ],
+      "role": "Future release reference, not simulated"
+    }
+  ],
+  "asset": "Courtyard paper-plane folding and launch station",
+  "bounds": {
+    "blender_z_up": {
+      "max": [
+        1.1200000047683716,
+        0.5400000214576721,
+        1.4199999570846558
+      ],
+      "min": [
+        -1.1200000047683716,
+        -0.41999998688697815,
+        0.0
+      ]
+    },
+    "dimensions_blender_xyz": [
+      2.240000009536743,
+      0.9600000083446503,
+      1.4199999570846558
+    ],
+    "gltf_y_up": {
+      "max": [
+        1.1200000047683716,
+        1.4199999570846558,
+        0.41999998688697815
+      ],
+      "min": [
+        -1.1200000047683716,
+        0.0,
+        -0.5400000214576721
+      ]
+    },
+    "source": "Exact extrema of evaluated authored mesh coordinates"
+  },
+  "clearance_requirements_gltf": {
+    "initial_launch_corridor": {
+      "max": [
+        0.65,
+        2.1,
+        3.0
+      ],
+      "min": [
+        -0.65,
+        0.8,
+        0.44
+      ]
+    },
+    "note": "Reserve these spaces in the host scene; clearance is not guaranteed by this standalone asset. Launch corridor is only an initial keep-clear zone, not a trajectory or safety test.",
+    "standing_volume": {
+      "max": [
+        0.65,
+        2.1,
+        1.55
+      ],
+      "min": [
+        -0.65,
+        0.0,
+        0.44
+      ]
+    },
+    "usable_folding_patch": {
+      "max": [
+        0.55,
+        0.95,
+        0.3
+      ],
+      "min": [
+        -0.55,
+        0.95,
+        -0.25
+      ]
+    }
+  },
+  "coordinates": {
+    "applied_object_scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "authored_front_launch": "-Y",
+    "authored_up": "+Z",
+    "export_front_launch": "+Z",
+    "export_up": "+Y",
+    "mapping": "[x, y, z]_Blender -> [x, z, -y]_glTF",
+    "meters_per_unit": 1.0,
+    "units": "meters"
+  },
+  "design_intent": "Human-scale, warm restrained courtyard furniture: bevelled timber worktop, thin folded ivory piers, asymmetric teal rear fold, and small plane relief. The front is open for folding and future launch interaction. No seat, lettering, loose props, or gameplay.",
+  "determinism": "Stable component order, no randomness, applied transforms. Binary output can differ across Blender/exporter versions due to triangulation, serialization, and exporter metadata.",
+  "file": "station.glb",
+  "geometry_budget": {
+    "estimated_export_triangle_count": 180,
+    "estimated_mesh_primitives": 4,
+    "estimated_payload_bytes": 39440,
+    "material_count": 4,
+    "preexport_triangle_count": 180,
+    "size_note": "Planning estimate only; output file is not read back.",
+    "target_glb_bytes": 200000
+  },
+  "provenance": {
+    "authoring": "Original procedural design authored for this request.",
+    "external_assets": [],
+    "interpretive_only": true,
+    "original": true,
+    "real_facility_claim": false
+  },
+  "schema_version": "1.0",
+  "suggested_colliders_gltf": {
+    "boxes": [
+      {
+        "max": [
+          1.12,
+          0.95,
+          0.42
+        ],
+        "min": [
+          -1.12,
+          0.905,
+          -0.54
+        ],
+        "name": "Bevelled folding worktop",
+        "type": "AABB"
+      },
+      {
+        "max": [
+          -0.73,
+          0.028,
+          0.27
+        ],
+        "min": [
+          -0.945,
+          0.0,
+          -0.355
+        ],
+        "name": "Left ground shoe",
+        "type": "AABB"
+      },
+      {
+        "max": [
+          -0.73,
+          0.913,
+          0.27
+        ],
+        "min": [
+          -0.945,
+          0.022,
+          -0.355
+        ],
+        "name": "Left folded pier",
+        "type": "AABB"
+      },
+      {
+        "max": [
+          0.945,
+          0.028,
+          0.27
+        ],
+        "min": [
+          0.73,
+          0.0,
+          -0.355
+        ],
+        "name": "Right ground shoe",
+        "type": "AABB"
+      },
+      {
+        "max": [
+          0.945,
+          0.913,
+          0.27
+        ],
+        "min": [
+          0.73,
+          0.022,
+          -0.355
+        ],
+        "name": "Right folded pier",
+        "type": "AABB"
+      },
+      {
+        "max": [
+          0.915,
+          0.765,
+          -0.245
+        ],
+        "min": [
+          -0.915,
+          0.705,
+          -0.31
+        ],
+        "name": "Rear structural stretcher",
+        "type": "AABB"
+      },
+      {
+        "max": [
+          -0.24,
+          1.42,
+          -0.346
+        ],
+        "min": [
+          -1.04,
+          0.935,
+          -0.499
+        ],
+        "name": "Backfold segment 1",
+        "type": "AABB"
+      },
+      {
+        "max": [
+          1.04,
+          1.42,
+          -0.351
+        ],
+        "min": [
+          -0.24,
+          0.935,
+          -0.499
+        ],
+        "name": "Backfold segment 2",
+        "type": "AABB"
+      }
+    ],
+    "method": "Conservative component AABBs; refine for final integration.",
+    "runtime_tested": false
+  },
+  "validation": {
+    "closed_oriented_component_topology": true,
+    "finite_coordinates": true,
+    "geometry_budget_passed": true,
+    "ground_at_zero": true,
+    "limitations": "Topology checks do not constitute a full self-intersection, ergonomic, accessibility, structural, or collision test.",
+    "nondegenerate_triangles": true,
+    "runtime_or_game_tests": false,
+    "within_dimensions": true
+  },
+  "worktop_height_m": 0.95
+}

@@ -157,8 +157,19 @@
   "excludedAssociatedFeature": "a04a7502-f32b-4fa2-acee-1f08811fee44",
   "generatedBy": "generator.py",
   "software": "Blender 4.3.2",
-  "trianglesAuthoring": 510,
-  "glbBytes": 47532,
+  "trianglesAuthoring": 1158,
+  "glbBytes": 82956,
   "researchDate": "2026-10-30",
-  "artifactSha256": "278f2c498d97c5abb9b9c1d65c65f6e36c48e879eeb679d0d10698fe5fc9f002"
+  "detailDesign": {
+    "revision": "solid-trim-v2",
+    "windowRecessM": 0.3,
+    "sillProjectionM": 0.12,
+    "sillThicknessM": 0.08,
+    "fasciaProjectionM": 0.08,
+    "fasciaHeightM": 0.17,
+    "status": "original display design, not measured construction",
+    "reviewedSourcesDate": "2026-10-31",
+    "historicalPhotoPage": "https://www.tyut.edu.cn/info/2093/22644.htm"
+  },
+  "artifactSha256": "9d36f02c61fa959198b70bed3e7c851e185f164133a954e282bd9c1d400f1da0"
 }

@@ -37,6 +37,14 @@ verifyHksImages(path.join(stage, 'games/hks/public/assets'));
 const hashes=JSON.parse(fs.readFileSync(path.join(out,'source-fingerprints.json'),'utf8')).hashes;
 const glbs=Object.keys(hashes).filter(x=>x.startsWith('public/assets/')&&x.endsWith('.glb'));
 for(const f of glbs){const b=fs.readFileSync(path.join(stage,f)).toString('base64'); if(!cj.includes(b)) throw Error('Missing embedded GLB: '+f); console.log('Verified embedded GLB:',f);}
+// Every copied PNG must be the reviewed Huyu texture and must be embedded.
+const pngs=Object.keys(hashes).filter(x=>x.startsWith('public/assets/')&&x.endsWith('.png'));
+if (JSON.stringify(pngs.sort()) !== JSON.stringify(['public/assets/environment/Leaves_NormalTree_C.png'])) throw Error('Unexpected/missing environment PNG set');
+for (const f of pngs) if (!cj.includes(fs.readFileSync(path.join(stage,f)).toString('base64'))) throw Error('Missing embedded environment PNG: '+f);
+for (const f of ['public/assets/environment/quaternius-license-standard.txt','public/assets/exhibits/paperplane-station.metadata.json']) {
+  if (!hashes[f] || !fs.readFileSync(path.join(stage,f),'utf8').trim()) throw Error('Missing required asset provenance/notice: '+f);
+}
+console.log('Verified embedded approved Huyu leaves and retained station/foliage provenance');
 for(const f of ['src/scene/LandmarkModels.ts','games/hks/src/GameScene.ts']){const s=fs.readFileSync(path.join(stage,f),'utf8'); if(/['"`]assets\/[^'"`]+\.(?:glb|png|jpe?g)/.test(s)) throw Error('Unresolved local asset in '+f);}
 function auditSource(dir) {
   for (const e of fs.readdirSync(dir,{withFileTypes:true})) {

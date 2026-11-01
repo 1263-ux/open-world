@@ -32,7 +32,24 @@ def shell(name,p,height=4.5):
  q=p[:]; signed=sum(x*v-u*z for (x,z),(u,v) in zip(q,q[1:]+q[:1]))
  if signed>0:q.reverse()
  v=[pt(x,z,h) for h in (0,height) for x,z in q];n=len(q)
- faces=[(i,(i+1)%n,(i+1)%n+n,i+n) for i in range(n)]
+ faces=[]
+ # Wall bands form actual openings, not dark decals on an opaque wall.
+ for i,(a,b) in enumerate(zip(q,q[1:]+q[:1])):
+  x,z=a;u,w=b;L=math.hypot(u-x,w-z);dx=(u-x)/L;dz=(w-z)/L
+  nx,nz=dz,-dx;pcx=sum(t[0] for t in q)/n;pcz=sum(t[1] for t in q)/n
+  if nx*((x+u)/2-pcx)+nz*((z+w)/2-pcz)<0:nx,nz=-nx,-nz
+  mx,mz=(x+u)/2,(z+w)/2
+  eligible=name.startswith('Source_') and L>=3.5 and nx*(mx-cx)+nz*(mz-cz)>=-1
+  if not eligible: faces.append((i,(i+1)%n,(i+1)%n+n,i+n));continue
+  margin=.8; end=L-.8; low=.48; high=3.65
+  def addface(coords):
+   j=len(v);v.extend(pt(x+dx*t+nx*o,z+dz*t+nz*o,h) for t,h,o in coords);faces.append(tuple(range(j,j+len(coords))))
+  # wall below/above and to either side of the opening; winding preserved
+  for t0,t1,h0,h1 in [(0,L,0,low),(0,L,high,height),(0,margin,low,high),(end,L,low,high)]:
+   addface([(t0,h0,0),(t1,h0,0),(t1,h1,0),(t0,h1,0)])
+  # Reveal jambs, lintel and sill run 30 cm into the shell.
+  d=-.30
+  for coords in [[(margin,low,0),(margin,high,0),(margin,high,d),(margin,low,d)],[(end,high,0),(end,low,0),(end,low,d),(end,high,d)],[(margin,high,0),(end,high,0),(end,high,d),(margin,high,d)],[(end,low,0),(margin,low,0),(margin,low,d),(end,low,d)]]:addface(coords)
  faces += [tuple(reversed(range(n)))]
  mesh(name,v,faces,'stone')
  # A nearly flush contrasting flat roof surface, still at exactly 4.5 m.
@@ -53,7 +70,20 @@ def facade(name,p,connector=False):
   def panel(mat,t0,t1,h0,h1,offset):
    def vtx(t,h):return pt(x+dx*t+nx*offset,z+dz*t+nz*offset,h)
    quad(mat,[vtx(t0,h0),vtx(t1,h0),vtx(t1,h1),vtx(t0,h1)])
+  def trim_box(t0,t1,h0,h1,o0,o1):
+   # Closed, outward-facing six-sided trim: visible from below and at ends.
+   # Share the existing frame mesh/material, adding no draw-call primitives.
+   def vtx(t,h,o):return pt(x+dx*t+nx*o,z+dz*t+nz*o,h)
+   vs=[vtx(t,h,o) for o in (o0,o1) for h in (h0,h1) for t in (t0,t1)]
+   center=sum((Vector(v) for v in vs),Vector())/8
+   for indices in [(0,1,3,2),(4,6,7,5),(0,4,5,1),(2,3,7,6),(0,2,6,4),(1,5,7,3)]:
+    face=[vs[i] for i in indices]
+    normal=(Vector(face[1])-Vector(face[0])).cross(Vector(face[2])-Vector(face[0]))
+    if normal.dot(sum((Vector(v) for v in face),Vector())/4-center)<0:face.reverse()
+    quad('frame',face)
   panel('base',0,L,.05,.30,.025)
+  # Keep the restrained 17 cm fascia profile; give it a real 8 cm projection.
+  trim_box(0,L,4.15,4.32,0,.08)
   # Select outer sides of radiating wings, avoid windows facing the hub.
   mx,mz=(x+u)/2,(z+v)/2
   if not connector and nx*(mx-cx)+nz*(mz-cz)<-1:continue
@@ -63,12 +93,15 @@ def facade(name,p,connector=False):
    # Only the east-facing entrance; location/orientation inferred from map.
    if nx<.65:continue
    span=min(span,5.2);margin=(L-span)/2
-  panel('glass',margin,margin+span,.48,3.65,.04)
+  panel('glass',margin,margin+span,.48,3.65,.04 if connector else -.30)
+  if not connector:
+   # Solid 8 cm sill, retaining the existing 12 cm maximum projection.
+   trim_box(margin,margin+span,.40,.48,-.30,.12)
   # Vertical and horizontal mullions; visually grouped tall rectangular windows.
   n=max(2,round(span/1.25)); w=.06
   for i in range(n+1):
-   t=margin+span*i/n;panel('frame',max(margin,t-w),min(margin+span,t+w),.45,3.68,.055)
-  for h in (.46,2.45,3.62):panel('frame',margin,margin+span,h,h+.07,.057)
+   t=margin+span*i/n;panel('frame',max(margin,t-w),min(margin+span,t+w),.48,3.65,.055 if connector else -.29)
+  for h in (.46,2.45,3.62):panel('frame',margin,margin+span,h,h+.07,.057 if connector else -.288)
  for mat in verts:
   if verts[mat]:mesh(name+'_'+mat,verts[mat],faces[mat],mat)
 for ident,p in P.items():facade('Detail_'+ident,p)
@@ -81,6 +114,7 @@ glb=os.path.join(D,'meihua-classroom-group.glb')
 bpy.ops.export_scene.gltf(filepath=glb,export_format='GLB',use_selection=True,export_yup=True,export_apply=True)
 triangles=sum(sum(len(poly.vertices)-2 for poly in o.data.polygons) for o in objects)
 meta={'name':'梅花教室组合','identityConfidence':'high for cluster west of library; medium for individual polygon assignment; no M1–M5 mapping','centerX':cx,'centerZ':cz,'coordinateSystem':'meters; world X east, Y up, Z south; GLB centered at centerX, centerZ','sourceFootprintsWorldXZ':P,'inferredConnector':{'objectName':'Inferred_Connector','confidence':'inferred','fullWorldXZPolygon':C,'note':'Invented display connector, not source GIS footprint. Keep paths outside rendered connector.'},'heightM':4.5,'heightStatus':'unverified one-storey visual estimate based on old photo, not a survey or proof of current 2026 condition','entryOrientation':'inferred +X facing library; exact entry position unverified','sourceURLs':{'officialMapPage':'https://dangban.tyut.edu.cn/ggzx/xqdt.htm','officialPhotoPage':'https://xiaoyou.tyut.edu.cn/info/1078/1809.htm','overtureAttribution':'https://docs.overturemaps.org/attribution/','upstreamEastAsianBuildings':'https://doi.org/10.5281/zenodo.8174931','unusedPredictedHeight':'https://doi.org/10.5281/zenodo.15487006'},'attribution':'Overture Maps Foundation Buildings release 2026-10-21.0, ODbL; © OpenStreetMap contributors, Overture Maps Foundation. All five source features identify Shi et al., A First High-quality Vector Data of Buildings in East Asian Countries, https://doi.org/10.5281/zenodo.8174931, CC BY 4.0, version 2024-11-01. Derived coordinate geometry and visual model are modified from that source; retain attribution and applicable ODbL obligations. Footprints may be inaccurate or outdated.','referenceLicense':'Official image use is reference only; redistribution permission unknown; no original image embedded.','unknowns':['part-to-classroom mapping','actual connector extent','entrance exact location','true height','current 2026 exterior'], 'excludedAssociatedFeature':'a04a7502-f32b-4fa2-acee-1f08811fee44','generatedBy':'generator.py','software':'Blender '+bpy.app.version_string,'trianglesAuthoring':triangles,'glbBytes':os.path.getsize(glb),'researchDate':'2026-10-30'}
+meta['detailDesign']={'revision':'solid-trim-v2','windowRecessM':.30,'sillProjectionM':.12,'sillThicknessM':.08,'fasciaProjectionM':.08,'fasciaHeightM':.17,'status':'original display design, not measured construction','reviewedSourcesDate':'2026-10-31','historicalPhotoPage':'https://www.tyut.edu.cn/info/2093/22644.htm'}
 meta['artifactSha256']=hashlib.sha256(open(glb,'rb').read()).hexdigest()
 json.dump(meta,open(os.path.join(D,'meihua-classroom-group.metadata.json'),'w'),ensure_ascii=False,indent=2)
 # Render preview-only ground, light and cameras after selected-object export.
@@ -98,4 +132,5 @@ def render(n,pos,target,scale):
 render('front',(90,0,22),(0,0,2),68)
 render('oblique',(80,-85,80),(0,0,2),76)
 render('top',(0,0,110),(0,0,0),80)
+render('near',(24,-32,8),(0,-4,2),32)
 print('CENTER',cx,cz,'TRIANGLES',triangles,'GLB_BYTES',os.path.getsize(glb))

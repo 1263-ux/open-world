@@ -13,3 +13,9 @@
     python scripts/landmarks/mechanical-hall/verify.py
 
 预览地面只用于CPU渲染，不在导出的模型里。浏览器加载失败保留原基础体块并提示；模型异步返回时校验校区世代，避免切区后旧模型错误回挂。
+
+## 唯一生成源（2026-10-31）
+
+本目录 `generator.py` 是机械馆几何的唯一事实源；导出 metadata 的 `generator` 字段也指向此路径。`scripts/art/mechanical_hall_refined.py` 仅为兼容包装，不再保留第二份几何实现。两入口显式设置相同 `MODEL_OUTPUT_DIR` 时输出同一 GLB；未设置时，canonical 默认输出本目录，legacy 默认输出 `scripts/art`，保持旧行为。`PREVIEW_RENDER=0` 可跳过预览。
+
+当前局部候选为 18,617 triangles / 989,908 bytes，GLB SHA256 `909415d5968afede94bc64cc7a471fddf300e41455d0f6d260c2f3c9a1d674fb`。圆窗、石拱、檐口和钟面边框均为参考照片的原创展示推估；候选导出验证不等于游戏运行时验收。

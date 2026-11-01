@@ -27,14 +27,18 @@ function copyApproved(dir,allow) {
     if(e.name.startsWith('.') || e.isSymbolicLink()) throw Error('Unexpected hidden or symlink input: '+path.join(dir,e.name));
     const rel=path.join(dir,e.name);
     if(e.isDirectory()) copyApproved(rel,allow);
-    else if(e.isFile() && allow(e.name)) cp(rel);
+    else if(e.isFile() && allow(e.name,rel)) cp(rel);
     else throw Error('Unapproved input: '+rel);
   }
 }
 copyApproved('src', n=>/\.(?:ts|vue|css|json)$/.test(n));
 copyApproved('games/hks/src',n=>/\.ts$/.test(n));
 copyApproved('games/hks/public/assets',n=>/\.(?:png|jpe?g)$/.test(n));
-copyApproved('public/assets',n=>/\.glb$|\.metadata\.json$|^NOTO-CJK-COPYRIGHT\.txt$/.test(n));
+const approvedEnvironmentFiles = new Set([
+  'public/assets/environment/Leaves_NormalTree_C.png',
+  'public/assets/environment/quaternius-license-standard.txt',
+]);
+copyApproved('public/assets',(n,rel)=>/\.glb$|\.metadata\.json$|^NOTO-CJK-COPYRIGHT\.txt$/.test(n) || approvedEnvironmentFiles.has(rel));
 fs.symlinkSync(path.join(src,'node_modules'),path.join(stage,'node_modules'),'dir');
 fs.symlinkSync(path.join(src,'games/hks/node_modules'),path.join(stage,'games/hks/node_modules'),'dir');
 const hashes={};
@@ -97,6 +101,24 @@ const studentJson = JSON.parse(studentBytes.subarray(20,20 + studentBytes.readUI
 for (const entry of [...(studentJson.buffers || []), ...(studentJson.images || [])]) if (entry.uri && !entry.uri.startsWith('data:')) throw Error('External student resource');
 edit('src/scene/StudentModel.ts', code => code.replace('`${import.meta.env.BASE_URL}assets/characters/casual-hoodie.glb`', JSON.stringify(data(studentPath, 'model/gltf-binary'))));
 console.log('Embedded character GLB: casual-hoodie.glb');
+
+// Exact additions only: no generic public-directory or image inlining fallback.
+const stationPath = path.join(stage, 'public/assets/exhibits/paperplane-station.glb');
+const stationBytes = fs.readFileSync(stationPath);
+if (stationBytes.length < 20 || stationBytes.readUInt32LE(0) !== 0x46546c67 || stationBytes.readUInt32LE(4) !== 2 || stationBytes.readUInt32LE(8) !== stationBytes.length || stationBytes.readUInt32LE(16) !== 0x4e4f534a) throw Error('Invalid station GLB');
+const stationJson = JSON.parse(stationBytes.subarray(20,20 + stationBytes.readUInt32LE(12)).toString('utf8').trim());
+for (const entry of [...(stationJson.buffers || []), ...(stationJson.images || [])]) if (entry.uri && !entry.uri.startsWith('data:')) throw Error('External station resource');
+const stationMetadata = path.join(stage, 'public/assets/exhibits/paperplane-station.metadata.json');
+JSON.parse(fs.readFileSync(stationMetadata, 'utf8'));
+edit('src/scene/OriginalViewingPlatform.ts', code => code
+  .replace("'/assets/exhibits/paperplane-station.glb'", JSON.stringify(data(stationPath, 'model/gltf-binary')))
+  .replace("'/assets/exhibits/paperplane-station.metadata.json'", JSON.stringify(data(stationMetadata, 'application/json'))));
+const leavesPath = path.join(stage, 'public/assets/environment/Leaves_NormalTree_C.png');
+const leavesBytes = fs.readFileSync(leavesPath);
+if (leavesBytes.length < 24 || leavesBytes.subarray(0,8).toString('hex') !== '89504e470d0a1a0a' || leavesBytes.toString('ascii',12,16) !== 'IHDR') throw Error('Invalid approved leaves PNG');
+edit('src/scene/HuyuCourtyards.ts', code => code.replace('`${import.meta.env.BASE_URL}assets/environment/Leaves_NormalTree_C.png`', JSON.stringify(data(leavesPath, 'image/png'))));
+console.log('Embedded explicit station GLB/metadata and Huyu leaves PNG; foliage notice retained');
+
 
 const rootReq=createRequire(path.join(src,'package.json')); 
 const vite8=await import(pathToFileURL(rootReq.resolve('vite')).href), vite5=await import(pathToFileURL(path.join(src,'games/hks/node_modules/vite/dist/node/index.js')).href), vue=(await import(pathToFileURL(rootReq.resolve('@vitejs/plugin-vue')).href)).default;

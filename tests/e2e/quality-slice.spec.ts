@@ -3,15 +3,18 @@ import { readFile } from 'node:fs/promises';
 import { campuses } from '../../src/campus-data/campuses';
 import { PHOTO_POINTS } from '../../src/games/photography';
 import { position, walkRoute, walkTo } from './campus-walk';
+import { ascend, descend, planePose, planeState, screenRightDisplacement, waitForFlightSuccess } from './complete-release-helpers';
+import { PAPERPLANE_STATION, VIEWING_PLATFORM } from '../../src/scene/OriginalViewingPlatform';
 
 // Read-only telemetry supplements actual input and screenshots; it never controls the game.
 test.setTimeout(420000);
-async function ready(page: Page) {
+async function ready(page: Page, touch=false) {
   await page.goto('/');
   const canvas = page.getByTestId('campus-canvas');
   await expect(canvas).toHaveAttribute('data-player-model', 'ready', { timeout: 30000 });
   await expect(canvas).toHaveAttribute('data-model-yx-mechanical', 'ready', { timeout: 30000 });
   await expect(canvas).toHaveAttribute('data-model-yx-garden-setting', 'ready', { timeout: 30000 });
+  const start=page.getByRole('button',{name:'开始手记',exact:true});if(touch)await start.tap();else await start.click();
   return canvas;
 }
 async function dragLook(page: Page, canvas: Locator, dx: number, dy=0, touch=false) {
@@ -80,7 +83,7 @@ async function steerPhotoZ(page: Page, canvas: Locator, target: number, info: Te
   }
 }
 /** Real left-joystick gestures; source geometry chooses a route, only touch moves the player. */
-async function touchWalkTo(page: Page, canvas: Locator, target: [number,number], info: TestInfo) {
+async function touchWalkTo(page: Page, canvas: Locator, target: [number,number], info: TestInfo, tolerance=4.5) {
   const [startX,,startZ]=await position(canvas),route=walkRoute(campuses.yingxi,[startX,startZ],target);
   const box=await canvas.boundingBox();if(!box)throw Error('Missing campus canvas bounds');
   // The visible fixed stick is left:38px, bottom:70px, diameter:90px.
@@ -91,7 +94,7 @@ async function touchWalkTo(page: Page, canvas: Locator, target: [number,number],
   try {
     for(const waypoint of route) for(let attempt=0;attempt<30;attempt++) {
       const before=await position(canvas),dx=waypoint[0]-before[0],dz=waypoint[1]-before[2];
-      if(Math.hypot(dx,dz)<.9||Math.hypot(target[0]-before[0],target[1]-before[2])<4.5)break;
+      if(Math.hypot(dx,dz)<.9||Math.hypot(target[0]-before[0],target[1]-before[2])<tolerance)break;
       const yaw=Number(await canvas.getAttribute('data-camera-yaw'));if(!Number.isFinite(yaw))throw Error('Missing camera yaw');
       const distance=Math.hypot(dx,dz),stick={x:(-dx*Math.cos(yaw)+dz*Math.sin(yaw))/distance,y:-(dx*Math.sin(yaw)+dz*Math.cos(yaw))/distance};
       const holdMs=Math.max(80,Math.min(300,distance/3.4*500));
@@ -115,10 +118,10 @@ async function stampIds(page: Page): Promise<string[]> {
   return page.evaluate(() => JSON.parse(localStorage.getItem('campus-atlas:photo-stamps:v1') ?? '[]') as string[]);
 }
 
-test('scenic diary: genuine walk, framing, two captures, Hks round-trip and local postcard', async ({ page }, info) => {
+test('scenic diary: genuine walk, framing, three captures, Hks round-trip and local postcard', async ({ page }, info) => {
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   const canvas=await ready(page), guide=page.getByTestId('photo-guide'), hint=page.getByTestId('photo-hint');
-  await expect(guide).toContainText('0 / 2');
+  await expect(guide).toContainText('0 / 3');
   await aimAtSubject(page,canvas,0,false,info);await expect(hint).toContainText('构图就绪', {timeout:30000});
   await page.screenshot({path:info.outputPath('photo-hall-ready.png')});
   await page.getByRole('button',{name:'打开校园地图'}).click(); await expect(canvas).toHaveAttribute('data-view','map');
@@ -170,7 +173,7 @@ test('scenic diary: genuine walk, framing, two captures, Hks round-trip and loca
   await page.screenshot({path:info.outputPath('photo-wrong-framing.png')});
   await dragLook(page,canvas,-300); await expect(hint).toContainText('构图就绪',{timeout:15000});
   await canvas.focus(); await page.keyboard.press('e');
-  await expect(guide).toContainText('1 / 2'); expect(await stampIds(page)).toEqual(['hall']);
+  await expect(guide).toContainText('1 / 3'); expect(await stampIds(page)).toEqual(['hall']);
   // E at the first site cannot record the distant second point.
   await page.keyboard.press('e'); await expect(hint).toContainText('还未到观察处'); expect(await stampIds(page)).toEqual(['hall']);
   const saved=await position(canvas), yaw=await canvas.getAttribute('data-camera-yaw');
@@ -195,7 +198,9 @@ test('scenic diary: genuine walk, framing, two captures, Hks round-trip and loca
   await aimAtSubject(page,canvas,1,false,info);await expect(hint).toContainText('构图就绪',{timeout:30000}); await page.screenshot({path:info.outputPath('photo-garden-ready.png')});
   // Exercise the actual visible shutter as a pointer action for the second capture.
   await page.getByTestId('photo-record').click();
-  const complete=page.getByTestId('photo-complete');await expect(complete).toBeVisible();expect(await stampIds(page)).toEqual(['hall','garden']);
+  await ascend(page,canvas);await aimAtSubject(page,canvas,2,false,info);await page.getByTestId('photo-record').click();
+  await page.getByTestId('open-photo-album').click();
+  const complete=page.getByTestId('photo-complete');await expect(complete).toBeVisible();expect(await stampIds(page)).toEqual(['hall','garden','platform']);
   await expect(complete).toHaveAttribute('role','dialog');await expect(complete).toHaveAttribute('aria-modal','true');
   await expect(canvas).toHaveAttribute('data-paused','true');await expect(page.locator('.app-shell')).toHaveAttribute('inert','');
   const modalPosition=await position(canvas), modalFrame=await canvas.getAttribute('data-frame');
@@ -210,9 +215,9 @@ test('scenic diary: genuine walk, framing, two captures, Hks round-trip and loca
   for(let i=0;i<10;i++){await page.keyboard.press('Shift+Tab');expect(await page.evaluate(()=>!!document.activeElement?.closest('[data-testid="photo-complete"]'))).toBe(true);}
   await page.keyboard.press('Escape');await expect(complete).toHaveCount(0);await expect(canvas).toHaveAttribute('data-paused','false');
   const afterEscape=await position(canvas);expect(Math.hypot(afterEscape[0]-modalPosition[0],afterEscape[2]-modalPosition[2])).toBeLessThan(.1);
-  await expect(page.getByTestId('photo-record')).toBeFocused();
-  await guide.getByRole('button',{name:/查看手记/}).click();await expect(complete).toBeVisible();await expect(canvas).toHaveAttribute('data-paused','true');
-  const photos=complete.locator('img');await expect(photos).toHaveCount(2);
+  await expect(page.getByTestId('open-photo-album')).toBeFocused();
+  await page.getByTestId('open-photo-album').click();await expect(complete).toBeVisible();await expect(canvas).toHaveAttribute('data-paused','true');
+  const photos=complete.locator('img');await expect(photos).toHaveCount(3);
   const sources=await photos.evaluateAll(images=>images.map(image=>(image as HTMLImageElement).src));
   expect(sources.every(src=>src.startsWith('data:image/png;base64,')&&src.length>10000)).toBe(true);
   expect(sources[0]).not.toBe(sources[1]);
@@ -224,18 +229,18 @@ test('scenic diary: genuine walk, framing, two captures, Hks round-trip and loca
   expect(bytes.readUInt32BE(16)).toBe(1600);expect(bytes.readUInt32BE(20)).toBe(1080);expect(bytes.length).toBeGreaterThan(20000);expect(bytes.length).toBeLessThanOrEqual(10*1024*1024);
   await info.attach('postcard-from-real-game-captures',{body:bytes,contentType:'image/png'});
   await complete.getByRole('button',{name:'继续漫游'}).click();await expect(complete).toHaveCount(0);await expect(canvas).toHaveAttribute('data-paused','false');
-  await expect(guide.getByRole('button',{name:/查看手记/})).toBeFocused();
-  await guide.getByRole('button',{name:/查看手记/}).click();await expect(complete).toBeVisible();
+  await expect(page.getByTestId('open-photo-album')).toBeFocused();
+  await page.getByTestId('open-photo-album').click();await expect(complete).toBeVisible();
   await complete.getByRole('button',{name:/机械馆 · 初见/}).click();await expect(complete).toHaveCount(0);
-  await walkTo(page,canvas,campuses.yingxi,PHOTO_POINTS[0]!.position);
+  await descend(page,canvas);await walkTo(page,canvas,campuses.yingxi,PHOTO_POINTS[0]!.position);
   await aimAtSubject(page,canvas,0,false,info);await expect(hint).toContainText('构图就绪',{timeout:30000});await canvas.focus();await page.keyboard.press('e');
-  await expect(complete).toBeVisible();expect(await stampIds(page)).toEqual(['hall','garden']);
+  await page.getByTestId('open-photo-album').click();await expect(complete).toBeVisible();expect(await stampIds(page)).toEqual(['hall','garden','platform']);
   await complete.getByRole('button',{name:'关闭手记'}).click();await expect(complete).toHaveCount(0);
-  await guide.getByRole('button',{name:/查看手记/}).click();await expect(complete).toBeVisible();
-  await page.reload();await expect(guide).toContainText('2 / 2');await guide.getByRole('button',{name:/查看手记/}).click();
+  await page.getByTestId('open-photo-album').click();await expect(complete).toBeVisible();
+  await page.reload();await expect(page.getByTestId('journey-panel')).toContainText('3 / 3');await page.getByTestId('open-photo-album').click();
   await expect(complete).toContainText('照片只留在本次游玩中');
   await expect(complete.getByRole('button',{name:/保存明信片到本机/})).toBeDisabled();
-  await complete.getByRole('button',{name:'重新收集'}).click();await expect(guide).toContainText('0 / 2');expect(await stampIds(page)).toEqual([]);
+  await complete.getByRole('button',{name:'关闭手记'}).click();await page.getByRole('button',{name:'另开一轮',exact:true}).click();await page.getByRole('button',{name:'确认重新开始',exact:true}).click();await expect(guide).toContainText('0 / 3');expect(await stampIds(page)).toEqual(['hall','garden','platform']);
   expect(errors).toEqual([]);
 });
 
@@ -322,26 +327,47 @@ test('delayed student load survives real campus switches without replacing the a
 
 test.describe('landscape touch diary',()=>{
   test.use({hasTouch:true,isMobile:true,viewport:{width:844,height:390}});
-  test('real left joystick and right-look visit both photo points, then return from Hks',async({page},info)=>{
+  test('real touch complete journal: three photos, stairs, Hks return, both flight directions and success',async({page},info)=>{
     const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
-    const canvas=await ready(page);await aimAtSubject(page,canvas,0,true,info);
+    const canvas=await ready(page,true);await aimAtSubject(page,canvas,0,true,info);
     await expect(page.getByTestId('photo-hint')).toContainText('构图就绪',{timeout:30000});
     await page.screenshot({path:info.outputPath('photo-touch-first-ready.png')});
     await page.getByTestId('photo-record').tap();
-    const guide=page.getByTestId('photo-guide');await expect(guide).toContainText('1 / 2');expect(await stampIds(page)).toEqual(['hall']);
+    const guide=page.getByTestId('photo-guide');await expect(guide).toContainText('1 / 3');expect(await stampIds(page)).toEqual(['hall']);
     await touchWalkTo(page,canvas,PHOTO_POINTS[1]!.position,info);
     const atGarden=await position(canvas);expect(Math.hypot(atGarden[0]-PHOTO_POINTS[1]!.position[0],atGarden[2]-PHOTO_POINTS[1]!.position[1])).toBeLessThan(PHOTO_POINTS[1]!.radius);
     await aimAtSubject(page,canvas,1,true,info);await expect(page.getByTestId('photo-hint')).toContainText('构图就绪',{timeout:30000});
     await page.screenshot({path:info.outputPath('photo-touch-second-ready.png')});await page.getByTestId('photo-record').tap();
-    const complete=page.getByTestId('photo-complete');await expect(complete).toBeVisible();expect(await stampIds(page)).toEqual(['hall','garden']);
+    await touchWalkTo(page,canvas,[VIEWING_PLATFORM.approach[0],VIEWING_PLATFORM.approach[2]],info,.9);
+    await touchWalkTo(page,canvas,VIEWING_PLATFORM.photo.position,info,.9);expect((await position(canvas))[1]).toBeGreaterThan(1.1);
+    await aimAtSubject(page,canvas,2,true,info);await page.getByTestId('photo-record').tap();await page.getByTestId('open-photo-album').tap();
+    const complete=page.getByTestId('photo-complete');await expect(complete).toBeVisible();expect(await stampIds(page)).toEqual(['hall','garden','platform']);
     await expect(canvas).toHaveAttribute('data-paused','true');await page.screenshot({path:info.outputPath('photo-touch-completion.png')});
     await complete.getByRole('button',{name:'继续漫游'}).tap();await expect(complete).toHaveCount(0);await expect(canvas).toHaveAttribute('data-paused','false');
-    await guide.getByRole('button',{name:/查看手记/}).tap();await expect(complete).toBeVisible();await complete.getByRole('button',{name:'关闭手记'}).tap();
+    await page.getByTestId('open-photo-album').tap();await expect(complete).toBeVisible();await complete.getByRole('button',{name:'关闭手记'}).tap();
+    await touchWalkTo(page,canvas,[VIEWING_PLATFORM.approach[0],VIEWING_PLATFORM.approach[2]],info,.9);expect((await position(canvas))[1]).toBeLessThan(.2);
     const saved=await position(canvas),yaw=await canvas.getAttribute('data-camera-yaw');await page.getByTestId('open-hks').tap();
     await expect(page.frameLocator('[data-testid="hks-frame"]').locator('canvas')).toBeVisible({timeout:30000});
     await page.getByTestId('hks-return').tap();await expect(canvas).toHaveAttribute('data-paused','false');
     const restored=await position(canvas);expect(Math.hypot(restored[0]-saved[0],restored[2]-saved[2])).toBeLessThan(.1);
-    expect(await canvas.getAttribute('data-camera-yaw')).toBe(yaw);expect(await stampIds(page)).toEqual(['hall','garden']);expect(errors).toEqual([]);
+    expect(await canvas.getAttribute('data-camera-yaw')).toBe(yaw);expect(await stampIds(page)).toEqual(['hall','garden','platform']);
+    // Simulated landscape touch, not a physical phone. Every route move above
+    // and below is a left-stick gesture; no keyboard or position injection.
+    await touchWalkTo(page,canvas,[PAPERPLANE_STATION.standing[0],PAPERPLANE_STATION.standing[2]],info,.9);
+    const stationPose=await position(canvas);
+    for(const [label,sign] of [['向右转',1],['向左转',-1]] as const){
+      await page.getByTestId('begin-paperplane').tap();await page.getByRole('button',{name:'开始放飞',exact:true}).tap();
+      const before=await planePose(canvas),button=page.getByRole('button',{name:label,exact:true}),box=await button.boundingBox();if(!box)throw Error('Missing flight touch control');
+      const client=await page.context().newCDPSession(page),x=box.x+box.width/2,y=box.y+box.height/2;
+      await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:22}]});await page.waitForTimeout(700);
+      await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await client.detach();
+      expect(screenRightDisplacement(before,await planePose(canvas))*sign).toBeGreaterThan(.01);
+      await page.getByRole('button',{name:/退出放飞/}).tap();expect(await position(canvas)).toEqual(stationPose);
+    }
+    await page.getByTestId('begin-paperplane').tap();await page.getByRole('button',{name:'开始放飞',exact:true}).tap();
+    await waitForFlightSuccess(canvas,info,'flight-wall-and-simulated-time');expect((await planeState(canvas)).gatesPassed).toBe(3);
+    await page.getByRole('button',{name:'返回手记',exact:true}).tap();await expect(page.getByTestId('journey-panel')).toContainText('晴日手记 · 完成');
+    expect(await position(canvas)).toEqual(stationPose);await page.screenshot({path:info.outputPath('touch-complete-journal.png')});expect(errors).toEqual([]);
   });
 });
 
@@ -379,7 +405,7 @@ test.describe('portrait orientation recovery',()=>{
 
 test('a failed mechanical model cannot produce a false clock photo',async({page},info)=>{
   await page.route('**/assets/campuses/yingxi/mechanical-hall.glb',route=>route.abort());
-  await page.goto('/');const canvas=page.getByTestId('campus-canvas');
+  await page.goto('/');await page.getByRole('button',{name:'开始手记',exact:true}).click();const canvas=page.getByTestId('campus-canvas');
   await expect(canvas).toHaveAttribute('data-model-yx-mechanical','fallback',{timeout:30000});
   await expect(page.getByTestId('scene-error')).toHaveCount(0);
   await expect(page.getByTestId('photo-hint')).toContainText('细节未能加载');
@@ -454,7 +480,7 @@ for (const gardenMode of ['ready','fallback'] as const) {
   test(`garden ${gardenMode}: reachable open approach and visible island stops real movement`, async ({page},info)=>{
     const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
     if (gardenMode==='fallback') await page.route('**/assets/campuses/yingxi/qingze-reading-garden.glb',route=>route.abort());
-    await page.goto('/');const canvas=page.getByTestId('campus-canvas');
+    await page.goto('/');await page.getByRole('button',{name:'开始手记',exact:true}).click();const canvas=page.getByTestId('campus-canvas');
     await expect(canvas).toHaveAttribute('data-model-yx-garden-setting',gardenMode,{timeout:30000});
     await expect(canvas).toHaveAttribute('data-model-yx-mechanical','ready',{timeout:30000});
     await canvas.focus();await walkTo(page,canvas,campuses.yingxi,PHOTO_POINTS[1]!.position,1);

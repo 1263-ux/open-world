@@ -24,3 +24,10 @@ The package is `campus-offline.zip` inside the work directory. No server or Node
 The scripts copy only named source/data/provenance paths, never workspace auth, .env, or node_modules into output. Symlinked dependencies are only read; Vite cache and output stay in the external work directory. `source-fingerprints.json` records SHA-256 hashes of the pre-adapter inputs, while `SHA256SUMS` covers the packaged files. The GLB checker requires binary files with no external buffer/image URIs, and package checks verify all registered models appear in the bundle. Include the Noto CJK notice even though its glyphs are baked into a model texture.
 
 `offline-file.spec.ts` is a focused file:// smoke test, not a substitute for the long natural-combat, complete-quest, mobile-touch, model-failure and normal-HTTP regression tests. No browser sandbox/security flags should be weakened to run it.
+
+
+## Complete-release asset compatibility (2026-10-31)
+
+The approved runtime additions are explicitly embedded: `exhibits/paperplane-station.glb` and its JSON provenance URL, plus `environment/Leaves_NormalTree_C.png` for Huyu foliage. The foliage license is explicitly packaged as `licenses/quaternius-foliage-CC0.txt`; station metadata is retained by the existing model-provenance packaging loop. No other environment PNG/text files are allowed. Unknown files still fail the input allowlist; every copied GLB and the exact approved PNG must appear byte-for-byte in the campus bundle. Station GLB external resource URIs are rejected, as for the existing campus and character assets. Runtime-source network/asset-path audit and output credential checks remain enabled.
+
+The initial recovered builder failed locally on `Unapproved input: public/assets/environment/Leaves_NormalTree_C.png`. These additions restore packaging compatibility, not browser functionality: successful archive/static checks do not prove file:// WebGL, image decoding, controls, photographs, or paperplane gameplay. Source snapshot and all output remain in the explicitly supplied external work directory; no browser flags or remote workflow are changed.

@@ -125,6 +125,7 @@ test.describe('two-campus release journeys', () => {
       const errors: string[] = [];
       page.on('pageerror', error => errors.push(error.message));
       await page.goto('/');
+      await page.getByRole('button',{name:'先去漫游',exact:true}).tap();
       const canvas = page.getByTestId('campus-canvas');
       const touch = await page.context().newCDPSession(page);
         for (const campus of ['yingxi', 'huyu', 'yingxi', 'huyu'] as const) {

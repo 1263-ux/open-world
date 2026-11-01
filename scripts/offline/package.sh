@@ -18,6 +18,7 @@ cp "$source_root/node_modules/vue/LICENSE" "$pkg/licenses/vue-MIT.txt"
 cp "$source_root/games/hks/node_modules/eventemitter3/LICENSE" "$pkg/licenses/eventemitter3-MIT.txt"
 cp "$stage/games/hks/PHASER-LICENSE.md" "$pkg/licenses/phaser-MIT.md"
 cp "$stage/docs/resources/licenses/quaternius-characters-CC0.txt" "$pkg/licenses/quaternius-characters-CC0.txt"
+cp "$stage/public/assets/environment/quaternius-license-standard.txt" "$pkg/licenses/quaternius-foliage-CC0.txt"
 cp "$stage/public/assets/campuses/huyu/NOTO-CJK-COPYRIGHT.txt" "$pkg/licenses/Noto-CJK-copyright.txt"
 for f in MODIFICATIONS.md MODERNIZATION.md ASSET_INVENTORY.json SOURCE_INVENTORY.json MODERNIZED_INVENTORY.json; do cp "$stage/games/hks/$f" "$pkg/provenance/hks-$f"; done
 while IFS= read -r -d '' file; do

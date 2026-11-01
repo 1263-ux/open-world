@@ -1,3 +1,5 @@
+import { VIEWING_PLATFORM } from '../scene/OriginalViewingPlatform';
+
 /** Designed viewpoints, not surveyed entrances or navigation coordinates. */
 export interface PhotoPoint {
   id: string;
@@ -11,6 +13,7 @@ export interface PhotoPoint {
   position: [number, number];
   target: [number, number, number];
   radius: number;
+  heightRange?: [number, number];
   landmarkId: string;
   frameExtent: [number, number, number][];
   focusExtent: [number, number, number][];
@@ -28,6 +31,7 @@ const gardenFrame: [number, number, number][] = [[27.494479, 5.318253, 210.76455
 export const PHOTO_POINTS: PhotoPoint[] = [
   { id: 'hall', title: '机械馆 · 初见', subtitle: '把钟楼收入画中', instruction: '在机械馆前的开阔处，转动视角寻找钟楼。', subject: '钟楼', modelLabel: '机械馆细节', frameHint: '调整视角：钟面放进框内，塔顶完整入画', position: [-20, 175.5], target: clockTarget, frameExtent: towerExtent, focusExtent: clockExtent, radius: 8, landmarkId: 'yx-mechanical' },
   { id: 'garden', title: '清泽园 · 花间', subtitle: '花岛与垂枝 · 游戏原创造景', instruction: '沿路向东再向南，到花园北侧，寻找花岛与垂枝。', subject: '垂枝树', modelLabel: '原创花园', frameHint: '调整视角：垂枝树放进框内，花岛完整入画', designNote: '游戏原创造景', position: [35, 193], target: gardenTarget, frameExtent: gardenFrame, focusExtent: gardenFocus, radius: 5.5, landmarkId: 'yx-garden-setting' },
+  { id: 'platform', title: '清泽园 · 高处', subtitle: '登高看花岛 · 游戏原创展示设计', instruction: '走上清泽园东北侧低台，从高处将花岛收入画面。', subject: '花岛', modelLabel: '原创花园', frameHint: '转向花园并略向下看，将花岛完整收入画面', designNote: '游戏原创展示设计', ...VIEWING_PLATFORM.photo },
 ];
 const KEY = 'campus-atlas:photo-stamps:v1';
 export function loadPhotoStamps(): string[] {

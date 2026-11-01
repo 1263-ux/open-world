@@ -23,6 +23,6 @@ python scripts/art/verify_mechanical_hall.py /tmp/mech-output
 
 生成器输出自包含 GLB 和配套元数据。验证脚本解析二进制，检查 SHA-256、体积、三角面、所有源顶点、法线与绕序、上下界，特别检查中央门和窗在外墙平面没有实体遮挡且在 20 cm 深处有面。墙体、拱窗、窗框和门是原创几何；窗洞并非贴在墙上的平面。台阶是三个 12 cm 高的展示估算，向立面外突出约 1.3 m，并不修改源多边形。钟楼高度约 15 m、翼楼约 9 m，仍为未核验视觉估算。没有内部空间、照片纹理、标牌、人物或精确测绘。
 
-已集成到 `public/assets/campuses/yingxi/mechanical-hall.glb`；默认验证器检查此路径，旧模型验证入口转发至新验证器。原生成脚本保留作历史参考，新版本复现使用本目录脚本。
+已集成到 `public/assets/campuses/yingxi/mechanical-hall.glb`；默认验证器检查此路径，旧模型验证入口转发至新验证器。本目录 `mechanical_hall_refined.py` 仅是兼容包装；唯一几何生成源为 `scripts/landmarks/mechanical-hall/generator.py`，metadata 也记录 canonical 路径。包装保留显式 `MODEL_OUTPUT_DIR`，未设置时仍默认输出本目录；canonical 未设置时默认输出其自身目录。请优先使用 canonical 入口，禁止在包装中复制几何实现。
 
-本次模型 15,603 三角形 / 827,580 bytes；这是比原平面窗版本更重的代价，真实浏览器和设备性能由集成方实测。CPU 渲染只用于几何对照，不能替代游戏中的灯光和交互验收。
+当前局部候选模型 18,617 三角形 / 989,908 bytes；这是比原平面窗版本更重的代价，真实浏览器和设备性能由集成方实测。CPU 渲染只用于几何对照，不能替代游戏中的灯光和交互验收。

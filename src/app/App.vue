@@ -3,12 +3,16 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import CampusMinimap from '../components/CampusMinimap.vue';
 import HksOverlay from '../components/HksOverlay.vue';
 import PhotoJournal from '../components/PhotoJournal.vue';
+import JourneyPanel from '../components/JourneyPanel.vue';
+import PaperplanePanel from '../components/PaperplanePanel.vue';
+import { createJourney, recordJourneyPhoto, recordJourneyFlight, journeyStage } from '../games/journey';
+import { loadJourney, saveJourney } from '../games/journey-storage';
 import { PHOTO_POINTS, loadPhotoStamps, savePhotoStamps } from '../games/photography';
 import { campuses } from '../campus-data/campuses';
 import { emptyQuest, startQuest, visitQuest } from '../games/quest';
 import { loadProgress, saveProgress } from '../games/storage';
 import { createCampusScene } from '../scene/CampusScene';
-import type { CampusData, CampusId, CampusSceneHandle, Landmark, SceneEvent } from '../shared/contracts';
+import type { CampusData, CampusId, CampusSceneHandle, Landmark, SceneEvent, PaperplaneSnapshot, PaperplaneInput } from '../shared/contracts';
 
 type QuestState = ReturnType<typeof emptyQuest>;
 type Panel = 'quest' | 'directory' | 'detail';
@@ -44,10 +48,32 @@ const displayed = computed(() => panel.value === 'detail' ? selected.value : tar
 const displayedFeature = computed(() => campus.value.features.find(item => item.id === displayed.value?.featureId || displayed.value?.featureIds?.includes(item.id)) ?? null);
 const visitedNames = computed(() => quest.value.visited.map(id => campus.value.landmarks.find(item => item.id === id)?.name).filter(Boolean));
 
-const hksOpen = ref(false);
-function openHks() { hksOpen.value = true; syncScenePause(); }
+type ActivityMode = 'exploring'|'photo'|'planeReady'|'flying'|'planeResult'|'hks'|'paused';
+const mode = ref<ActivityMode>('exploring');
+const planeSnapshot = ref<PaperplaneSnapshot | null>(null);
+const planeActive = computed(() => planeSnapshot.value !== null);
+const hksOpen = computed(() => mode.value === 'hks');
+const journey = ref(loadJourney());
+const planeNearby = ref(false);
+const notebookHidden = ref(false);
+const notebookExpanded = ref(false);
+const notebookConfirming = ref(false);
+const journeySaved = ref(true);
+const showNotebook = computed(() => !notebookHidden.value && (notebookExpanded.value || !journey.value || ['flight','complete'].includes(journeyStage(journey.value))));
+function persistJourney() { if (journey.value) journeySaved.value = saveJourney(journey.value); }
+function startNotebook() { notebookExpanded.value = false; notebookHidden.value = false; journey.value = createJourney(); persistJourney(); focusScene(); }
+function restartNotebook() {
+  startNotebook(); photoImages.value = {}; photoPointId.value = 'hall';
+}
+function confirmNotebook(open: boolean) { notebookConfirming.value = open; syncScenePause(); }
+function openNotebook() { notebookHidden.value = false; notebookExpanded.value = true; }
+function continueNotebook() { notebookExpanded.value = false; notebookHidden.value = false; focusScene(); }
+function freeRoam() { notebookExpanded.value = false; notebookHidden.value = true; focusScene(); }
+function resumeFlight() { scene?.resumePaperplane(); focusScene(); }
+function launchFlight() { scene?.launchPaperplane(); focusScene(); }
+function openHks() { if (mode.value !== 'exploring' || notebookConfirming.value) return; mode.value = 'hks'; syncScenePause(); }
 function focusScene() { nextTick(() => sceneElement.value?.querySelector('canvas')?.focus()); }
-function closeHks() { hksOpen.value = false; syncScenePause(); if (!photoCompleteOpen.value) focusScene(); }
+function closeHks() { mode.value = 'exploring'; syncScenePause(); if (!photoCompleteOpen.value) focusScene(); }
 
 const panel = ref<Panel>('quest');
 const panelOpen = ref(false);
@@ -71,7 +97,7 @@ function syncMinimap() {
   if (canvas.dataset.playerX !== undefined && canvas.dataset.playerZ !== undefined && Number.isFinite(x) && Number.isFinite(z) && (playerPosition.value?.[0] !== x || playerPosition.value?.[1] !== z)) playerPosition.value = [x, z];
 }
 function toggleOverview() {
-  if (!scene || sceneError.value) return;
+  if (!scene || sceneError.value || planeActive.value) return;
   if (mapOpen.value) { scene.resetView(); focusScene(); } else scene.overview();
   syncMinimap();
 }
@@ -80,7 +106,7 @@ let returnFocus: HTMLElement | null = null;
 let scene: CampusSceneHandle | null = null;
 const photoStamps = ref(loadPhotoStamps());
 const photoImages = ref<Record<string, string>>({});
-const photoPointId = ref(PHOTO_POINTS.find(point => !photoStamps.value.includes(point.id))?.id ?? PHOTO_POINTS[0]!.id);
+const photoPointId = ref(PHOTO_POINTS.find(point => !journey.value?.photos.includes(point.id as 'hall'|'garden'|'platform'))?.id ?? PHOTO_POINTS[0]!.id);
 const photoPoint = computed(() => PHOTO_POINTS.find(point => point.id === photoPointId.value) ?? PHOTO_POINTS[0]!);
 const photoStatus = ref<{ inRange: boolean; framed: boolean; obstructed: boolean; distance: number } | null>(null);
 const photoFeedback = ref('');
@@ -88,18 +114,19 @@ const photoViewAvailable = ref(true);
 type PhotoModelStatus = 'loading' | 'ready' | 'fallback';
 const photoModelStatuses = ref<Record<string, PhotoModelStatus>>({});
 const photoModelStatus = computed(() => photoModelStatuses.value[photoPoint.value.landmarkId] ?? 'loading');
-const photoCompleteOpen = ref(false);
+const photoCompleteOpen = computed(() => mode.value === 'photo');
 let photoReturnFocus: HTMLElement | null = null;
 function syncScenePause() {
-  if (hksOpen.value || photoCompleteOpen.value) scene?.pause(); else scene?.resume();
+  if (hksOpen.value || photoCompleteOpen.value || notebookConfirming.value) scene?.pause(); else scene?.resume();
 }
 function openPhotoComplete() {
   photoReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  photoCompleteOpen.value = true;
+  if (mode.value !== 'exploring') return;
+  mode.value = 'photo';
   syncScenePause();
 }
 function closePhotoComplete(restore = true) {
-  photoCompleteOpen.value = false;
+  if (mode.value === 'photo') mode.value = 'exploring';
   syncScenePause();
   if (restore && !hksOpen.value) nextTick(() => {
     if (photoReturnFocus?.isConnected) photoReturnFocus.focus(); else focusScene();
@@ -151,13 +178,13 @@ async function dismissOrientation() {
 let photoTimer: number | undefined;
 let feedbackTimer: number | undefined;
 function updatePhotoStatus() {
-  if (campusId.value !== 'yingxi' || hksOpen.value || sceneError.value || !scene) { photoStatus.value = null; return; }
+  if (campusId.value !== 'yingxi' || mode.value !== 'exploring' || sceneError.value || !scene) { photoStatus.value = null; return; }
   photoViewAvailable.value = sceneElement.value?.querySelector('canvas')?.dataset.view === 'player';
   if (!photoViewAvailable.value) { photoStatus.value = null; return; }
   // Free exploration: if an unphotographed station is reached first, offer it
   // without moving the player or skipping a missing model's readiness gate.
   if (!panelOpen.value && !photoCompleteOpen.value) {
-    const nearby = PHOTO_POINTS.find(point => point.id !== photoPointId.value && !photoImages.value[point.id] && scene!.inspectPhoto(point).inRange);
+    const nearby = PHOTO_POINTS.find(point => point.id !== photoPointId.value && !journey.value?.photos.includes(point.id as 'hall'|'garden'|'platform') && scene!.inspectPhoto(point).inRange);
     if (nearby) { photoPointId.value = nearby.id; photoFeedback.value = ''; }
   }
   photoStatus.value = scene.inspectPhoto(photoPoint.value);
@@ -168,7 +195,7 @@ function photoMessage(message: string) {
   feedbackTimer = window.setTimeout(() => { photoFeedback.value = ''; }, 2800);
 }
 function recordPhoto() {
-  if (campusId.value !== 'yingxi' || hksOpen.value || panelOpen.value || photoCompleteOpen.value || sceneError.value) return;
+  if (campusId.value !== 'yingxi' || notebookConfirming.value || mode.value !== 'exploring' || panelOpen.value || photoCompleteOpen.value || sceneError.value) return;
   updatePhotoStatus();
   if (photoModelStatus.value !== 'ready') { photoMessage(photoModelStatus.value === 'fallback' ? `${photoPoint.value.modelLabel}未能加载，暂无法记录${photoPoint.value.subject}。` : `${photoPoint.value.modelLabel}正在加载，稍候即可取景。`); return; }
   const status = photoStatus.value;
@@ -182,13 +209,14 @@ function recordPhoto() {
   photoImages.value = { ...photoImages.value, [id]: image };
   if (!photoStamps.value.includes(id)) photoStamps.value = [...photoStamps.value, id];
   savePhotoStamps(photoStamps.value);
-  const next = PHOTO_POINTS.find(point => !photoImages.value[point.id]);
+  journey.value = recordJourneyPhoto(journey.value ?? createJourney(), id); notebookHidden.value = false; persistJourney();
+  const next = PHOTO_POINTS.find(point => !journey.value?.photos.includes(point.id as 'hall'|'garden'|'platform'));
   if (next) { photoPointId.value = next.id; photoMessage('已收入手记 · 去寻找下一处风景'); }
-  else { openPhotoComplete(); photoFeedback.value = ''; }
+  else { photoMessage('三处风景已记录 · 沿台阶下行，到旁边的纸飞机站完成航线'); }
   updatePhotoStatus();
 }
-function selectPhotoPoint(id: string) { photoPointId.value = id; closePhotoComplete(false); photoFeedback.value = ''; updatePhotoStatus(); focusScene(); }
-function replayPhotos() { photoStamps.value = []; photoImages.value = {}; savePhotoStamps([]); photoPointId.value = PHOTO_POINTS[0]!.id; closePhotoComplete(false); photoFeedback.value = ''; updatePhotoStatus(); focusScene(); }
+function selectPhotoPoint(id: string) { notebookHidden.value = true; notebookExpanded.value = false; photoPointId.value = id; closePhotoComplete(false); photoFeedback.value = ''; updatePhotoStatus(); focusScene(); }
+function replayPhotos() { closePhotoComplete(false); restartNotebook(); updatePhotoStatus(); }
 
 
 function persist() {
@@ -209,6 +237,7 @@ function clearJourneyView() {
   travelProgress.value = 0;
 }
 function showPanel(view: Panel, trigger?: EventTarget | null) {
+  if (mode.value !== 'exploring') return;
   if (trigger instanceof HTMLElement) returnFocus = trigger;
   panel.value = view;
   panelOpen.value = true;
@@ -218,6 +247,7 @@ function closePanel() {
   nextTick(() => (returnFocus ?? questButton.value)?.focus());
 }
 function switchCampus(id: CampusId) {
+  if (mode.value !== 'exploring') return;
   if (id === campusId.value) return;
   modelErrors.value = {};
   photoModelStatuses.value = {};
@@ -258,6 +288,7 @@ function exitQuest() {
   syncScene();
 }
 function selectLandmark(item: Landmark) {
+  if (mode.value !== 'exploring') return;
   selectedId.value = item.id;
   panel.value = quest.value.status === 'active' && target.value?.id === item.id ? 'quest' : 'detail';
   panelOpen.value = true;
@@ -300,7 +331,23 @@ function checkIn() {
   panelOpen.value = true;
   syncScene();
 }
+function beginFlight() {
+  if (mode.value !== 'exploring' || panelOpen.value || sceneError.value) return;
+  if (!scene?.beginPaperplane()) { notice.value = '请沿台阶下到地面，靠近观景台旁的折叠站再开始。'; return; }
+  photoStatus.value = null;
+}
+function endFlight() { scene?.endPaperplane(); planeSnapshot.value = null; mode.value = 'exploring'; syncScenePause(); focusScene(); }
+function planeInput(input: PaperplaneInput) { scene?.setPaperplaneInput(input); }
 function onSceneEvent(event: SceneEvent) {
+  if (event.type === 'paperplane') {
+    const previous = planeSnapshot.value;
+    planeSnapshot.value = event.snapshot;
+    mode.value = !event.snapshot ? 'exploring' : event.snapshot.paused ? 'paused' : event.snapshot.phase === 'ready' ? 'planeReady' : event.snapshot.phase === 'flying' ? 'flying' : 'planeResult';
+    if (event.snapshot?.result === 'success' && previous?.result !== 'success') {
+      journey.value = recordJourneyFlight(journey.value ?? createJourney(), { success: true, score: event.snapshot.elapsed }); notebookHidden.value = false; persistJourney();
+    }
+    return;
+  }
   if (event.type === 'modelstatus') {
     if (PHOTO_POINTS.some(point => point.landmarkId === event.id)) photoModelStatuses.value = { ...photoModelStatuses.value, [event.id]: event.status };
     if (event.status === 'fallback') modelErrors.value = { ...modelErrors.value, [event.id]: `${event.name}细节暂未加载；保留基础体块或标记，漫游仍可继续。` };
@@ -341,6 +388,7 @@ function heightLabel(status: string) {
 }
 function onKeydown(event: KeyboardEvent) {
   if (hksOpen.value) return;
+  if (planeActive.value) { if (event.key === 'Escape') { event.preventDefault(); endFlight(); } return; }
   if (event.key === 'Escape' && photoCompleteOpen.value) { event.preventDefault(); closePhotoComplete(); return; }
   if (event.key === 'Escape' && panelOpen.value) closePanel();
   const element = event.target as HTMLElement | null;
@@ -348,7 +396,7 @@ function onKeydown(event: KeyboardEvent) {
 }
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
-  photoTimer = window.setInterval(() => { updatePhotoStatus(); syncMinimap(); }, 250);
+  photoTimer = window.setInterval(() => { updatePhotoStatus(); syncMinimap(); planeNearby.value = !!scene?.canBeginPaperplane(); }, 250);
   if (!sceneElement.value) return;
   try {
     scene = createCampusScene(sceneElement.value, campus.value, onSceneEvent);
@@ -374,7 +422,7 @@ onBeforeUnmount(() => {
     <header class="masthead">
       <div class="brand"><span class="brand-mark" aria-hidden="true">太</span><span>太理 <i>·</i> 时光漫游</span></div>
       <nav class="campus-switch" aria-label="选择校区">
-        <button v-for="item in campusList" :key="item.id" type="button" :data-testid="`campus-${item.id}`" :aria-pressed="campusId === item.id" @click="switchCampus(item.id)">{{ item.name }}</button>
+        <button v-for="item in campusList" :key="item.id" type="button" :data-testid="`campus-${item.id}`" :disabled="planeActive" :aria-pressed="campusId === item.id" @click="switchCampus(item.id)">{{ item.name }}</button>
       </nav>
       <div class="header-progress" :aria-label="`地标探索已记录 ${quest.visited.length} 站，共 ${orderedLandmarks.length} 站`">
         <span>地标探索</span><span class="header-count">{{ String(quest.visited.length).padStart(2, '0') }} <em>/</em> {{ String(orderedLandmarks.length).padStart(2, '0') }}</span>
@@ -385,27 +433,32 @@ onBeforeUnmount(() => {
     <main class="scene-area" aria-label="校园漫游场景">
       <div ref="sceneElement" class="scene-canvas" aria-label="校园三维场景"></div>
       <div class="scene-shade" aria-hidden="true"></div>
-      <CampusMinimap :campus="campus" :position="playerPosition" :map-open="mapOpen" :disabled="!!sceneError" @toggle="toggleOverview" />
+      <CampusMinimap :campus="campus" :position="playerPosition" :map-open="mapOpen" :disabled="!!sceneError || planeActive" @toggle="toggleOverview" />
       <div class="chapter-title" :class="{ 'photo-chapter': campusId === 'yingxi' }">
         <span class="eyebrow">CAMPUS CHAPTER <span class="eyebrow-line"></span> {{ campus.id === 'huyu' ? '01' : '02' }}</span>
         <h1>沿着校园，<br>慢慢走</h1>
         <p>{{ campus.name }} <span> / </span> {{ campus.englishName }}</p>
       </div>
 
-      <PhotoJournal v-if="campusId === 'yingxi' && !hksOpen" :point="photoPoint" :stamps="photoStamps" :photos="photoImages" :status="photoStatus" :disabled="!!sceneError" :view-available="photoViewAvailable" :model-status="photoModelStatus" :panel-open="panelOpen" :feedback="photoFeedback" :complete-open="photoCompleteOpen" @record="recordPhoto" @close="closePhotoComplete()" @open="openPhotoComplete" @replay="replayPhotos" @select="selectPhotoPoint" />
+      <PhotoJournal v-if="campusId === 'yingxi' && !hksOpen && !planeActive && (!showNotebook || photoCompleteOpen)" :point="photoPoint" :stamps="journey?.photos ?? []" :photos="photoImages" :status="photoStatus" :disabled="!!sceneError" :view-available="photoViewAvailable" :model-status="photoModelStatus" :panel-open="panelOpen" :feedback="photoFeedback" :complete-open="photoCompleteOpen" @record="recordPhoto" @close="closePhotoComplete()" @open="openPhotoComplete" @replay="replayPhotos" @select="selectPhotoPoint" />
 
+      <JourneyPanel v-if="campusId === 'yingxi' && showNotebook && !planeActive && !photoCompleteOpen && !hksOpen && !panelOpen" :state="journey" :saved="journeySaved" :campus-id="campusId" @start="startNotebook" @continue="continueNotebook" @restart="restartNotebook" @free-roam="freeRoam" @flight="beginFlight" @confirming="confirmNotebook" />
+      <button v-if="campusId === 'yingxi' && !planeActive && mode === 'exploring' && planeNearby && !panelOpen" class="plane-station-button" data-testid="begin-paperplane" type="button" @click="beginFlight">纸飞机站 · 准备起飞</button>
+      <PaperplanePanel v-if="planeSnapshot" :snapshot="planeSnapshot" @launch="launchFlight" @retry="scene?.retryPaperplane()" @exit="endFlight" @resume="resumeFlight" @input="planeInput" />
       <div v-if="sceneError" class="error-banner" data-testid="scene-error" role="status">
         <strong>无障碍列表模式</strong><span>{{ sceneError }}</span>
         <button type="button" @click="showPanel('quest', $event.currentTarget)">打开旅程</button>
       </div>
 
-      <div class="scene-actions" aria-label="场景工具">
+      <div v-if="!planeActive" class="scene-actions" aria-label="场景工具">
         <button type="button" aria-label="打开校园地图" title="校园地图" :disabled="!!sceneError" @click="scene?.overview()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V4h4M17 4h4v4M21 16v4h-4M7 20H3v-4M8 12h8M12 8v8"/></svg></button>
         <button type="button" aria-label="聚焦当前站点" title="聚焦当前站点" :disabled="!!sceneError || !(target || selected)" @click="(target || selected) && scene?.focusLandmark((target || selected)!.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
         <button type="button" data-testid="reset-view" aria-label="返回人物视角" title="返回人物视角" :disabled="!!sceneError" @click="scene?.resetView(); focusScene()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2 6M4 4v7h7"/></svg></button>
       </div>
       <div v-if="travelling && target" class="direction-hint">前往 {{ target.name }} <span>·</span> 金线仅指方向，遇建筑请绕行</div>
-      <div class="panel-launchers">
+      <div v-if="!planeActive" class="panel-launchers">
+        <button v-if="campusId === 'yingxi' && journey" type="button" data-testid="open-photo-album" @click="openPhotoComplete">照片集</button>
+        <button v-if="campusId === 'yingxi'" type="button" data-testid="open-notebook" @click="openNotebook">晴日手记</button>
         <button type="button" data-testid="open-hks" @click="openHks">古建守护</button>
         <button ref="questButton" type="button" data-testid="open-quest" :aria-expanded="panelOpen && panel === 'quest'" @click="showPanel('quest', $event.currentTarget)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16l-7-4-7 4z"/></svg> 漫游</button>
         <button type="button" data-testid="open-directory" :aria-expanded="panelOpen && panel === 'directory'" @click="showPanel('directory', $event.currentTarget)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg> 地点</button>

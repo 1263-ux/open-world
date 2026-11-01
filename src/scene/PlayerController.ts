@@ -16,6 +16,7 @@ export class PlayerController {
   readonly shadow = new THREE.Mesh(new THREE.CircleGeometry(.38, 20), new THREE.MeshBasicMaterial({ color: 0x253a30, transparent: true, opacity: .24, depthWrite: false }));
   private readonly collider = new Capsule(new THREE.Vector3(0, .34, 0), new THREE.Vector3(0, 1.38, 0), .34);
   private octree = new Octree();
+  private solidVolumes: { bounds: THREE.Box3; triangles: THREE.Triangle[] }[] = [];
   private readonly keys = new Set<string>();
   private torso: THREE.Mesh | null = null;
   private readonly arms: THREE.Group[] = [];
@@ -197,6 +198,18 @@ export class PlayerController {
     }
     group.updateMatrixWorld(true);
     this.octree = new Octree().fromGraphNode(group);
+    // Preserve individual closed proxy identities only for launch containment.
+    // Global parity would XOR overlapping solids instead of testing their union.
+    this.solidVolumes = [];
+    group.traverse(object => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const positions = object.geometry.getAttribute('position'), index = object.geometry.index;
+      if (!positions) return;
+      const triangles: THREE.Triangle[] = [];
+      const vertex = (i: number) => new THREE.Vector3().fromBufferAttribute(positions,index ? index.getX(i) : i).applyMatrix4(object.matrixWorld);
+      for (let i=0; i<(index?.count ?? positions.count); i+=3) triangles.push(new THREE.Triangle(vertex(i),vertex(i+1),vertex(i+2)));
+      this.solidVolumes.push({bounds:new THREE.Box3().setFromObject(object),triangles});
+    });
     group.traverse(o => { if (o instanceof THREE.Mesh) o.geometry.dispose(); });
     mat.dispose();
     // This is a designed gameplay viewpoint, not a surveyed entrance or a
@@ -213,6 +226,34 @@ export class PlayerController {
     this.shadow.position.set(p[0], .135, p[1]);
     this.collider.start.set(p[0], .46, p[1]); this.collider.end.set(p[0], 1.5, p[1]);
     this.velocityY = 0; this.grounded = true;
+  }
+  /** Read-only finite point-proxy query against the existing world Octree. */
+  segmentHit(from: [number, number, number], to: [number, number, number]): { fraction: number } | null {
+    if (![...from, ...to].every(Number.isFinite)) return { fraction: 0 };
+    const start = new THREE.Vector3(...from), delta = new THREE.Vector3(...to).sub(start);
+    const length = delta.length();
+    if (length < 1e-9) return null;
+    const hit = this.octree.rayIntersect(new THREE.Ray(start, delta.divideScalar(length)));
+    return hit && hit.distance <= length + 1e-8 ? { fraction: Math.max(0, Math.min(1, hit.distance / length)) } : null;
+  }
+  /** Interior launch rejection; parity of deduplicated two-sided triangle hits. */
+  pointBlocked(point: [number, number, number]): boolean {
+    if (!point.every(Number.isFinite) || point[1] <= .12) return true;
+    const origin = new THREE.Vector3(...point);
+    if (this.octree.sphereIntersect(new THREE.Sphere(origin, .03))) return true;
+    const ray = new THREE.Ray(origin, new THREE.Vector3(.917, .271, .293).normalize());
+    const hit = new THREE.Vector3();
+    return this.solidVolumes.some(volume => {
+      if (!volume.bounds.containsPoint(origin)) return false;
+      const distances: number[] = [];
+      for (const triangle of volume.triangles) {
+        if (ray.intersectTriangle(triangle.a,triangle.b,triangle.c,false,hit)) {
+          const d = hit.distanceTo(origin);
+          if (!distances.some(previous => Math.abs(previous-d) < 1e-5)) distances.push(d);
+        }
+      }
+      return distances.length % 2 === 1;
+    });
   }
   resize(width: number, height: number) { this.camera.aspect = Math.max(1, width) / Math.max(1, height); this.camera.updateProjectionMatrix(); }
   setEnabled(enabled: boolean) { if (!enabled) this.onBlur(); this.enabled = enabled; this.ui.hidden = !enabled; this.lastAdvance = performance.now(); }
@@ -281,6 +322,7 @@ export class PlayerController {
             if (!this.octree.capsuleIntersect(raised)) { this.collider.copy(raised); this.grounded = false; break; }
           }
         }
+        if (hit.normal.y < -.5 && this.velocityY > 0) this.velocityY = 0;
         if (hit.normal.y > .5 && this.velocityY <= 0) { this.velocityY = 0; this.grounded = true; }
         this.collider.translate(hit.normal.multiplyScalar(hit.depth + .001));
       }
@@ -288,7 +330,12 @@ export class PlayerController {
       if (foot <= .12) { this.collider.translate(new THREE.Vector3(0, .12 - foot, 0)); this.velocityY = 0; this.grounded = true; }
     }
     this.avatar.position.set(this.collider.start.x, this.collider.start.y - this.collider.radius, this.collider.start.z);
-    this.shadow.position.set(this.collider.start.x, .135, this.collider.start.z);
+    // Probe from foot level, not overhead: a roof must never receive this shadow.
+    const footY = this.avatar.position.y;
+    const support = this.octree.rayIntersect(new THREE.Ray(new THREE.Vector3(this.collider.start.x, footY + .06, this.collider.start.z), new THREE.Vector3(0, -1, 0)));
+    const supportY = support && support.distance < .16 ? support.position.y : .12;
+    this.shadow.visible = footY - supportY < .15;
+    this.shadow.position.set(this.collider.start.x, supportY + .015, this.collider.start.z);
     if (input.lengthSq() > .001) {
       const target = Math.atan2(movement.x, movement.z);
       const delta = Math.atan2(Math.sin(target - this.avatar.rotation.y), Math.cos(target - this.avatar.rotation.y));
@@ -330,7 +377,7 @@ export class PlayerController {
     if (this.disposed) return;
     this.disposed = true;
     this.student?.dispose(); this.student = null;
-    this.fadeMaterials.clear();
+    this.fadeMaterials.clear(); this.solidVolumes = [];
     window.removeEventListener('keydown', this.onKeyDown); window.removeEventListener('keyup', this.onKeyUp); window.removeEventListener('blur', this.onBlur);
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.canvas.removeEventListener('lostpointercapture', this.onPointerUp);
