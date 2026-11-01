@@ -340,7 +340,39 @@ test.describe('landscape touch diary',()=>{
     await page.screenshot({path:info.outputPath('photo-touch-second-ready.png')});await page.getByTestId('photo-record').tap();
     await touchWalkTo(page,canvas,[VIEWING_PLATFORM.approach[0],VIEWING_PLATFORM.approach[2]],info,.9);
     await touchWalkTo(page,canvas,VIEWING_PLATFORM.photo.position,info,.9);expect((await position(canvas))[1]).toBeGreaterThan(1.1);
-    await aimAtSubject(page,canvas,2,true,info);await page.getByTestId('photo-record').tap();await page.getByTestId('open-photo-album').tap();
+    await aimAtSubject(page,canvas,2,true,info);
+    // Diagnostic only: one atomic read of existing DOM telemetry and known save
+    // keys. Keep the shutter action single-shot; do not mask a rejection by retry.
+    async function elevatedCaptureEvidence(phase:'before-tap'|'after-tap') {
+      const state=await page.evaluate(()=>{
+        const canvas=document.querySelector<HTMLCanvasElement>('[data-testid="campus-canvas"]');
+        const guide=document.querySelector<HTMLElement>('[data-testid="photo-guide"]');
+        const shutter=document.querySelector<HTMLButtonElement>('[data-testid="photo-record"]');
+        const readSave=(key:string)=>{try{return localStorage.getItem(key);}catch(error){return `unavailable: ${String(error)}`;}};
+        return {
+          frame:canvas?.dataset.frame??null,
+          playerXYZ:['playerX','playerY','playerZ'].map(key=>canvas?.dataset[key]??null),
+          camera:{yaw:canvas?.dataset.cameraYaw??null,pitch:canvas?.dataset.cameraPitch??null},
+          view:canvas?.dataset.view??null,paused:canvas?.dataset.paused??null,
+          inRange:guide?.getAttribute('data-photo-in-range')??null,
+          framed:guide?.getAttribute('data-photo-framed')??null,
+          obstructed:guide?.getAttribute('data-photo-obstructed')??null,
+          guideText:guide?.textContent??null,
+          hint:document.querySelector('[data-testid="photo-hint"]')?.textContent??null,
+          shutterDisabled:shutter?.disabled??null,
+          journey:readSave('campus-atlas:journey:v1'),
+          photoStamps:readSave('campus-atlas:photo-stamps:v1'),
+        };
+      });
+      console.log(`[ELEVATED_PHOTO_CAPTURE] ${JSON.stringify({phase,...state})}`);
+      return {phase,...state};
+    }
+    const beforeCapture=await elevatedCaptureEvidence('before-tap');
+    await page.getByTestId('photo-record').tap();
+    const afterCapture=await elevatedCaptureEvidence('after-tap');
+    await info.attach('elevated-photo-single-tap',{body:JSON.stringify({beforeCapture,afterCapture},null,2),contentType:'application/json'});
+    await page.screenshot({path:info.outputPath('elevated-photo-after-single-tap.png')});
+    await page.getByTestId('open-photo-album').tap();
     const complete=page.getByTestId('photo-complete');await expect(complete).toBeVisible();expect(await stampIds(page)).toEqual(['hall','garden','platform']);
     await expect(canvas).toHaveAttribute('data-paused','true');await page.screenshot({path:info.outputPath('photo-touch-completion.png')});
     await complete.getByRole('button',{name:'继续漫游'}).tap();await expect(complete).toHaveCount(0);await expect(canvas).toHaveAttribute('data-paused','false');
@@ -373,6 +405,9 @@ test.describe('landscape touch diary',()=>{
 
 test('student camera at a real wall fades the close avatar and restores it when looking away',async({page},info)=>{
   const canvas=await ready(page);await page.getByTestId('campus-huyu').click();
+  // Campus rebuild deliberately removes XYZ until its first rendered frame.
+  // Wait for that explicit read-only readiness before position() can be read.
+  await expect(canvas).toHaveAttribute('data-campus-ready','huyu',{timeout:30000});
   await expect.poll(async()=>{const [x,,z]=await position(canvas);return Math.hypot(x-campuses.huyu.start[0],z-campuses.huyu.start[1]);},{timeout:15000}).toBeLessThan(1);
   await canvas.focus();await page.keyboard.down('Shift');await page.keyboard.down('w');
   try { await expect.poll(async()=>(await position(canvas))[2],{timeout:60000,intervals:[500]}).toBeGreaterThan(-144); }

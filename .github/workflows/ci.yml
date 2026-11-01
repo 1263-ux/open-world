@@ -168,6 +168,7 @@ jobs:
       - name: Scenic diary, animated student and full landscape touch journey
         run: npm run test:e2e -- tests/e2e/quality-slice.spec.ts --output=test-results/quality
       - name: Complete notebook, paperplane lifecycle and physical vertical exploration
+        if: ${{ !cancelled() }}
         run: npm run test:e2e -- tests/e2e/complete-release.spec.ts tests/e2e/paperplane.spec.ts tests/e2e/vertical-exploration.spec.ts --output=test-results/complete-release
       - uses: actions/upload-artifact@v4
         if: always()
