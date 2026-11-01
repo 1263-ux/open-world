@@ -1,12 +1,36 @@
 # 太理 · 校园漫游 / Campus Atlas
 
-一个浏览器里的低多边形校园探索原型，覆盖太原理工大学虎峪与迎西校区的示意地标、信息卡片和一条可完成、重玩、退出的探索任务。
+更新：2026-11-01。**公开 v7 已发布，但用户明确反馈“依旧不够好”。当前应称低保真、可运行的校园功能原型，不是已达到用户期待的完整高品质作品。** 技术门禁通过与用户对品质满意是两个不同结论。
 
-> 当前仍是开发中的校园探索原型，尚未公开部署或完成视觉验收。占地轮廓来自 OSM / Overture，统一转换为米制坐标；楼高分别标注来源值、楼层估算、机器学习预测或展示用估算，不是实测模型或现实导航。
+[打开公开 v7](https://tyut-campus-world-private-preview.aglowswan513.chatgpt.site)
 
-## 运行
+## 现在有什么
+- 虎峪、迎西两个校区的示意场景、地标资料、探索任务和地图。
+- 第三人称角色步行；桌面 WASD、拖动视角、Shift 跑、Space 跳，触控使用摇杆与屏幕按钮。地图是辅助，不是旧版斜俯视地图控制模式。
+- 迎西校园手记：两张地面照片→真实走上原创低台拍第三张→下台绕到折叠站→纸飞机三道门和落地→保存、重开或继续漫游。
+- 独立可选 Hks 古建守护小游戏；返回继续校园旅程。上游与修改记录见 [Hks 说明](games/hks/README.md)。
+- WebGL 不可用时提供地标/任务无障碍界面；这不等同完整 3D 玩法。
 
-Node.js 24；依赖版本由 package-lock.json 锁定。
+## 验证到哪一步
+- 功能验证提交：`38d9b0a372a2a3234ec111a44a8391414c73e56b`。
+- [同提交 CI 41290585490](https://github.com/1263-ux/open-world/actions/runs/41290585490)：6 个必需 jobs 通过，39 个实际浏览器用例、125 单测；3 个可选诊断 jobs 未运行。
+- 公开 v7 Site source：`c4ccc0c681685bb705b8e534138f0b8ebf3c375b`；部署：`appgdep_6ae705dd4ac08191a9491a89abf6451e`，状态 succeeded。
+- 223 项应用输入清单 SHA256：`d6f5ff69a49912b5480c202be27a4ce478abb4039a217cbd38ef6bea9ed0ad14`；63 项构建清单 SHA256：`7f6b59c5b6826b4ae58543d4c3a2b8aefc5b4613f3224c60eeba0ca72e898ef8`。
+- 后续纯文档提交不是新的功能验证或新部署，不能把文档 head 冒充运行锚点。
+
+## 尚未做好与验证边界
+- 校园大部分仍是低细节体块，场景质感、角色/镜头与界面整体品质未达到用户期待；通过功能测试不证明美术或游玩体验优秀。
+- 横屏完成面板与背景跑跳控件存在叠压/低对比。CI 关键操作可读且流程通过，不等于所有比例都理想。
+- 实体手机和普通设备性能未测。软件渲染 CI 的低帧率与长测试耗时不能作为真机性能结论，也不能宣称达到 30 FPS。
+- 公开入口可达，入口主 JS/CSS 引用与发布构建一致；云浏览器 WebGL context 创建失败，只检查了入口/无障碍界面，未完成公开站点 live 3D 试玩。全量网络回读 hash 未获证明；发布包内一致性不能代替它。
+- 摄影 PNG 仅会话内保存，应主动下载；本地进度保存不包含 PNG，存储被拒绝/清理可能丢失进度。
+- 平台是原创展示设计，不是校园实测建筑；纸飞机是游戏化运动及点代理碰撞，不是完整机翼物理。
+
+## API 与美术来源
+本轮新增设施中，确认由 Astra API 生成并接入的是折纸站；平台最终表面为本地实现，不是 Astra 新平台。后续平台请求在计数阶段没有确认收据，结果/计费未知，已停止，未取得新生成产物，不推定零费用。历史其他开发调用与模型作者记录仍保留在归档，不据此扩大本轮 Astra 成果。网站运行不需要 API key。
+
+## 本地运行
+Node.js 24，使用锁文件安装；默认开发服务仅监听本机。
 
 ```bash
 npm ci
@@ -16,59 +40,13 @@ npm run typecheck
 npm run lint
 npm run test
 npm run build
-npx playwright install --with-deps chromium
-npm run test:e2e
 ```
 
-默认开发服务仅监听 127.0.0.1。本机预览地址由 Vite 输出。若已有适配的 Chromium，可通过 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH 指定；默认使用 Playwright 管理的浏览器。
+浏览器验证需安装匹配的 Playwright Chromium：`npx playwright install --with-deps chromium`，然后 `npm run test:e2e`。执行结果只对实际运行的提交负责。离线包构建见 [离线说明](scripts/offline/README.md)；HTTP 测试不能冒充 file:// 验证。
 
-## Hks 小游戏
+## 文档与下一步
+- [当前状态](.agent/CURRENT_STATE.md)、[验收边界](.agent/RESULT.md)、[设计现状](.agent/DESIGN.md)、[当前计划](.agent/PLAN.md)。
+- [历史归档及恢复方法](docs/archive/README.md)：初始三份计划和阶段日志都是历史，不是当前待办。
+- [数据来源](public/data/README.md)、[资源来源与许可](docs/resources/ASSET_SOURCES.md) 保留；示意占地、预测/估算楼高不是测绘或现实导航。
 
-用户授权的《山西古建保卫战》直接移植在 games/hks，保留技能、Boss和五分钟守护规则。通过“古建守护”入口按需打开；返回校园后继续原旅程。独立 iframe 避免游戏样式与校园冲突，退出回收音频及计时器。对应来源和最小修改记录见 games/hks/README.md。当前是否通过试玩以相应提交的 CI 和报告为准。
-
-## 当前功能
-
-- 虎峪、迎西场景切换；斜俯视旋转、拖拽、缩放、重置。
-- 点击建筑或使用键盘地标目录查看说明及来源。
-- 按顺序记录地标，开始/完成/重玩/退出；本地进度保存，损坏存储安全回退。
-- WebGL 不可用时仍可使用地标列表与任务流程。
-- 响应式布局。实际移动设备性能仍待实测。
-
-## 验证状态
-
-已验证运行提交 `1ec3130e34690fbdd2948efc661e4c0d770d932a`：37项TS、8项Python、3个GLB检查及11条HTTP、2条file://真实浏览器流程通过。[验证记录](https://github.com/1263-ux/open-world/actions/runs/41004752367)。该运行提交已推送main；竖屏科普弹窗与升级卡已适配，离线job另独立复验通过。
-
-测试通过不代表实测建筑高度、物理真机性能或最终美术验收。自然试玩已验证升级和失败；Boss与自然胜利尚未验证。
-
-## 离线试玩包
-
-CI通过后生成 `campus-offline-playable` 构件。解压其中ZIP，以现代Chrome或Edge打开 `index.html`；运行不需要Node、服务器或API key。来源链接需要联网，游戏资源应全部内置。file://测试结果与该提交CI对应，不用HTTP测试冒充离线验证。
-
-开发者可按 [离线构建说明](scripts/offline/README.md) 生成并验证单HTML包。三个重点模型是机械馆、梅花教室组合及北门示意；建筑轮廓与视觉估高、校门推定锚点均分开标注。
-
-## 数据生成与精度边界
-
-- 筛选后使用虎峪 94 个、迎西 129 个建筑多边形，包含原有 15 个命名地标建筑。数量是来源数据中的图形，不是现场核实的楼栋数。
-- 已有 OSM 楼高、楼层优先。202 个展示高度采用轮廓高重叠的 2020 年 3D-GloBFP 模型预测；梅花组合另5个原预测保留于审计，展示采用明确标记的4.5m视觉估计；不匹配或矛盾数据不自动覆盖。
-- 补充建筑以低细节体块批量渲染，重点建筑立面仍在深化。任务路线避开所有已接入楼体，但不保证现实可通行。
-- 来源、许可证和筛选记录见 [数据说明](public/data/README.md)、[来源清单](public/data/sources/manifest.json)。学校照片仅作参考，不在仓库中分发。
-
-离线重建需要 Python 3.12，建议使用虚拟环境：
-
-```bash
-python -m venv .venv
-# 激活虚拟环境后：
-pip install -r scripts/requirements.txt
-python scripts/test_augment_buildings.py
-python scripts/build_spatial_data.py
-```
-
-## 项目资料
-
-- [执行规则](AGENTS.md)
-- [三份原计划](.agent/plans/)
-- [当前进度](.agent/CURRENT_STATE.md)
-- [来源与复用调研](.agent/research/round-00-resources.md)
-- [本轮检查记录](.agent/reports/round-01-local-checks.md)
-
-MVP 先做可玩的单体前端，后端与多人为后续方向。API 只用于开发过程，网站运行不需要 API key；任何密钥都不得进入仓库或客户端。
+本轮只澄清现状、清理文档和过期过程材料；不开发新功能，不改站点。下一轮先和用户讨论具体品质差距及验收基准，再决定有界改进范围。
