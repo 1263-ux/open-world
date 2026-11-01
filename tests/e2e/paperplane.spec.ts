@@ -24,21 +24,53 @@ test('flight failure, retry, resize pause, cancel, and campus/Hks mutual exclusi
 });
 test.describe('landscape touch flight',()=>{
   test.use({hasTouch:true,isMobile:true,viewport:{width:844,height:390}});
-  test('touch steering and cancellation do not move the retained walker',async({page})=>{
+  test('touch steering and cancellation do not move the retained walker',async({page},info)=>{
     test.setTimeout(180000);const canvas=await ready(page);await page.getByRole('button',{name:'先去漫游',exact:true}).tap();await reachStation(page,canvas);const pose=await position(canvas);
     await page.getByTestId('begin-paperplane').tap();await page.getByRole('button',{name:'开始放飞',exact:true}).tap();
     const right=page.getByRole('button',{name:'向右转',exact:true}),box=await right.boundingBox();if(!box)throw Error('Missing touch flight control');
     expect(box.width).toBeGreaterThanOrEqual(44);expect(box.height).toBeGreaterThanOrEqual(44);
+    // Passive DOM observations only; never dispatch synthetic DOM events or write app state.
+    const pointerEvents:Array<{type:string;id:number;label:string;time:number}>=[];
+    await page.exposeFunction('recordFlightPointer', (event:{type:string;id:number;label:string;time:number})=>{pointerEvents.push(event);});
+    await page.evaluate(()=>{
+      const observer=(event:Event)=>{
+        const p=event as PointerEvent,button=(p.target as Element).closest('.touch-controls button');
+        if(button)void (window as unknown as {recordFlightPointer:(e:unknown)=>Promise<void>}).recordFlightPointer({type:p.type,id:p.pointerId,label:button.getAttribute('aria-label')??'',time:performance.now()});
+      };
+      for(const type of ['pointerdown','pointerup','pointercancel','lostpointercapture'])document.addEventListener(type,observer,true);
+    });
     const touch=await page.context().newCDPSession(page);const x=box.x+box.width/2,y=box.y+box.height/2;const before=await planePose(canvas);
-    await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});await page.waitForTimeout(800);expect(screenRightDisplacement(before,await planePose(canvas))).toBeGreaterThan(.01);
-    // Releasing a second finger must not cancel the still-held right control.
-    const pitchBox=await page.getByRole('button',{name:'抬头',exact:true}).boundingBox();if(!pitchBox)throw Error('Missing pitch touch control');
-    const second={x:pitchBox.x+pitchBox.width/2,y:pitchBox.y+pitchBox.height/2,id:2};
-    await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1},second]});await page.waitForTimeout(200);
-    await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[{x,y,id:1}]});const stillHeld=await planePose(canvas);
-    await page.waitForTimeout(400);expect((await planePose(canvas)).heading-stillHeld.heading).toBeGreaterThan(.03);
-    await touch.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});await touch.detach();
-    await page.waitForTimeout(200);const cancelledHeading=(await planePose(canvas)).heading;await page.waitForTimeout(400);expect((await planePose(canvas)).heading).toBeCloseTo(cancelledHeading,2);
+    async function evidence(stage:string){const data={stage,wall:Date.now(),state:await planeState(canvas),pose:await planePose(canvas),frame:await canvas.getAttribute('data-frame'),pointerEvents:[...pointerEvents]};console.log(`[FLIGHT_TOUCH] ${JSON.stringify(data)}`);return data;}
+    async function advanceFrom(elapsed:number){await expect.poll(async()=>{const state=await planeState(canvas);expect(state.phase).toBe('flying');expect(state.paused).toBe(false);return state.elapsed;},{timeout:10000,intervals:[100]}).toBeGreaterThanOrEqual(elapsed+.2);}
+    try{
+      await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});
+      await advanceFrom((await planeState(canvas)).elapsed);expect(screenRightDisplacement(before,await planePose(canvas))).toBeGreaterThan(.01);
+      const pitchBox=await page.getByRole('button',{name:'抬头',exact:true}).boundingBox();if(!pitchBox)throw Error('Missing pitch touch control');
+      const second={x:pitchBox.x+pitchBox.width/2,y:pitchBox.y+pitchBox.height/2,id:2};
+      // CDP changes the active list with touchMove; touchEnd requires an empty list.
+      await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y,id:1},second]});
+      await advanceFrom((await planeState(canvas)).elapsed);await evidence('two-held');
+      const rightId=pointerEvents.find(e=>e.type==='pointerdown'&&e.label==='向右转')?.id;
+      const pitchId=pointerEvents.find(e=>e.type==='pointerdown'&&e.label==='抬头')?.id;
+      expect(rightId).toBeDefined();expect(pitchId).toBeDefined();expect(pitchId).not.toBe(rightId);
+      const releaseStart=pointerEvents.length;
+      await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y,id:1}]});
+      await expect.poll(()=>pointerEvents.slice(releaseStart).some(e=>e.type==='pointerup'&&e.id===pitchId)).toBe(true);
+      const stillHeld=await evidence('pitch-released');await advanceFrom(stillHeld.state.elapsed);
+      const retained=await evidence('right-retained');
+      expect(pointerEvents.slice(releaseStart).some(e=>e.id===rightId&&['pointerup','pointercancel','lostpointercapture'].includes(e.type))).toBe(false);
+      expect(retained.pose.heading-stillHeld.pose.heading).toBeGreaterThan(.03);
+      await touch.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+      await expect.poll(()=>pointerEvents.some(e=>e.type==='pointercancel'&&e.id===rightId)).toBe(true);
+      // Flush pre-cancel pose telemetry before comparing two neutral simulated intervals.
+      await advanceFrom((await planeState(canvas)).elapsed);
+      const cancelled=await evidence('cancelled');await advanceFrom(cancelled.state.elapsed);
+      expect((await planePose(canvas)).heading).toBeCloseTo(cancelled.pose.heading,2);
+    }finally{
+      console.log(`[FLIGHT_POINTER_EVENTS] ${JSON.stringify(pointerEvents)}`);
+      await info.attach('flight-pointer-events',{body:JSON.stringify(pointerEvents),contentType:'application/json'}).catch(error=>console.log(`[FLIGHT_TOUCH_ATTACHMENT] ${String(error)}`));
+      await touch.detach().catch(error=>console.log(`[FLIGHT_TOUCH_CLEANUP] ${String(error)}`));
+    }
     await page.getByRole('button',{name:/退出放飞/}).tap();await expect(canvas).toHaveAttribute('data-view','player');expect(await position(canvas)).toEqual(pose);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   });
