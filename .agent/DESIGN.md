@@ -1,6 +1,43 @@
 # 下一次交付：双校区完整可玩版本 · 晴日校园手记
 
+## 2026-11-01 09:29 UTC · 已发布 v7
+
+原公开链接已同 Site 更新：https://tyut-campus-world-private-preview.aglowswan513.chatgpt.site 。部署状态 succeeded；版本 7；Site source `c4ccc0c681685bb705b8e534138f0b8ebf3c375b`，deployment `appgdep_6ae705dd4ac08191a9491a89abf6451e`。这与功能 CI 锚点 `38d9b0a372a2a3234ec111a44a8391414c73e56b` 分工不同，并非另一套未经验证的生产代码。
+
+发布包内 63 项应用文件与已验收构建一致。公开浏览器已打开正常入口，引用 `index-lIMCPyZ8.js` / `index-BO0Sp-nT.css` 与冻结构建相符。云浏览器 WebGL context 创建失败而进入无障碍模式，因此未声称公开站点 live 3D 试玩成功；真实 3D 完整交互证据来自同构建 CI。批量 HTTP 校验被 403 阻止，未取得全量 live 63 项 hash，不把打包校验冒充网络回读。
+
+原 v6 保存版本仍保留，可通过同 Site 支持的版本重新部署流程回退，不删除历史版本。
+
+
+## 2026-11-01 09:27 UTC · 最终功能与视觉验收（本节优先于历史记录）
+
+- 功能验证锚点 `38d9b0a372a2a3234ec111a44a8391414c73e56b`，tree `03341fffa5f2eddeb0752cf170070ba6ae862413`；Actions `41290585490` 同 head 六个必需 jobs 全绿，39 个实际浏览器用例、125 单测通过，三个可选诊断 jobs 未运行。
+- 223 项应用输入 manifest：`d6f5ff69a49912b5480c202be27a4ce478abb4039a217cbd38ef6bea9ed0ad14`；63 项构建 manifest：`7f6b59c5b6826b4ae58543d4c3a2b8aefc5b4613f3224c60eeba0ca72e898ef8`。本地文档不属于重新验证的生产改动；未另推文档 commit。
+- 最终 CI 实际平台、飞行中飞机、高台单次拍照与触控完成截图已经独立检查，主控接受并放行同 Site 发布。平台采用本地原创象牙石踏面/压顶、灰绿实心护墙分层色面；32 个碰撞体、锚点/路径/飞行门位不变。不是 Astra 新平台。
+- API 事实：既有 Astra 折纸站已成功生成并用于本版；后续平台请求在计数阶段未获得确认，已停止，未生成新平台。计数尝试结果/计费仍未知，停止后未再调用；未获得新的生成产物，不推定零费用。
+- 横屏完成面板与背景跑跳控件有叠压/低对比，主操作可读且完整流程通过，作为非阻塞已知限制保留。软件渲染模拟触控不是实体手机性能验收：本站前六段约 2.94 FPS；完整触控测试 6.8 分钟、桌面新主线 3.8 分钟仅是 CI 测试耗时。
+- 发布由同 Site 负责人执行，当前本节不声称部署成功；保留原 v6 `3febd05b43341c2b32f678508b6e44e9024b0c4a` 回滚身份，部署收据与公开 URL 复核另记。禁止为非阻塞美化继续改生产或重复全套 CI。
+- 证据：`../complete-release-qa/runtime-acceptance-38d9b0a/REPORT.md`、`../release-sync-preflight/ci-41290585490/`、`../ci-artifacts-41290585490/visual-evidence-manifest.json`。历史失败和旧阶段结论保留，不拼接为新 head 通过。
+
+
+## 2026-11-01 08:44 UTC · 最新同身份验收（优先于下方历史状态）
+
+- 最终功能候选 main `baebd32109e454ce93cb775476caac39de2eed60`，tree `3d89fc89e4b63843af63bf7eff54be7a3e7100ec`。GitHub Actions run `41287145670` 已终态 **success**：6 个常开 jobs 全过，3 个可选诊断/deepplay 未运行。
+- 125 单测、两校区旧探索/地图/方向/Hks/失焦/真实 file:// 门禁通过；quality 12/12、新核心 4/4 实际执行通过。桌面完整新手记三照→上下台→三门落地→保存/刷新/重开、横屏模拟触控完整主线与真实多指释放/取消通过。不是仅测试发现或历史拼接。
+- application 223-input manifest `57bc449fce8aec75506ae8a7c52c8737c92ddc0f822ec94212da41e7c356ce9c`；HTTP build 63-file manifest `ea0f206daa60b73715667bc6539d2328075bfd6126e150d08f2281bc795cdfde`。本次文档仅本地更新，不改变已验收生产构建，不推送触发额外 CI。
+- **仍未发布/未完成最终美术接受。** 原公开 v6 `3febd05b43341c2b32f678508b6e44e9024b0c4a` 保持。平台仍明确为原创灰模；已有真实 Astra 折纸站在候选中。新的平台 Astra 调用处于计数阶段 unknown/pending，已停止，未生成新平台，不得称完成。
+- 软件渲染约 2 FPS 的 CI 是功能旅程证据，不是普通设备性能/物理真机或审美接受。完整触控测试 8.7 分钟、桌面摄影回归含重拍 8.0 分钟是该运行环境与测试流程耗时，不能等同自然用户平均游玩时长。
+- Actions 免费门槛已合法复核；05:59 显示 $1.32 used / $12 included、billable $0，月预算 $0 + Stop usage 勾选保持。后续运行会增加 included 用量，这不是当前余额承诺。无付费 runner/预算扩张；quality 50 分钟、桌面摄影 600s/触控 660s 是经实测批准的有界功能测试预算，不豁免性能目标。
+- 证据：`../release-sync-preflight/ci-41287145670/` 六份 job logs、jobs-terminal.json；独立源审 `../full-release-review/SOURCE_REVIEW.md`；本地发布检查清单 `../release-sync-preflight/release-preparation/RELEASE_CHECKLIST.md`。旧“runtime 未执行/额度未核实”条目只描述当时历史，不覆盖此节。
+
+
 2026-10-31 14:20 UTC。C2 + R-ui + R-runtime + R-architecture + R-data（新增可选手记存档）。当前阶段：深入调研/方案已完成，主控已分派有界实现；**runtime验收仍待完成**。本地A0/A1；既有main/原站A2/A3授权仍有效但受免费额度、权限和真实验收门禁约束。
+
+## 已验收设计修正与剩余视觉门槛
+- 地面铺装采用北侧安全接近→站体东侧→正面；不得沿桌背直穿。平台/站体固体与高度不因测试放宽。
+- 摄影就绪新增真实相机收敛门槛：碰撞调整后的目标位置残差≤5mm时精确收敛，视角/人物改变同步失效；UI 与快门均拒绝未稳定相机并给出提示。构图、遮挡、模型 ready、距离和高度原门槛不变。
+- CDP 多指测试以固定 Chromium 156.0.8078.4 默认 WebTouch 实现的 changed-ID touchEnd 语义为准，实际 pointerup/lostcapture 证明只释放第二指；此前仅依据通用 protocol 注释推导的 active-list 释放被真实运行否定，已纠正。产品输入不使用测试状态注入。
+- 纸飞机为原创四三角面折纸轮廓，门为简洁环形、终点为地面圆环；模型简洁不等于视觉已接受。最终台体、栏杆、站体与校园整体需真实游戏截图审查，不能用灰模功能全绿冒充最终美术。
 
 ## 最新目标与完整边界
 用户14:02要求先深入调研/复查计划，下一次为完整版交付；14:07重申GitHub推送自主推进，不逐次打扰。下一次面向用户的成果必须是游戏入口与完整可玩旅程，不再交零散模型。内部保留小切片迭代；期间只报告必要决策/关键阻塞，不将内部增量当外部交付。
