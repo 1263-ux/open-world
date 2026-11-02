@@ -39,6 +39,14 @@ const approvedEnvironmentFiles = new Set([
   'public/assets/environment/quaternius-license-standard.txt',
 ]);
 copyApproved('public/assets',(n,rel)=>/\.glb$|\.metadata\.json$|^NOTO-CJK-COPYRIGHT\.txt$/.test(n) || approvedEnvironmentFiles.has(rel));
+const approvedNatureFiles = new Set([
+  'public/models/nature/campus-nature.glb', 'public/models/nature/License.txt',
+  'public/models/nature/PROVENANCE.json', 'public/models/nature/README.md',
+]);
+for(const rel of ['public','public/models','public/models/nature']) { const info=fs.lstatSync(path.join(src,rel)); if(info.isSymbolicLink()||!info.isDirectory())throw Error('Unsafe nature input directory '+rel); }
+copyApproved('public/models', (_name,rel) => approvedNatureFiles.has(rel));
+for(const rel of approvedNatureFiles)if(!fs.existsSync(path.join(stage,rel)))throw Error('Missing approved nature input '+rel);
+
 fs.symlinkSync(path.join(src,'node_modules'),path.join(stage,'node_modules'),'dir');
 fs.symlinkSync(path.join(src,'games/hks/node_modules'),path.join(stage,'games/hks/node_modules'),'dir');
 const hashes={};
@@ -119,6 +127,23 @@ if (leavesBytes.length < 24 || leavesBytes.subarray(0,8).toString('hex') !== '89
 edit('src/scene/HuyuCourtyards.ts', code => code.replace('`${import.meta.env.BASE_URL}assets/environment/Leaves_NormalTree_C.png`', JSON.stringify(data(leavesPath, 'image/png'))));
 console.log('Embedded explicit station GLB/metadata and Huyu leaves PNG; foliage notice retained');
 
+
+// One reviewed CC0 subset only; never broaden this into arbitrary models/network copying.
+const naturePath = path.join(stage,'public/models/nature/campus-nature.glb');
+const natureBytes = fs.readFileSync(naturePath);
+if(natureBytes.length<20 || natureBytes.readUInt32LE(0)!==0x46546c67 || natureBytes.readUInt32LE(4)!==2 || natureBytes.readUInt32LE(8)!==natureBytes.length || natureBytes.readUInt32LE(16)!==0x4e4f534a)throw Error('Invalid nature GLB');
+const natureJson = JSON.parse(natureBytes.subarray(20,20+natureBytes.readUInt32LE(12)).toString('utf8').trim());
+for(const entry of [...(natureJson.buffers||[]),...(natureJson.images||[])])if(entry.uri && !entry.uri.startsWith('data:'))throw Error('External nature resource');
+const natureProof = JSON.parse(fs.readFileSync(path.join(stage,'public/models/nature/PROVENANCE.json'),'utf8'));
+if(natureProof.derived.sha256!==crypto.createHash('sha256').update(natureBytes).digest('hex'))throw Error('Nature provenance hash mismatch');
+edit('src/scene/CampusNatureAssets.ts', code => {
+  const url = '`${import.meta.env.BASE_URL}models/nature/campus-nature.glb`';
+  const transport = "  const response = await fetch(CAMPUS_NATURE_URL, { signal });\n  if (!response.ok) throw new Error(`Campus nature assets unavailable (${response.status}); keep base scenery`);\n  const bytes = await response.arrayBuffer(); signal?.throwIfAborted();";
+  if(!code.includes(url)||!code.includes(transport))throw Error('Unknown nature loader contract; review offline adapter');
+  return code.replace(url,JSON.stringify(data(naturePath,'model/gltf-binary'))).replace(transport,
+    "  const encoded = CAMPUS_NATURE_URL.split(',')[1];\n  if (!encoded) throw new Error('Missing embedded nature GLB');\n  const bytes = Uint8Array.from(atob(encoded), character => character.charCodeAt(0)).buffer; signal?.throwIfAborted();");
+});
+console.log('Embedded exact CC0 nature GLB; removed only its network transport, retained abort/decode lifecycle');
 
 const rootReq=createRequire(path.join(src,'package.json')); 
 const vite8=await import(pathToFileURL(rootReq.resolve('vite')).href), vite5=await import(pathToFileURL(path.join(src,'games/hks/node_modules/vite/dist/node/index.js')).href), vue=(await import(pathToFileURL(rootReq.resolve('@vitejs/plugin-vue')).href)).default;

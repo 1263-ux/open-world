@@ -35,7 +35,7 @@ function verifyHksImages(dir) {
 }
 verifyHksImages(path.join(stage, 'games/hks/public/assets'));
 const hashes=JSON.parse(fs.readFileSync(path.join(out,'source-fingerprints.json'),'utf8')).hashes;
-const glbs=Object.keys(hashes).filter(x=>x.startsWith('public/assets/')&&x.endsWith('.glb'));
+const glbs=Object.keys(hashes).filter(x=>(x.startsWith('public/assets/')||x==='public/models/nature/campus-nature.glb')&&x.endsWith('.glb'));
 for(const f of glbs){const b=fs.readFileSync(path.join(stage,f)).toString('base64'); if(!cj.includes(b)) throw Error('Missing embedded GLB: '+f); console.log('Verified embedded GLB:',f);}
 // Every copied PNG must be the reviewed Huyu texture and must be embedded.
 const pngs=Object.keys(hashes).filter(x=>x.startsWith('public/assets/')&&x.endsWith('.png'));
@@ -44,6 +44,10 @@ for (const f of pngs) if (!cj.includes(fs.readFileSync(path.join(stage,f)).toStr
 for (const f of ['public/assets/environment/quaternius-license-standard.txt','public/assets/exhibits/paperplane-station.metadata.json']) {
   if (!hashes[f] || !fs.readFileSync(path.join(stage,f),'utf8').trim()) throw Error('Missing required asset provenance/notice: '+f);
 }
+const natureFiles = Object.keys(hashes).filter(x=>x.startsWith('public/models/')).sort();
+const approvedNature = ['public/models/nature/License.txt','public/models/nature/PROVENANCE.json','public/models/nature/README.md','public/models/nature/campus-nature.glb'].sort();
+if(JSON.stringify(natureFiles)!==JSON.stringify(approvedNature))throw Error('Unexpected/missing nature subset inputs');
+if(!fs.readFileSync(path.join(stage,'public/models/nature/License.txt'),'utf8').includes('CC0'))throw Error('Missing nature CC0 notice');
 console.log('Verified embedded approved Huyu leaves and retained station/foliage provenance');
 for(const f of ['src/scene/LandmarkModels.ts','games/hks/src/GameScene.ts']){const s=fs.readFileSync(path.join(stage,f),'utf8'); if(/['"`]assets\/[^'"`]+\.(?:glb|png|jpe?g)/.test(s)) throw Error('Unresolved local asset in '+f);}
 function auditSource(dir) {

@@ -1,3 +1,8 @@
+import { Octree } from 'three/examples/jsm/math/Octree.js';
+import { Capsule } from 'three/examples/jsm/math/Capsule.js';
+import { ARRIVAL_ROUTES, createCampusArrivalLandscape } from './CampusArrivalLandscape';
+import { loadCampusNatureAssets, type CampusNatureAssets, type NatureBatch, type NaturePlacement } from './CampusNatureAssets';
+import { createAdaptiveRenderQuality, type RenderQualityState } from './AdaptiveRenderQuality';
 import { createIdealCampusLayer, IDEAL_FACILITIES, IDEAL_ACTIVITY_POINTS } from './IdealCampusLayer';
 import { createOriginalViewingPlatform, VIEWING_PLATFORM, PAPERPLANE_STATION, PAPERPLANE_COURSE } from './OriginalViewingPlatform';
 import { PaperplaneActivity } from './PaperplaneActivity';
@@ -16,6 +21,8 @@ import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRe
 import type { IdealActivityInspection, CampusMode, CampusModeSwitchStatus, CampusModeSwitchResult, CampusData, CampusRoad, CampusSceneHandle, Landmark, PhotoInspection, PhotoPoint, Point2, SceneEvent, SceneState } from '../shared/contracts';
 
 const noopHandle = (): CampusSceneHandle => ({
+  getRenderQuality: () => createAdaptiveRenderQuality().getState(),
+  setRenderQuality: () => createAdaptiveRenderQuality().getState(),
   inspectIdealActivity: () => null,
   getCampusMode: () => 'base', getModeSwitchStatus: () => ({allowed:false,reason:'三维场景不可用。'}), requestCampusMode: () => ({applied:false,mode:'base',reason:'三维场景不可用。'}),
   setCampus() {}, setState() {}, navigateTo: () => false, resetJourney() {},
@@ -176,7 +183,21 @@ export function strips(roads: CampusRoad[], extra: number): THREE.BufferGeometry
 
 /** Original human-scale streetscape along the designed Mechanical Hall–Qingze guide.
  * These furnishings are interpretive, not a survey of real street furniture. */
-function addCorridor(world: THREE.Group, colliders: THREE.Group): void {
+export const NEAR_HALL_TREE_SITES: readonly Point2[] = [[-48, 151], [-24, 151], [0, 151], [-43, 170], [-19, 170], [5, 170]];
+export const NEAR_HALL_NATURE_PLACEMENTS: readonly NaturePlacement[] = NEAR_HALL_TREE_SITES.map(([x,z],i) => ({ kind:'tree-round',position:[x,0,z],scale:1.35,rotationY:0,id:`near-hall-tree-${i}` }));
+/** Actual candidate solids must leave all authored pedestrian centerlines/capsules clear. */
+export function nearHallTreeClearsProtectedPaths(colliders: THREE.Group, campus: CampusData): boolean {
+  const octree = new Octree().fromGraphNode(colliders);
+  const capsuleAt = (x:number,z:number) => new Capsule(new THREE.Vector3(x,.46,z),new THREE.Vector3(x,1.5,z),.34);
+  for (const points of [...Object.values(campus.routes),[...ARRIVAL_ROUTES[campus.id]]]) {
+    for (let i=1;i<points.length;i++) {
+      const a=points[i-1],b=points[i],steps=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.25));
+      for(let j=0;j<=steps;j++) { const t=j/steps,hit=octree.capsuleIntersect(capsuleAt(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t)); if(hit&&hit.depth>.001)return false; }
+    }
+  }
+  return !octree.capsuleIntersect(capsuleAt(-20,175.5));
+}
+function addCorridor(world: THREE.Group, colliders: THREE.Group): THREE.Group {
   const stone = new THREE.MeshStandardMaterial({ color: 0xd2c8b2, roughness: 1 });
   const wood = new THREE.MeshStandardMaterial({ color: 0x9d6a49, roughness: .9 });
   const iron = new THREE.MeshStandardMaterial({ color: 0x4f5b50, roughness: .8 });
@@ -211,16 +232,19 @@ function addCorridor(world: THREE.Group, colliders: THREE.Group): void {
   }
   const bark = new THREE.MeshStandardMaterial({ color: 0x746c55, roughness: 1 });
   const leaves = new THREE.MeshStandardMaterial({ color: 0x839f7f, roughness: 1, vertexColors: true, side: THREE.DoubleSide });
-  const treeSites: Point2[] = [[-48, 151], [-24, 151], [0, 151], [-43, 170], [-19, 170], [5, 170]];
+  const treeSites = NEAR_HALL_TREE_SITES;
+  const treeVisual = new THREE.Group(); treeVisual.name = 'near-hall-fallback-six'; world.add(treeVisual);
+  const treeSolids = new THREE.Group(); treeSolids.name = 'near-hall-fallback-six-solids'; colliders.add(treeSolids);
   const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(.22, .3, 3.4, 8), bark, treeSites.length);
   const treeTransform = new THREE.Object3D();
   treeSites.forEach(([x, z], i) => {
     treeTransform.position.set(x, 1.7, z); treeTransform.scale.set(1, 1, 1); treeTransform.updateMatrix(); trunks.setMatrixAt(i, treeTransform.matrix);
     const proxy = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, 3.4, 8), new THREE.MeshBasicMaterial());
-    proxy.position.set(x, 1.7, z); colliders.add(proxy);
+    proxy.position.set(x, 1.7, z); proxy.name = `near-hall-tree-${i}`; treeSolids.add(proxy);
   });
+  trunks.userData.nearHallTreeIndices = treeSites.map((_,i)=>i);
   trunks.instanceMatrix.needsUpdate = true;
-  trunks.castShadow = true; world.add(trunks);
+  trunks.castShadow = true; treeVisual.add(trunks);
   for (const variant of [0, 1] as const) {
     const indices = treeSites.flatMap(([x, z], i) => getFoliageVariation(x, z).variant === variant ? [i] : []);
     if (!indices.length) continue;
@@ -231,10 +255,12 @@ function addCorridor(world: THREE.Group, colliders: THREE.Group): void {
       treeTransform.scale.set(2.1, 2.4, 2.1); treeTransform.updateMatrix(); canopies.setMatrixAt(local, treeTransform.matrix);
       canopies.setColorAt(local, new THREE.Color().setScalar(variation.colorScale));
     });
+    canopies.userData.nearHallTreeIndices = indices;
     canopies.instanceMatrix.needsUpdate = true;
     if (canopies.instanceColor) canopies.instanceColor.needsUpdate = true;
-    canopies.computeBoundingSphere(); canopies.castShadow = true; world.add(canopies);
+    canopies.computeBoundingSphere(); canopies.castShadow = true; treeVisual.add(canopies);
   }
+  return treeVisual;
 }
 
 export function createCampusScene(container: HTMLElement, initialData: CampusData, onEvent: (event: SceneEvent) => void): CampusSceneHandle {
@@ -260,14 +286,14 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   controls.minZoom = 0.3;
   controls.maxZoom = 5;
   const referenceQuality = new URLSearchParams(window.location.search).get('render-quality') === 'reference';
-  let renderRatio = referenceQuality ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
-  let slowFrames = 0, fastFrames = 0;
+  const quality = createAdaptiveRenderQuality({ devicePixelRatio: window.devicePixelRatio, reference: referenceQuality, nowMs: performance.now() });
+  let renderRatio = quality.getState().renderRatio;
   renderer.setPixelRatio(renderRatio);
   renderer.shadowMap.enabled = true;
   // Campus geometry/light are static; do not redraw a 2048px shadow map each frame.
   renderer.shadowMap.autoUpdate = false;
   // r186 removed PCFSoft: reference runs select its supported PCF replacement explicitly.
-  renderer.shadowMap.type = referenceQuality ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -308,9 +334,41 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   sun.shadow.normalBias = 0.08;
   scene.add(sun, sun.target);
 
+  function applyRenderQuality(next: RenderQualityState): void {
+    if (next.renderRatio !== renderRatio) {
+      renderRatio = next.renderRatio;
+      renderer.setPixelRatio(renderRatio);
+      renderer.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight), false);
+    }
+    const shadowType = next.shadowType === 'basic' ? THREE.BasicShadowMap : THREE.PCFShadowMap;
+    const shadowSizeChanged = sun.shadow.mapSize.x !== next.shadowMapSize;
+    if (shadowSizeChanged) {
+      sun.shadow.map?.dispose(); sun.shadow.map = null;
+      sun.shadow.mapSize.set(next.shadowMapSize, next.shadowMapSize);
+    }
+    if (shadowSizeChanged || renderer.shadowMap.type !== shadowType) {
+      renderer.shadowMap.type = shadowType; renderer.shadowMap.needsUpdate = true;
+    }
+    canvas.dataset.renderRatio = renderRatio.toFixed(2);
+    canvas.dataset.renderQuality = referenceQuality ? 'reference' : 'adaptive';
+    canvas.dataset.qualityMode = next.mode;
+    canvas.dataset.qualityReason = next.reason;
+    canvas.dataset.shadowType = String(renderer.shadowMap.type);
+    canvas.dataset.shadowSize = String(next.shadowMapSize);
+  }
+
   let data = initialData;
   let campusGeneration = 0;
   let collisionGeneration = 0;
+  let arrival: ReturnType<typeof createCampusArrivalLandscape> | null = null;
+  let natureLibrary: CampusNatureAssets | null = null;
+  let natureBatch: NatureBatch | null = null;
+  let natureLayer: ModeLayer | null = null;
+  let nearHallFallback: THREE.Group | null = null;
+  const natureAbort = new AbortController();
+  let natureFailed = false;
+  let naturePending: { batch: NatureBatch; props: THREE.Group; base: PlayerCollisionSnapshot; target: PlayerCollisionSnapshot; mode: CampusMode; replacements: number[]; layer: ModeLayer } | null = null;
+  let lastNatureAttempt = 0;
   let campusMode: CampusMode = 'base';
   let idealLayer: ReturnType<typeof createIdealCampusLayer> | null = null;
   let baseCollisionProps: THREE.Group | null = null;
@@ -356,8 +414,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
   function resize(): void {
     if (disposed) return;
-    renderRatio = referenceQuality ? 1 : Math.min(renderRatio, window.devicePixelRatio || 1, 1.5);
-    renderer.setPixelRatio(renderRatio);
+    applyRenderQuality(quality.setDevicePixelRatio(window.devicePixelRatio, performance.now()));
     renderer.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight), false);
     labels.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight));
     refreshFrustum();
@@ -400,9 +457,115 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     }
   }
 
+  /** Copies CPU proxies into private ownership; borrowed asset resources never reach generic disposal. */
+  function ownCollisionProps(source: THREE.Group): THREE.Group {
+    const copy = source.clone(true), mat = new THREE.MeshBasicMaterial();
+    copy.traverse(object => { if (object instanceof THREE.Mesh) { object.geometry = object.geometry.clone(); object.material = mat; } });
+    return copy;
+  }
+  function createNatureVisualLayer(batch: NatureBatch, replacements: number[]): ModeLayer {
+    const visual = new THREE.Group(); visual.name = 'arrival-nature-committed-layer'; visual.add(batch.visual);
+    let retained: THREE.Group | null = null;
+    if (nearHallFallback && replacements.length < NEAR_HALL_TREE_SITES.length) {
+      retained = nearHallFallback.clone(true);
+      const geos = new Map<THREE.BufferGeometry,THREE.BufferGeometry>(), mats = new Map<THREE.Material,THREE.Material>();
+      const hidden = new THREE.Matrix4().makeScale(0,0,0), replaced = new Set(replacements);
+      retained.traverse(object => {
+        if (!(object instanceof THREE.Mesh)) return;
+        if(!geos.has(object.geometry))geos.set(object.geometry,object.geometry.clone()); object.geometry=geos.get(object.geometry)!;
+        const copyMaterial=(material:THREE.Material) => { if(!mats.has(material))mats.set(material,material.clone());return mats.get(material)!; };
+        object.material = Array.isArray(object.material) ? object.material.map(copyMaterial) : copyMaterial(object.material);
+        if(object instanceof THREE.InstancedMesh) {
+          (object.userData.nearHallTreeIndices as number[]).forEach((index,slot)=>{if(replaced.has(index))object.setMatrixAt(slot,hidden);});
+          object.instanceMatrix.needsUpdate=true;object.computeBoundingBox();object.computeBoundingSphere();
+        }
+      });
+      visual.add(retained);
+    }
+    let released=false;
+    return { visual, dispose() { if(released)return;released=true;visual.removeFromParent();batch.dispose();if(retained)disposeObject(retained);visual.clear(); } };
+  }
+  function prepareArrivalNature(): void {
+    if (disposed || !natureLibrary || !arrival || !baseCollisionProps || natureBatch || naturePending) return;
+    let batch: NatureBatch | null = null, props: THREE.Group | null = null, layer: ModeLayer | null = null;
+    try {
+      const placements: NaturePlacement[] = [...arrival.placements];
+      const replacements: number[] = [];
+      if (data.id === 'yingxi') NEAR_HALL_NATURE_PLACEMENTS.forEach((placement,index) => {
+        const probe = natureLibrary!.createBatch([placement]);
+        try { if (nearHallTreeClearsProtectedPaths(probe.colliders,data)) { placements.push(placement); replacements.push(index); } }
+        finally { probe.dispose(); }
+      });
+      batch = natureLibrary.createBatch(placements);
+      const borrowed = new THREE.Group(); borrowed.add(baseCollisionProps.clone(true), batch.colliders.clone(true));
+      props = ownCollisionProps(borrowed); borrowed.clear();
+      for(const index of replacements) {
+        const old = props.getObjectByName(`near-hall-tree-${index}`);
+        // First matching group is the old base subtree; new batch has the same id
+        // on its solid components but lives in the second sibling subtree.
+        if(old) { old.removeFromParent(); if(old instanceof THREE.Mesh) old.geometry.dispose(); }
+      }
+      const base = player.prepareCollision(data, props);
+      layer = createNatureVisualLayer(batch,replacements);
+      naturePending = { batch, props, base, target: base, mode: 'base', replacements, layer };
+      tryActivateArrivalNature();
+    } catch {
+      if(layer)layer.dispose();else batch?.dispose(); if (props) disposeObject(props);
+      canvas.dataset.arrivalNatureStatus = 'fallback';
+    }
+  }
+  function tryActivateArrivalNature(): void {
+    const pending = naturePending;
+    if (!pending || disposed || paused || plane || mapMode || !player.onSharedGround || player.hasActiveInput) return;
+    let committed = false;
+    try {
+      if (pending.mode !== campusMode) {
+        if (idealLayer) {
+          const borrowed = new THREE.Group(); borrowed.add(pending.props.clone(true), idealLayer.colliders.clone(true));
+          try { pending.target = player.prepareCollision(data, borrowed); } finally { borrowed.clear(); }
+        } else pending.target = pending.base;
+        pending.mode = campusMode;
+      }
+      if (!player.canCommitCollision(pending.target)) { canvas.dataset.arrivalNatureStatus = 'waiting-safe-ground'; return; }
+      const obsolete = new Set<THREE.Object3D>(); nearHallFallback?.traverse(object => obsolete.add(object));
+      const nextPickables = pickables.filter(object => !obsolete.has(object));
+      pending.layer.visual.traverse(object => { if (object instanceof THREE.Mesh) nextPickables.push(object); });
+      const oldTree = nearHallFallback;
+      const oldLayer: ModeLayer | null = oldTree ? {visual:oldTree,dispose:()=>disposeObject(oldTree)} : null;
+      const transaction = commitCampusModeLayer(world,player,pending.target,oldLayer,pending.layer);
+      if(!transaction.applied) {
+        disposeObject(pending.props);naturePending=null;
+        canvas.dataset.arrivalNatureStatus='fallback';return;
+      }
+      // The transaction has applied. Subsequent cleanup warnings must never claim rollback.
+      committed = true;
+      nearHallFallback=null; natureLayer=pending.layer;
+      canvas.dataset.nearHallTreeReplacement = data.id === 'yingxi' ? `${pending.replacements.length}/6` : 'not-applicable';
+      canvas.dataset.nearHallTreeReplacementIds = pending.replacements.join(',');
+      const oldProps = baseCollisionProps;
+      baseCollisionProps = pending.props; baseCollisionSnapshot = pending.base;
+      natureBatch = pending.batch; naturePending = null; pickables = nextPickables;
+      try { if (oldProps) disposeObject(oldProps); } catch { canvas.dataset.arrivalNatureCleanupWarning = 'true'; }
+      if(transaction.cleanupWarning)canvas.dataset.arrivalNatureCleanupWarning='true';
+      canvas.dataset.arrivalNatureStatus = 'ready';
+      canvas.dataset.arrivalNatureInstances = String(natureBatch.stats.instances);
+      canvas.dataset.arrivalNatureStats = JSON.stringify({...natureBatch.stats, retainedNearHallTrees:data.id === 'yingxi' ? 6-pending.replacements.length : 0, replacedNearHallTrees:pending.replacements.length});
+      canvas.dataset.arrivalNatureGeneration = String(campusGeneration);
+      canvas.dataset.collisionGeneration = String(++collisionGeneration);
+      renderer.shadowMap.needsUpdate = true; quality.resetSampling(performance.now());
+    } catch {
+      if (committed) { canvas.dataset.arrivalNatureStatus = 'ready'; canvas.dataset.arrivalNatureCleanupWarning = 'true'; return; }
+      if (naturePending) { naturePending.layer.dispose(); disposeObject(naturePending.props); naturePending = null; }
+      canvas.dataset.arrivalNatureStatus = 'fallback';
+    }
+  }
   function buildCampus(): void {
+    quality.resetSampling(performance.now());
     endPaperplane(); planeConfig = null; planeStation = null;
     idealLayer?.dispose(); idealLayer = null;
+    natureLayer?.dispose(); natureLayer = null; natureBatch = null;
+    if (naturePending) { naturePending.layer.dispose(); disposeObject(naturePending.props); naturePending = null; }
+    arrival?.dispose(); arrival = null; nearHallFallback = null;
     if (baseCollisionProps) disposeObject(baseCollisionProps);
     baseCollisionProps = null; baseCollisionSnapshot = null; campusMode = 'base';
     canvas.dataset.campusMode = campusMode;
@@ -886,7 +1049,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
 
     let gardenFallback: THREE.Group | null = null;
     if (data.id === 'yingxi') {
-      addCorridor(world, collisionProps);
+      nearHallFallback = addCorridor(world, collisionProps);
       const garden = createQingzeFallback();
       gardenFallback = garden.visual; world.add(garden.visual); collisionProps.add(garden.colliders);
       platform = createOriginalViewingPlatform(); world.add(platform.visual); collisionProps.add(platform.colliders);
@@ -903,6 +1066,20 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       canvas.dataset.viewingPlatform = JSON.stringify({status:'graybox',deckTop:VIEWING_PLATFORM.deckTop,photo:VIEWING_PLATFORM.photo.position});
       canvas.dataset.paperplaneStation = 'loading';
     }
+    collisionProps.updateMatrixWorld(true);
+    const oldPropBounds: THREE.Box3[] = [];
+    collisionProps.traverse(object => { if (object instanceof THREE.Mesh) oldPropBounds.push(new THREE.Box3().setFromObject(object)); });
+    const oldTrees: Point2[] = [...treePositions, ...(data.id === 'yingxi' ? NEAR_HALL_TREE_SITES : [[-5,-188],[-95,-14],[78,-57]] as Point2[])];
+    arrival = createCampusArrivalLandscape(data, (x,z,radius) =>
+      oldTrees.every(([tx,tz]) => Math.hypot(x-tx,z-tz) > radius+3.5) && oldPropBounds.every(box =>
+        Math.hypot(Math.max(box.min.x-x,0,x-box.max.x),Math.max(box.min.z-z,0,z-box.max.z)) > radius+.3));
+    world.add(arrival.visual);
+    canvas.dataset.arrivalGeometryMetrics = JSON.stringify({...arrival.metrics, kinds:arrival.placements.reduce<Record<string,number>>((counts,p)=>{counts[p.kind]=(counts[p.kind]??0)+1;return counts;},{})});
+    canvas.dataset.arrivalNatureStatus = natureFailed ? 'fallback' : 'loading';
+    canvas.dataset.arrivalNatureInstances = '0';
+    delete canvas.dataset.arrivalNatureStats; delete canvas.dataset.arrivalNatureCleanupWarning;
+    canvas.dataset.arrivalNatureGeneration = String(generation);
+    canvas.dataset.nearHallTreeReplacement = data.id === 'yingxi' ? 'fallback-six' : 'not-applicable';
     // Retain private CPU proxy geometry, never borrowed model/platform resources.
     baseCollisionProps = collisionProps.clone(true);
     const proxyMaterial = new THREE.MeshBasicMaterial();
@@ -918,6 +1095,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     world.add(pawn, player.shadow);
     renderer.shadowMap.needsUpdate = true;
     updateHighlights();
+    prepareArrivalNature();
     const ownerWorld = world;
     if (platform) {
       const platformOwner = platform;
@@ -926,7 +1104,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         gltf.scene.position.set(...PAPERPLANE_STATION.position); gltf.scene.rotation.y = PAPERPLANE_STATION.rotationY;
         gltf.scene.traverse(object => { if (object instanceof THREE.Mesh) object.castShadow = object.receiveShadow = true; });
         platformOwner.stationVisual.visible = false; ownerWorld.add(gltf.scene); gltf.scene.updateMatrixWorld(true);
-        renderer.shadowMap.needsUpdate = true; canvas.dataset.paperplaneStation = 'ready';
+        renderer.shadowMap.needsUpdate = true; canvas.dataset.paperplaneStation = 'ready'; quality.resetSampling(performance.now());
       }).catch(() => {
         if (disposed || generation !== campusGeneration || platform !== platformOwner) return;
         canvas.dataset.paperplaneStation = 'fallback';
@@ -970,6 +1148,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         if (marker) marker.position.y = config.markerHeight;
         updateHighlights();
         renderer.shadowMap.needsUpdate = true;
+        quality.resetSampling(performance.now());
         updateModelStatus(config.landmarkId, 'ready');
         onEvent({ type: 'modelstatus', id: config.landmarkId, name: config.name, status: 'ready' });
       }).catch(() => {
@@ -1105,26 +1284,12 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
   function tick(time: number): void {
     if (disposed || paused) return;
+    const rawFrameMs = previousTime ? Math.max(0, time - previousTime) : 0;
     const dt = previousTime ? Math.min(1, Math.max(0, (time - previousTime) / 1000)) : 0;
     previousTime = time;
-    // Keep the canvas responsive on software renderers and slow devices;
-    // recover resolution only after sustained fast frames to avoid oscillation.
-    if (dt > .1) { slowFrames++; fastFrames = 0; }
-    else if (dt > 0 && dt < .025) { fastFrames++; slowFrames = 0; }
-    else { slowFrames = 0; fastFrames = 0; }
-    const maxRatio = Math.min(window.devicePixelRatio || 1, 1.5);
-    const nextRatio = referenceQuality ? 1 : slowFrames >= 3 ? Math.max(.5, renderRatio * .75)
-      : fastFrames >= 180 ? Math.min(maxRatio, renderRatio / .75) : renderRatio;
-    if (nextRatio !== renderRatio) {
-      renderRatio = nextRatio; renderer.setPixelRatio(renderRatio);
-      const shadowType = renderRatio <= .75 ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
-      if (renderer.shadowMap.type !== shadowType) { renderer.shadowMap.type = shadowType; renderer.shadowMap.needsUpdate = true; }
-      renderer.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight), false);
-      slowFrames = fastFrames = 0;
-    }
-    canvas.dataset.renderRatio = renderRatio.toFixed(2);
-    canvas.dataset.renderQuality = referenceQuality ? 'reference' : 'adaptive';
-    canvas.dataset.shadowType = String(renderer.shadowMap.type);
+    if (naturePending && time - lastNatureAttempt >= 250) { lastNatureAttempt = time; tryActivateArrivalNature(); }
+    // Rendering-only policy consumes real frame duration, never alters player simulation.
+    applyRenderQuality(quality.observe(rawFrameMs, time));
     if (tween) {
       tween.elapsed += dt;
       const t = Math.min(1, tween.elapsed / tween.duration), eased = t * t * (3 - 2 * t);
@@ -1187,6 +1352,10 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (canvas.dataset.playerX !== undefined && canvas.dataset.cameraYaw !== undefined) canvas.dataset.campusReady = data.id;
     if (courtyard) canvas.dataset.huyuTreeTexture = String(courtyard.visual.userData.treeTextureStatus);
     canvas.dataset.frame = String(++frameCount);
+    canvas.dataset.renderBufferWidth = String(canvas.width);
+    canvas.dataset.renderBufferHeight = String(canvas.height);
+    canvas.dataset.shadowActualSize = String(sun.shadow.map?.width ?? 0);
+    canvas.dataset.shadowActualHeight = String(sun.shadow.map?.height ?? 0);
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
     canvas.dataset.triangles = String(renderer.info.render.triangles);
     canvas.dataset.geometries = String(renderer.info.memory.geometries);
@@ -1277,8 +1446,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
   function interruptView(): void { tween = null; }
   controls.addEventListener('start', interruptView);
-  function resetFrameClock(): void { previousTime = 0; }
+  function resetFrameClock(): void { previousTime = 0; quality.resetSampling(performance.now()); }
   document.addEventListener('visibilitychange', resetFrameClock);
+  window.addEventListener('focus', resetFrameClock);
   function pointerDown(event: PointerEvent): void {
     if (pointer && event.pointerId !== pointer.id) { pointer.moved = true; return; }
     if (event.button !== 0 || pointer) return;
@@ -1386,9 +1556,13 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (disposed) return;
     endPaperplane();
     idealLayer?.dispose(); idealLayer = null;
+    natureLayer?.dispose(); natureLayer = null; natureBatch = null;
+    if (naturePending) { naturePending.layer.dispose(); disposeObject(naturePending.props); naturePending = null; }
+    arrival?.dispose(); arrival = null; nearHallFallback = null;
     if (baseCollisionProps) disposeObject(baseCollisionProps);
     baseCollisionProps = null; baseCollisionSnapshot = null;
     disposed = true;
+    natureAbort.abort(); natureLibrary?.dispose(); natureLibrary = null;
     delete canvas.dataset.campusReady;
     delete canvas.dataset.huyuTreeTexture; delete canvas.dataset.huyuTreeCount;
     courtyard?.dispose(); courtyard = null;
@@ -1399,6 +1573,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     window.removeEventListener('resize', resize);
     controls.removeEventListener('start', interruptView);
     document.removeEventListener('visibilitychange', resetFrameClock);
+    window.removeEventListener('focus', resetFrameClock);
     controls.dispose();
     canvas.removeEventListener('pointerdown', pointerDown);
     canvas.removeEventListener('pointermove', pointerMove);
@@ -1422,6 +1597,14 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
 
   try {
     buildCampus();
+    void loadCampusNatureAssets({ signal: natureAbort.signal }).then(library => {
+      if (disposed) { library.dispose(); return; }
+      natureLibrary = library; prepareArrivalNature();
+    }).catch(() => {
+      if (disposed) return;
+      natureFailed = true; canvas.dataset.arrivalNatureStatus = 'fallback';
+      onEvent({ type:'modelstatus', id:'arrival-nature', name:'沿途植物（保留基础景观）', status:'fallback' });
+    });
     resize();
     questView(true);
     showPlayer();
@@ -1434,6 +1617,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
 
   return {
+    getRenderQuality: () => quality.getState(),
+    setRenderQuality(mode) { const next = quality.setMode(mode, performance.now()); if (!disposed) applyRenderQuality(next); return next; },
     inspectIdealActivity,
     getCampusMode: () => campusMode, getModeSwitchStatus, requestCampusMode,
     setCampus(next) {
@@ -1465,6 +1650,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     resume() {
       if (disposed || !paused) return;
       paused = false; controls.enabled = mapMode && !plane; player.setPaused(false); previousTime = 0;
+      quality.resetSampling(performance.now());
       canvas.dataset.paused = 'false'; raf = requestAnimationFrame(tick);
     },
     dispose,

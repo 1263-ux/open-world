@@ -1,8 +1,25 @@
 {
-  "baselineCommit": "e7c2d939b44dc7323f251d832ab6ce2ba5ac1a09",
-  "path": "src/scene/CampusScene.ts",
-  "originalSha256": "543f1ecad03622fcdf3be708af26d8716689959d80c7825013c24707d4d008a0",
-  "patchedSha256": "6e218da7ca9ee368cdda34df26d272341e8206bab6cffd8a8716ebbb2313b9a7",
-  "patchSha256": "c79a74c5a8ed1b9bb34a2632a82db60ef28bf78c70745537c875587a58ad4b49",
-  "scope": "Reference-only query patch: DPR 1, explicit supported PCF shadow (Three r186), no adaptive ratio changes, read-only quality/shadow telemetry. No geometry, movement, collision or progress changes."
+  "baselineCommit": "c17b46220743fe0059bf5b3bfedacebe37a1212a",
+  "requiresPatch": false,
+  "sourceFiles": [
+    {
+      "path": "src/scene/CampusScene.ts",
+      "sha256": "a6503eac9214575207b4f2eca635339024dd6929b8acd47af618bfa4263c5bc0"
+    },
+    {
+      "path": "src/scene/PlayerController.ts",
+      "sha256": "5ac939d39502bdb6829e775a2bfa00a152ebb83641bf32c2ab66829c34cfaa1d"
+    },
+    {
+      "path": "src/app/App.vue",
+      "sha256": "0914e53fd000b1a2f37ac3363a0917c3eacab2e8640d589d15596f5367aab84b"
+    }
+  ],
+  "reference": {
+    "query": "render-quality=reference",
+    "renderRatio": 1,
+    "shadowType": 1,
+    "shadowMapSize": 2048,
+    "shadowMapSizeEvidence": "pinned-source-constant"
+  }
 }

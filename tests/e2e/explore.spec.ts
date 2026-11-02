@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Locator } from '@playwright/test';
 import { campuses } from '../../src/campus-data/campuses';
 import { position, walkTo } from './campus-walk';
+import { dragLook, waitForSettledCamera } from './complete-release-helpers';
 
 
 test.setTimeout(600000);
@@ -286,13 +287,36 @@ test('WebGL denied: accessible list journey and corrupt save recovery', async ({
 });
 
 test('model loading failures retain the campus; repeated switches isolate late loads', async ({ page }) => {
+  const natureUrl = '**/models/nature/campus-nature.glb';
+  let releaseNature!: () => void;
+  const natureGate = new Promise<void>(resolve => { releaseNature = resolve; });
+  await page.route(natureUrl, async route => { await natureGate; await route.continue(); });
   await page.route('**/assets/campuses/huyu/*.glb',async route=>{await new Promise(resolve=>setTimeout(resolve,900));await route.continue();});
   await page.goto('/'); const canvas=page.getByTestId('campus-canvas'); await selectHuyu(page); await page.getByTestId('campus-yingxi').click();
   await expect(canvas).toHaveAttribute('data-model-yx-mechanical','ready',{timeout:30000}); await page.waitForTimeout(1800);
   await expect(canvas).not.toHaveAttribute('data-model-hy-meihua','ready'); await page.unroute('**/assets/campuses/huyu/*.glb');
+  await expect(canvas).toHaveAttribute('data-arrival-nature-instances','0');
+  const generation = await canvas.getAttribute('data-world-generation'); releaseNature();
+  await expect(canvas).toHaveAttribute('data-arrival-nature-status','ready',{timeout:30000});
+  await expect(canvas).toHaveAttribute('data-arrival-nature-generation',generation!);
+  expect(Number(await canvas.getAttribute('data-arrival-nature-instances'))).toBeGreaterThan(0);
+  await expect(canvas).toHaveAttribute('data-campus-ready','yingxi');
+  await page.unroute(natureUrl);
+
   await page.route('**/assets/campuses/huyu/north-gate.glb',route=>route.abort()); await page.getByTestId('campus-huyu').click();
   await expect(canvas).toHaveAttribute('data-model-hy-north-gate','fallback',{timeout:30000}); await expect(canvas).toHaveAttribute('data-model-hy-meihua','ready',{timeout:30000});
   await expect(page.getByTestId('model-notice')).toContainText('北门'); await expect(page.getByTestId('scene-error')).toHaveCount(0);
+  // Network failure is injected, never gameplay progress. Fallback must remain walkable.
+  await page.route(natureUrl, route => route.abort()); await page.reload();
+  await expect(canvas).toHaveAttribute('data-campus-ready','huyu',{timeout:30000});
+  await expect(canvas).toHaveAttribute('data-arrival-nature-status','fallback',{timeout:30000});
+  await expect(canvas).toHaveAttribute('data-arrival-nature-instances','0');
+  await expect.poll(()=>canvas.getAttribute('data-player-z')).not.toBeNull();
+  const fallbackStart=await position(canvas); await canvas.focus(); await page.keyboard.down('KeyW');
+  try { await expect.poll(async()=>Math.hypot((await position(canvas))[0]-fallbackStart[0],(await position(canvas))[2]-fallbackStart[2]),{timeout:10000}).toBeGreaterThan(.5); }
+  finally { await page.keyboard.up('KeyW'); }
+  await expect(page.getByTestId('scene-error')).toHaveCount(0);
+
 });
 
 test('building collision stops a player at the sourced main-building footprint', async ({ page }) => {
@@ -300,7 +324,12 @@ test('building collision stops a player at the sourced main-building footprint',
   await page.goto('/'); await selectHuyu(page); const canvas=page.getByTestId('campus-canvas');
   await expect.poll(()=>canvas.getAttribute('data-player-z')).not.toBeNull();
   const start=await position(canvas);
-  // At the initial Huyu heading, +Z intersects the main-building footprint near z=-142.78.
+  // The approved Huyu first view faces north. Use a real drag to face this
+  // existing collision test's +Z wall; never inject yaw or player position.
+  const yaw=Number(await canvas.getAttribute('data-camera-yaw'));
+  await dragLook(page,canvas,-Math.atan2(Math.sin(-yaw),Math.cos(-yaw))/.005);
+  await waitForSettledCamera(page,canvas,45000);await canvas.focus();
+  // +Z intersects the same sourced building footprint near z=-142.78.
   // The player must reach the wall through input and then remain outside it while held.
   await page.keyboard.down('Shift'); await page.keyboard.down('w');
   try {

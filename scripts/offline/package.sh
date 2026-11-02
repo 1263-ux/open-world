@@ -19,6 +19,9 @@ cp "$source_root/games/hks/node_modules/eventemitter3/LICENSE" "$pkg/licenses/ev
 cp "$stage/games/hks/PHASER-LICENSE.md" "$pkg/licenses/phaser-MIT.md"
 cp "$stage/docs/resources/licenses/quaternius-characters-CC0.txt" "$pkg/licenses/quaternius-characters-CC0.txt"
 cp "$stage/public/assets/environment/quaternius-license-standard.txt" "$pkg/licenses/quaternius-foliage-CC0.txt"
+cp "$stage/public/models/nature/License.txt" "$pkg/licenses/kaykit-forest-CC0.txt"
+cp "$stage/public/models/nature/PROVENANCE.json" "$pkg/provenance/kaykit-nature.json"
+cp "$stage/public/models/nature/README.md" "$pkg/provenance/kaykit-nature-README.md"
 cp "$stage/public/assets/campuses/huyu/NOTO-CJK-COPYRIGHT.txt" "$pkg/licenses/Noto-CJK-copyright.txt"
 for f in MODIFICATIONS.md MODERNIZATION.md ASSET_INVENTORY.json SOURCE_INVENTORY.json MODERNIZED_INVENTORY.json; do cp "$stage/games/hks/$f" "$pkg/provenance/hks-$f"; done
 while IFS= read -r -d '' file; do

@@ -8,11 +8,10 @@ import { waitForSettledCamera } from './complete-release-helpers';
 export const REFERENCE_VIEWPORT = { width: 1280, height: 720 };
 interface Shot { id: string; purpose: string; campus: CampusId; foot: Point2; look: Point2; pitch?: number; via?: Point2[] }
 export const REFERENCE_SHOTS: Shot[] = [
-  { id: 'huyu-entrance-east-facade', purpose: '虎峪入口东楼立面对比（b396）；不是校门全景或树冠评估', campus: 'huyu', foot: [18.26, -177.03], look: [42, -189] },
-  // Actual admitted east bed (-60,-12), viewed from clear eastern ground; not the old glass-wall shot.
-  { id: 'huyu-meihua-court', purpose: '梅花东花床石缘、内凹土面与低植栽对比', campus: 'huyu', foot: [-53, -19], look: [-62, -12], pitch: .15 },
-  { id: 'yingxi-canopy-near-mid', purpose: '迎西近中景闭合树冠；须实际图核可见性', campus: 'yingxi', foot: [45, 162], look: [54.04, 169.31] },
-  { id: 'yingxi-backlit-facade', purpose: '迎西195741288西立面逆光层次', campus: 'yingxi', foot: [100, 178], look: [120, 178], via: [[54, 172], [100, 172]] },
+  { id: 'huyu-gate-arrival', purpose: '虎峪原安全spawn内侧：北门形态与入口铺装/植栽景序，不冒充门外正面', campus: 'huyu', foot: [18.26, -177.03], look: [14, -200] },
+  { id: 'huyu-campus-approach', purpose: '虎峪入校中段：连续铺装、植栽与主楼方向可读性', campus: 'huyu', foot: [18.26, -158], look: [15.79, -132.35] },
+  { id: 'yingxi-hall-arrival', purpose: '迎西真实spawn：机械馆前景与新树形/首程入口', campus: 'yingxi', foot: [-20, 175.5], look: [-53.045, 175.65] },
+  { id: 'yingxi-garden-approach', purpose: '迎西走廊中段朝清泽园：连续近中远景与可走入口', campus: 'yingxi', foot: [7, 172.76], look: [35, 192.8] },
 ];
 export interface ReferencePose { xyz: number[]; yaw: number; pitch: number; camera: number[]; quality: string; ratio: number; shadow: number; frame: number }
 async function read(canvas: Locator): Promise<ReferencePose> {
@@ -58,6 +57,7 @@ export async function captureReference(page: Page, canvas: Locator, shot: Shot, 
     if (await canvas.getAttribute('data-campus-ready') !== shot.campus) await page.getByTestId(`campus-${shot.campus}`).click();
     await expect(canvas).toHaveAttribute('data-campus-ready', shot.campus, { timeout: 30000 });
     await expect(canvas).toHaveAttribute('data-player-model', 'ready', { timeout: 30000 });
+    if (label === 'after') { await expect(canvas).toHaveAttribute('data-arrival-nature-status', 'ready', { timeout: 30000 }); await expect.poll(async()=>Number(await canvas.getAttribute('data-arrival-nature-instances'))).toBeGreaterThan(0); }
     await expect(canvas).toHaveAttribute('data-hero-model', 'ready', { timeout: 30000 });
     if (shot.campus === 'huyu') await expect(canvas).toHaveAttribute('data-huyu-tree-texture', 'ready', { timeout: 30000 });
     else await expect(canvas).toHaveAttribute('data-model-yx-garden-setting', 'ready', { timeout: 30000 });
@@ -67,13 +67,14 @@ export async function captureReference(page: Page, canvas: Locator, shot: Shot, 
     await expect.poll(async () => (await read(canvas)).xyz[1]).toBeLessThan(.125);
     const yaw = baseline?.yaw ?? Math.atan2(shot.look[0] - target[0], shot.look[1] - target[1]);
     await look(page, canvas, yaw, baseline?.pitch ?? shot.pitch ?? -.15);
-    const pose = await read(canvas), conditions = { label, shot, pose, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), candidateCommit: process.env.GITHUB_SHA ?? 'uncommitted-local' };
+    const shadowMapSize = label === 'before' ? { value: 2048, evidence: 'pinned-source-constant' } : { value: Number(await canvas.getAttribute('data-shadow-size')), evidence: 'runtime-telemetry' };
+    const pose = await read(canvas), conditions = { shadowMapSize, label, shot, pose, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), candidateCommit: process.env.GITHUB_SHA ?? 'uncommitted-local' };
     console.log('[REFERENCE_CONDITIONS]', JSON.stringify(conditions));
     await info.attach(`${label}-${shot.id}-conditions`, { body: JSON.stringify(conditions, null, 2), contentType: 'application/json' });
     await page.screenshot({ path: info.outputPath(`${label}-${shot.id}.png`) });
     // Pinned Three r186 WebGLShadowMap normalizes removed PCFSoft(2) to PCF(1).
     // Reference explicitly uses supported PCF; Basic(0) remains a failure.
-    expect(pose.quality).toBe('reference'); expect(pose.ratio).toBe(1); expect(pose.shadow).toBe(1); expect(conditions.dpr).toBe(1);
+    expect(shadowMapSize.value).toBe(2048); expect(pose.quality).toBe('reference'); expect(pose.ratio).toBe(1); expect(pose.shadow).toBe(1); expect(conditions.dpr).toBe(1);
     if (baseline) {
       expect(pose.shadow).toBe(baseline.shadow); expect(pose.ratio).toBe(baseline.ratio);
       expect(Math.hypot(...pose.xyz.map((v, i) => v - baseline.xyz[i]!))).toBeLessThanOrEqual(.03);

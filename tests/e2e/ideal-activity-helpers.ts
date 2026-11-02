@@ -1,4 +1,5 @@
 import { expect, type Page, type Locator, type TestInfo } from '@playwright/test';
+import type { CampusId } from '../../src/shared/contracts';
 import { campuses } from '../../src/campus-data/campuses';
 import { walkRoute } from './campus-walk';
 import { authoredTouchMagnitude } from './complete-release-helpers';
@@ -32,8 +33,8 @@ async function touchPose(canvas: Locator) {
 // Preserve bends/clearance and apply the existing d/6 gain, rather than changing
 // collision, arrival tolerances, or the test's hard time budget.
 // Real CDP touch input only; no game pose/mode/progress mutation.
-export async function touchWalkTo(page: Page, canvas: Locator, target: [number,number], info: TestInfo, tolerance=4.5, authoredSegment=false) {
-  const initial=await touchPose(canvas),[startX,,startZ]=initial.xyz,route=authoredSegment?[target]:compactTouchRoute(walkRoute(campuses.yingxi,[startX,startZ],target));
+export async function touchWalkTo(page: Page, canvas: Locator, target: [number,number], info: TestInfo, tolerance=4.5, authoredSegment=false, campus:CampusId='yingxi') {
+  const initial=await touchPose(canvas),[startX,,startZ]=initial.xyz,route=authoredSegment?[target]:compactTouchRoute(walkRoute(campuses[campus],[startX,startZ],target));
   const box=await canvas.boundingBox();if(!box)throw Error('Missing campus canvas bounds');
   // The visible fixed stick is left:38px, bottom:70px, diameter:90px.
   const center={x:box.x+83,y:box.y+box.height-115};

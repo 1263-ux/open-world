@@ -1,3 +1,4 @@
+import type { RenderQualityMode, RenderQualityState } from '../scene/AdaptiveRenderQuality';
 export type CampusMode = 'base' | 'ideal';
 export interface CampusModeSwitchStatus { allowed: boolean; reason: string }
 export interface CampusModeSwitchResult { applied: boolean; mode: CampusMode; reason: string }
@@ -31,6 +32,8 @@ export interface SceneState {selectedId:string|null;targetId:string|null;}
 export interface PhotoPoint { heightRange?: [number, number]; position: Point2; target: [number, number, number]; frameExtent: [number, number, number][]; focusExtent: [number, number, number][]; radius: number; landmarkId?: string; }
 export interface PhotoInspection { settling: boolean; inRange: boolean; framed: boolean; obstructed: boolean; distance: number; }
 export interface CampusSceneHandle {
+  getRenderQuality(): RenderQualityState;
+  setRenderQuality(mode: RenderQualityMode): RenderQualityState;
   inspectIdealActivity(): IdealActivityInspection | null;
   getCampusMode(): CampusMode;
   getModeSwitchStatus(): CampusModeSwitchStatus;

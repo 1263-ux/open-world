@@ -14,6 +14,9 @@ async function ready(page: Page, touch=false) {
   await expect(canvas).toHaveAttribute('data-player-model', 'ready', { timeout: 30000 });
   await expect(canvas).toHaveAttribute('data-model-yx-mechanical', 'ready', { timeout: 30000 });
   await expect(canvas).toHaveAttribute('data-model-yx-garden-setting', 'ready', { timeout: 30000 });
+  await expect(canvas).toHaveAttribute('data-arrival-nature-status','ready',{timeout:30000});
+  await expect(canvas).toHaveAttribute('data-near-hall-tree-replacement','5/6');
+  await expect(canvas).toHaveAttribute('data-near-hall-tree-replacement-ids','0,1,2,4,5');
   const start=page.getByRole('button',{name:'开始手记',exact:true});if(touch)await start.tap();else await start.click();
   return canvas;
 }
@@ -138,18 +141,16 @@ test('scenic diary: genuine walk, framing, three captures, Hks round-trip and lo
   // versions, so a single hard-coded pose is not an invariant. No scene state
   // is injected; the visible status and screenshot are the evidence.
   const obstructionAttempts: unknown[] = []; let foundObstruction = false;
-  // Two actual slow-renderer traces found natural obstruction near z174 at
-  // pitch-.30 / -.35 only after34 /35 attempts. Prefer those observed views,
-  // but retain the complete original40-candidate fallback and all live gates.
-  // Reach174 from172 as in those traces: the unchanged .3m steering tolerance
-  // can otherwise approach from the opposite side of a thin occluding edge.
+  // Current actual GLB/collision-camera CPU probes find these new-canopy
+  // candidates first. Browser framing+opaque occlusion still decide; retain
+  // the entire original40-candidate fallback with no relaxed photo threshold.
   const obstructionGroups = [
-    { z: 174, pitches: [-.3, -.35], preferred: true },
-    ...[170.5, 169, 172, 174].map(z => ({ z, pitches: [-.15,-.2,-.25,-.3,-.35,-.4,-.45,-.5,-.55,-.6], preferred: false })),
+    { z: 170.5, pitches: [-.2] },
+    { z: 169, pitches: [-.2, -.25] },
+    ...[170.5, 169, 172, 174].map(z => ({ z, pitches: [-.15,-.2,-.25,-.3,-.35,-.4,-.45,-.5,-.55,-.6] })),
   ];
-  for (const { z, pitches, preferred } of obstructionGroups) {
+  for (const { z, pitches } of obstructionGroups) {
     await rotateTo(page,canvas,-Math.PI/2,-.15); await canvas.focus();
-    if (preferred) await steerPhotoZ(page,canvas,172,info,'photo-obstruction-preferred-north-approach');
     await steerPhotoZ(page,canvas,z,info,`photo-obstruction-approach-${z}`);
     const p = await position(canvas);
     expect(Math.hypot(p[0]-PHOTO_POINTS[0]!.position[0],p[2]-PHOTO_POINTS[0]!.position[1])).toBeLessThan(PHOTO_POINTS[0]!.radius);
@@ -444,6 +445,9 @@ test('student camera at a real wall fades the close avatar and restores it when 
   // Wait for that explicit read-only readiness before position() can be read.
   await expect(canvas).toHaveAttribute('data-campus-ready','huyu',{timeout:30000});
   await expect.poll(async()=>{const [x,,z]=await position(canvas);return Math.hypot(x-campuses.huyu.start[0],z-campuses.huyu.start[1]);},{timeout:15000}).toBeLessThan(1);
+  // Huyu now starts looking at the north gate. Turn through real input toward
+  // this test's original southward wall target, not by changing player state.
+  await rotateTo(page,canvas,0,-.15);await waitForSettledCamera(page,canvas,45000);
   await canvas.focus();await page.keyboard.down('Shift');await page.keyboard.down('w');
   try { await expect.poll(async()=>(await position(canvas))[2],{timeout:60000,intervals:[500]}).toBeGreaterThan(-144); }
   finally { await page.keyboard.up('w');await page.keyboard.up('Shift'); }

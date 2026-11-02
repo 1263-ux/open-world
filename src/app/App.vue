@@ -9,11 +9,27 @@ import { createJourney, recordJourneyPhoto, recordJourneyFlight, journeyStage } 
 import { loadJourney, saveJourney } from '../games/journey-storage';
 import { PHOTO_POINTS, loadPhotoStamps, savePhotoStamps } from '../games/photography';
 import { campuses } from '../campus-data/campuses';
+import type { RenderQualityMode, RenderQualityState } from '../scene/AdaptiveRenderQuality';
+import { CAMPUS_STORIES } from '../campus-data/stories';
 import { emptyQuest, startQuest, visitQuest } from '../games/quest';
 import { loadProgress, saveProgress } from '../games/storage';
 import { createCampusScene } from '../scene/CampusScene';
 import type { IdealActivityInspection, CampusMode, CampusData, CampusId, CampusSceneHandle, Landmark, SceneEvent, PaperplaneSnapshot, PaperplaneInput, PhotoInspection } from '../shared/contracts';
 
+const QUALITY_KEY = 'campus-atlas:render-quality:v1';
+function initialQuality(): RenderQualityMode {
+  try { const value = localStorage.getItem(QUALITY_KEY); return value === 'clear' || value === 'smooth' ? value : 'auto'; }
+  catch { return 'auto'; }
+}
+const qualityMode = ref<RenderQualityMode>(initialQuality());
+const qualityState = ref<RenderQualityState | null>(null);
+function chooseQuality(event: Event) {
+  const value = (event.target as HTMLSelectElement).value;
+  if (value !== 'auto' && value !== 'clear' && value !== 'smooth') return;
+  qualityMode.value = value;
+  qualityState.value = scene?.setRenderQuality(value) ?? null;
+  try { localStorage.setItem(QUALITY_KEY, value); } catch { /* Optional independent preference, never journey data. */ }
+}
 type QuestState = ReturnType<typeof emptyQuest>;
 type Panel = 'quest' | 'directory' | 'detail';
 
@@ -72,6 +88,7 @@ const target = computed(() => quest.value.status === 'active'
 const selectedId = ref<string | null>(null);
 const selected = computed(() => campus.value.landmarks.find(item => item.id === selectedId.value) ?? null);
 const displayed = computed(() => panel.value === 'detail' ? selected.value : target.value);
+const displayedStory = computed(() => displayed.value ? CAMPUS_STORIES[displayed.value.id] : undefined);
 const displayedFeature = computed(() => campus.value.features.find(item => item.id === displayed.value?.featureId || displayed.value?.featureIds?.includes(item.id)) ?? null);
 const visitedNames = computed(() => quest.value.visited.map(id => campus.value.landmarks.find(item => item.id === id)?.name).filter(Boolean));
 
@@ -152,6 +169,21 @@ function syncMinimap() {
   mapOpen.value = canvas.dataset.view === 'map';
   const x = Number(canvas.dataset.playerX), z = Number(canvas.dataset.playerZ);
   if (canvas.dataset.playerX !== undefined && canvas.dataset.playerZ !== undefined && Number.isFinite(x) && Number.isFinite(z) && (playerPosition.value?.[0] !== x || playerPosition.value?.[1] !== z)) playerPosition.value = [x, z];
+}
+const currentObjective = computed(() => target.value ?? campus.value.landmarks.find(item => item.id === (campusId.value === 'huyu' ? 'hy-north-gate' : 'yx-mechanical')) ?? null);
+const objectiveDistance = computed(() => currentObjective.value && playerPosition.value ? Math.hypot(currentObjective.value.arrival[0] - playerPosition.value[0], currentObjective.value.arrival[1] - playerPosition.value[1]) : null);
+const objectiveNearby = computed(() => objectiveDistance.value !== null && objectiveDistance.value < 5);
+const objectiveDirection = computed(() => {
+  if (!currentObjective.value || !playerPosition.value) return '';
+  const dx = currentObjective.value.arrival[0] - playerPosition.value[0], dz = currentObjective.value.arrival[1] - playerPosition.value[1];
+  return Math.abs(dx) > Math.abs(dz) * 1.5 ? dx > 0 ? '向东' : '向西' : Math.abs(dz) > Math.abs(dx) * 1.5 ? dz > 0 ? '向南' : '向北' : `${dz > 0 ? '向南' : '向北'}${dx > 0 ? '东' : '西'}`;
+});
+const idealPromptVisible = computed(() => (campusId.value !== 'yingxi' || !notebookExpanded.value) && !!idealActivity.value && idealActivity.value.distance <= 8 && mode.value === 'exploring' && !panelOpen.value && !mapOpen.value && !notebookConfirming.value);
+const showCompactObjective = computed(() => mode.value === 'exploring' && !panelOpen.value && !mapOpen.value && !notebookConfirming.value && !idealPromptVisible.value && (campusId.value === 'huyu' || (!journey.value && showNotebook.value && !notebookExpanded.value)));
+function openObjectiveStory(trigger: EventTarget | null) {
+  if (!currentObjective.value || mode.value !== 'exploring') return;
+  selectedId.value = currentObjective.value.id;
+  showPanel('detail', trigger); // Read in place: do not fly the camera to a map view.
 }
 function toggleOverview() {
   if (!scene || sceneError.value || planeActive.value) return;
@@ -302,7 +334,14 @@ function showPanel(view: Panel, trigger?: EventTarget | null) {
 }
 function closePanel() {
   panelOpen.value = false;
-  nextTick(() => (returnFocus ?? questButton.value)?.focus());
+  nextTick(() => {
+    if (returnFocus?.isConnected) returnFocus.focus();
+    else {
+      const id = returnFocus?.dataset.testid;
+      const restored = id === 'objective-story' || id === 'objective-route' ? document.querySelector<HTMLButtonElement>(`[data-testid="${id}"]`) : null;
+      (restored ?? questButton.value)?.focus();
+    }
+  });
 }
 function switchCampus(id: CampusId) {
   if (mode.value !== 'exploring') return;
@@ -322,6 +361,7 @@ function switchCampus(id: CampusId) {
   notice.value = '已切换校区，两个章节的印记分别保留。返回后可继续前往下一站。';
   try {
     scene?.setCampus(campus.value);
+    qualityState.value = scene?.setRenderQuality(qualityMode.value) ?? null;
     restoreCampusMode();
     syncScene();
   } catch {
@@ -458,10 +498,11 @@ function onKeydown(event: KeyboardEvent) {
 }
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
-  photoTimer = window.setInterval(() => { updatePhotoStatus(); syncMinimap(); updateIdealActivity(); planeNearby.value = !!scene?.canBeginPaperplane(); }, 250);
+  photoTimer = window.setInterval(() => { updatePhotoStatus(); syncMinimap(); updateIdealActivity(); qualityState.value = scene?.getRenderQuality() ?? null; planeNearby.value = !!scene?.canBeginPaperplane(); }, 250);
   if (!sceneElement.value) return;
   try {
     scene = createCampusScene(sceneElement.value, campus.value, onSceneEvent);
+    qualityState.value = scene?.setRenderQuality(qualityMode.value) ?? null;
     restoreCampusMode();
     if (quest.value.status === 'active') {
       selectedId.value = target.value?.id ?? null;
@@ -488,10 +529,12 @@ onBeforeUnmount(() => {
         <button v-for="item in campusList" :key="item.id" type="button" :data-testid="`campus-${item.id}`" :disabled="planeActive" :aria-pressed="campusId === item.id" @click="switchCampus(item.id)">{{ item.name }}</button>
         <button type="button" data-testid="campus-mode-toggle" :aria-pressed="campusMode === 'ideal'" @click="toggleCampusMode">{{ campusMode === 'ideal' ? '理想校园 · 原创' : '基础校园' }}</button>
       </nav>
-      <div class="header-progress" :aria-label="`地标探索已记录 ${quest.visited.length} 站，共 ${orderedLandmarks.length} 站`">
-        <span>地标探索</span><span class="header-count">{{ String(quest.visited.length).padStart(2, '0') }} <em>/</em> {{ String(orderedLandmarks.length).padStart(2, '0') }}</span>
-        <span class="stamp-dots" aria-hidden="true"><b v-for="item in orderedLandmarks" :key="item.id" :class="{ filled: quest.visited.includes(item.id) }"></b></span>
-      </div>
+      <label class="quality-control">画质
+        <select data-testid="render-quality-select" :value="qualityMode" :disabled="qualityState?.reference || !!sceneError" @change="chooseQuality">
+          <option value="auto">自动均衡</option><option value="clear">清晰优先</option><option value="smooth">流畅优先</option>
+        </select>
+        <small data-testid="render-quality-status">{{ qualityState?.reference ? '固定参考画质' : qualityState ? `渲染倍率 ${qualityState.renderRatio.toFixed(2)}` : '准备场景' }}</small>
+      </label>
     </header>
 
     <main class="scene-area" aria-label="校园漫游场景">
@@ -499,7 +542,7 @@ onBeforeUnmount(() => {
       <div v-if="campusModeFeedback" class="campus-mode-feedback" data-testid="campus-mode-feedback" role="status">
         <span>{{ campusModeFeedback }}</span><button type="button" aria-label="关闭模式提示" @click="campusModeFeedback = ''">×</button>
       </div>
-      <section v-if="idealActivity && mode === 'exploring' && !panelOpen && !notebookConfirming" class="ideal-activity-card" :class="{ 'below-mode-feedback': !!campusModeFeedback }" data-testid="ideal-activity-card" aria-label="原创公共空间">
+      <section v-if="idealActivity && idealPromptVisible" class="ideal-activity-card" :class="{ 'below-mode-feedback': !!campusModeFeedback }" data-testid="ideal-activity-card" aria-label="原创公共空间">
         <small>{{ campusId === 'huyu' ? '梅影书庭 · 开放阅读台' : '清泽柱廊 · 照片手记台' }}</small>
         <button v-if="idealActivity.available" type="button" data-testid="ideal-activity-open" @click="openIdealActivity">{{ idealActivity.label }} <span aria-hidden="true">↗</span></button>
         <p v-else>{{ idealActivity.distance > 2.4 ? `${idealActivity.direction} · 台面约 ${Math.ceil(idealActivity.distance)} 米` : idealActivity.reason }}</p>
@@ -507,15 +550,20 @@ onBeforeUnmount(() => {
       </section>
       <div class="scene-shade" aria-hidden="true"></div>
       <CampusMinimap :campus="campus" :position="playerPosition" :map-open="mapOpen" :disabled="!!sceneError || planeActive" @toggle="toggleOverview" />
-      <div class="chapter-title" :class="{ 'photo-chapter': campusId === 'yingxi' }">
-        <span class="eyebrow">CAMPUS CHAPTER <span class="eyebrow-line"></span> {{ campus.id === 'huyu' ? '01' : '02' }}</span>
-        <h1>沿着校园，<br>慢慢走</h1>
-        <p>{{ campus.name }} <span> / </span> {{ campus.englishName }}</p>
-      </div>
+      <section v-if="showCompactObjective && currentObjective" class="current-objective" data-testid="current-objective" :data-target-id="currentObjective.id" :data-distance="objectiveDistance?.toFixed(2)" :data-arrived="String(objectiveNearby)">
+        <small>{{ campus.name }} · 下一处驻足</small><span v-if="campusId === 'huyu' && quest.status !== 'active'">从北门内侧，沿铺装认识校园</span>
+        <strong>{{ currentObjective.name }}</strong>
+        <span>{{ objectiveNearby ? '已到附近 · 可以看看这里的故事' : `${objectiveDirection} · 约 ${Math.round(objectiveDistance ?? 0)} 米直线距离，沿路绕行` }}</span>
+        <template v-if="campusId === 'yingxi'">
+          <div data-testid="journey-panel" class="compact-actions"><button type="button" @click="startNotebook">开始手记</button><button type="button" @click="freeRoam">先去漫游</button></div>
+          <details><summary @keydown.space.stop>这一页的故事与玩法</summary><p>{{ CAMPUS_STORIES['yx-mechanical']!.text }}</p><p>机械馆、清泽园取景，再沿台阶登高、下台放飞；Hks 是可选支线。开始前不会创建新手记。</p><button type="button" @click="openNotebook">展开手记详情</button></details>
+        </template>
+        <template v-else><button type="button" data-testid="objective-story" @click="openObjectiveStory($event.currentTarget)">看看这里的故事</button><button type="button" data-testid="objective-route" @click="showPanel('quest', $event.currentTarget)">展开漫游路线</button></template>
+      </section>
 
-      <PhotoJournal v-if="campusId === 'yingxi' && !hksOpen && !planeActive && (!showNotebook || photoCompleteOpen)" :point="photoPoint" :stamps="journey?.photos ?? []" :photos="photoImages" :status="photoStatus" :disabled="!!sceneError" :view-available="photoViewAvailable" :model-status="photoModelStatus" :panel-open="panelOpen" :feedback="photoFeedback" :complete-open="photoCompleteOpen" @record="recordPhoto" @close="closePhotoComplete()" @open="openPhotoComplete" @replay="replayPhotos" @select="selectPhotoPoint" />
+      <PhotoJournal v-if="campusId === 'yingxi' && !hksOpen && !planeActive && (!idealPromptVisible || photoCompleteOpen) && (!showNotebook || photoCompleteOpen)" :point="photoPoint" :stamps="journey?.photos ?? []" :photos="photoImages" :status="photoStatus" :disabled="!!sceneError" :view-available="photoViewAvailable" :model-status="photoModelStatus" :panel-open="panelOpen" :feedback="photoFeedback" :complete-open="photoCompleteOpen" @record="recordPhoto" @close="closePhotoComplete()" @open="openPhotoComplete" @replay="replayPhotos" @select="selectPhotoPoint" />
 
-      <JourneyPanel v-if="campusId === 'yingxi' && showNotebook && !planeActive && !photoCompleteOpen && !hksOpen && !panelOpen" :state="journey" :saved="journeySaved" :campus-id="campusId" @start="startNotebook" @continue="continueNotebook" @restart="restartNotebook" @free-roam="freeRoam" @flight="beginFlight" @confirming="confirmNotebook" />
+      <JourneyPanel v-if="campusId === 'yingxi' && showNotebook && (journey || notebookExpanded) && !idealPromptVisible && !planeActive && !photoCompleteOpen && !hksOpen && !panelOpen" :state="journey" :saved="journeySaved" :campus-id="campusId" @start="startNotebook" @continue="continueNotebook" @restart="restartNotebook" @free-roam="freeRoam" @flight="beginFlight" @confirming="confirmNotebook" />
       <button v-if="campusId === 'yingxi' && !planeActive && mode === 'exploring' && planeNearby && !panelOpen" class="plane-station-button" data-testid="begin-paperplane" type="button" @click="beginFlight">纸飞机站 · 准备起飞</button>
       <PaperplanePanel v-if="planeSnapshot" :snapshot="planeSnapshot" @launch="launchFlight" @retry="scene?.retryPaperplane()" @exit="endFlight" @resume="resumeFlight" @input="planeInput" />
       <div v-if="sceneError" class="error-banner" data-testid="scene-error" role="status">
@@ -528,7 +576,7 @@ onBeforeUnmount(() => {
         <button type="button" aria-label="聚焦当前站点" title="聚焦当前站点" :disabled="!!sceneError || !(target || selected)" @click="(target || selected) && scene?.focusLandmark((target || selected)!.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
         <button type="button" data-testid="reset-view" aria-label="返回人物视角" title="返回人物视角" :disabled="!!sceneError" @click="scene?.resetView(); focusScene()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2 6M4 4v7h7"/></svg></button>
       </div>
-      <div v-if="travelling && target" class="direction-hint">前往 {{ target.name }} <span>·</span> 金线仅指方向，遇建筑请绕行</div>
+      <div v-if="travelling && target && !showCompactObjective && campusId !== 'yingxi' && !panelOpen" class="direction-hint">前往 {{ target.name }} <span>·</span> 金线仅指方向，遇建筑请绕行</div>
       <div v-if="!planeActive" class="panel-launchers">
         <button v-if="campusId === 'yingxi' && journey" type="button" data-testid="open-photo-album" @click="openPhotoComplete">照片集</button>
         <button v-if="campusId === 'yingxi'" type="button" data-testid="open-notebook" @click="openNotebook">晴日手记</button>
@@ -572,11 +620,18 @@ onBeforeUnmount(() => {
           <template v-else-if="displayed">
             <div class="detail-heading"><span class="section-number">{{ panel === 'quest' ? `STOP ${String(quest.visited.length + 1).padStart(2, '0')} / ${String(orderedLandmarks.length).padStart(2, '0')}` : 'CAMPUS PLACE' }}</span><span v-if="quest.visited.includes(displayed.id)" class="recorded">已记录 ✳</span></div>
             <h2>{{ displayed.name }}</h2><p class="subtitle">{{ displayed.subtitle }}</p>
+            <template v-if="displayedStory">
+              <p class="facts" data-testid="campus-story">{{ displayedStory.text }}</p>
+              <p class="story-invitation">{{ displayedStory.invitation }}</p>
+              <a :href="displayedStory.source" target="_blank" rel="noopener noreferrer">官方校园故事 · 报道 {{ displayedStory.date }}</a>
+            </template>
+            <details class="model-evidence" :open="!displayedStory"><summary @keydown.space.stop>模型与地点依据</summary>
             <p class="facts">{{ displayed.facts }}</p>
             <div v-if="displayedFeature" class="metric-note">轮廓：米制坐标 · 高 {{ displayedFeature.height }} m（{{ heightLabel(displayedFeature.heightStatus) }}）<template v-if="displayedFeature.levels !== null"> · {{ displayedFeature.levels }} 层</template></div>
             <div class="source-note">地点来源：<a v-if="safeUrl(displayed.source)" :href="safeUrl(displayed.source)!" target="_blank" rel="noopener noreferrer">{{ displayed.source }}</a><span v-else>{{ displayed.source }}</span><template v-if="displayedFeature"><br>轮廓来源：<a v-if="safeUrl(displayedFeature.source)" :href="safeUrl(displayedFeature.source)!" target="_blank" rel="noopener noreferrer">{{ displayedFeature.source }}</a><span v-else>{{ displayedFeature.source }}</span></template></div>
             <p v-if="displayedFeature?.heightSource" class="facts">楼高依据：{{ displayedFeature.heightSource.dataset }}<template v-if="displayedFeature.heightSource.year"> · {{ displayedFeature.heightSource.year }}</template><template v-if="displayedFeature.heightSource.matchIoU !== undefined"> · 轮廓重叠 {{ Math.round(displayedFeature.heightSource.matchIoU * 100) }}%</template>。<a v-if="safeUrl(displayedFeature.heightSource.source)" :href="safeUrl(displayedFeature.heightSource.source)!" target="_blank" rel="noopener noreferrer">查看高度来源</a></p>
             <p v-if="safeUrl(displayed.visualSource)" class="facts"><a :href="safeUrl(displayed.visualSource)!" target="_blank" rel="noopener noreferrer">建筑外观参考来源</a></p>
+            </details>
             <template v-if="panel === 'quest' && target?.id === displayed.id">
               <div class="clue"><span>观察线索</span><p>{{ displayed.clue }}</p></div>
               <div data-testid="arrival-status" class="arrival-status" aria-live="polite">{{ arrivedId === displayed.id ? (sceneError ? '无障碍列表模式 · 已打开观察题' : '已到达 · 可以开始观察') : travelling ? '金线仅指方向，遇建筑请绕行' : '尚未到达本站' }}</div>
@@ -604,7 +659,7 @@ onBeforeUnmount(() => {
       </aside>
 
       <p v-if="modelNotice" class="model-note" role="status" data-testid="model-notice">{{ modelNotice }}</p>
-      <div class="attribution">{{ campus.attribution }} <span>·</span> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a> <span>·</span> 米制轮廓 · 楼高含估算 <span>·</span> <a href="./data/sources/README.md" target="_blank" rel="noopener noreferrer">数据来源与许可</a></div>
+      <div class="attribution">{{ campus.attribution }} <span>·</span> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a> <span>·</span> 布局参考 · 楼高估算 · 景观为设计补全 <span>·</span> <a href="./data/sources/README.md" target="_blank" rel="noopener noreferrer">数据来源与许可</a></div>
     </main>
 
     <footer class="journey-bar" data-testid="quest-status">
@@ -627,7 +682,10 @@ onBeforeUnmount(() => {
       <p>{{ campus.description }}</p>
       <p class="reading-note">书庭是基于校园布局的原创设计，不是现实建筑复原。以下介绍沿用地点资料；阅读不会移动人物或改变旅程进度。</p>
       <article v-for="item in campus.landmarks" :key="item.id">
-        <h3>{{ item.name }}</h3><p>{{ item.facts }}</p>
+        <h3>{{ item.name }}</h3><p>{{ CAMPUS_STORIES[item.id]?.text ?? item.facts }}</p>
+        <p v-if="CAMPUS_STORIES[item.id]">{{ CAMPUS_STORIES[item.id]!.invitation }}</p>
+        <a v-if="CAMPUS_STORIES[item.id]" :href="CAMPUS_STORIES[item.id]!.source" target="_blank" rel="noopener noreferrer">官方故事 · 报道 {{ CAMPUS_STORIES[item.id]!.date }}</a>
+        <details v-if="CAMPUS_STORIES[item.id]"><summary @keydown.space.stop>模型与地点依据</summary><p>{{ item.facts }}</p></details>
         <a v-if="safeUrl(item.source)" :href="safeUrl(item.source)!" target="_blank" rel="noopener noreferrer">查看资料来源 ↗</a>
         <span v-else>{{ item.source }}</span>
       </article>
@@ -638,6 +696,20 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.current-objective { position:absolute; left:20px; top:18px; z-index:8; width:260px; box-sizing:border-box; display:flex; flex-direction:column; gap:5px; padding:12px 14px; border:1px solid #cbd5c4; border-radius:12px; background:#faf8efed; color:#294534; font-size:12px; }
+.current-objective strong { font-size:17px; }.current-objective small { color:#637666; }
+.current-objective button { min-height:36px; padding:5px 9px; background:#fffdf4; color:#294534; border:1px solid #adbdac; border-radius:6px; cursor:pointer; }
+.current-objective details { line-height:1.5; }.current-objective summary { cursor:pointer; }.compact-actions { display:flex; gap:8px; }
+.current-objective :focus-visible,.quality-control select:focus-visible { outline:3px solid #bc7547; outline-offset:2px; }
+@media(max-height:550px) { .current-objective { top:10px;left:12px;width:235px;padding:8px 10px;gap:3px;max-height:calc(100% - 140px);overflow:auto; }.current-objective strong { font-size:15px; }.current-objective details p { margin:5px 0; } }
+
+.quality-control { display:grid; grid-template-columns:auto auto; align-items:center; gap:2px 6px; font-size:12px; color:#344a3e; }
+.quality-control select { min-height:36px; max-width:105px; border:1px solid #b7c5b9; border-radius:6px; background:#fffdf5; color:inherit; }
+.quality-control small { grid-column:1 / -1; font-size:10px; text-align:right; }
+.model-evidence { margin:12px 0; font-size:12px; }.model-evidence summary { cursor:pointer; }
+.story-invitation { color:#405d4d; line-height:1.6; }
+@media(max-width:900px) { .quality-control { gap:0; font-size:0; }.quality-control small { display:none; }.quality-control select { max-width:85px; font-size:11px; } }
+
 .ideal-activity-card { position:absolute; right:18px; top:18px; z-index:8; width:210px; padding:12px 14px; color:#294737; background:#f8f5e9ed; border-left:3px solid #9c7549; box-shadow:0 4px 18px #243a351a; }
 .ideal-activity-card.below-mode-feedback { top:104px; }
 .ideal-activity-card small { display:block; font-size:11px; line-height:1.6; }

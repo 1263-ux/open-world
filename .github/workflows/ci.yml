@@ -66,6 +66,9 @@ jobs:
       - name: Current-campus minimap desktop and landscape touch
         if: always()
         run: npm run test:e2e -- tests/e2e/minimap.spec.ts --output=test-results/minimap
+      - name: Natural automatic-quality campus arrival journeys
+        if: ${{ !cancelled() }}
+        run: npm run test:e2e -- tests/e2e/campus-arrival.spec.ts --output=test-results/campus-arrival
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -123,7 +126,7 @@ jobs:
       - uses: actions/checkout@v4
         if: ${{ !cancelled() }}
         with:
-          ref: e7c2d939b44dc7323f251d832ab6ce2ba5ac1a09
+          ref: c17b46220743fe0059bf5b3bfedacebe37a1212a
           path: reference-baseline
           persist-credentials: false
       - name: Fixed-quality old/new visual reference on separate static builds
@@ -131,25 +134,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git -C reference-baseline rev-parse HEAD)" = e7c2d939b44dc7323f251d832ab6ce2ba5ac1a09
+          test "$(git -C reference-baseline rev-parse HEAD)" = c17b46220743fe0059bf5b3bfedacebe37a1212a
           cmp package-lock.json reference-baseline/package-lock.json
           cmp games/hks/package-lock.json reference-baseline/games/hks/package-lock.json
           node --input-type=module <<'NODE'
           import fs from 'node:fs'; import crypto from 'node:crypto';
           const m=JSON.parse(fs.readFileSync('tests/e2e/reference-baseline-manifest.json','utf8'));
           const hash=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
-          if(m.baselineCommit!=='e7c2d939b44dc7323f251d832ab6ce2ba5ac1a09'||m.path!=='src/scene/CampusScene.ts'||hash('reference-baseline/'+m.path)!==m.originalSha256||hash('tests/e2e/reference-baseline.patch')!==m.patchSha256)throw Error('Baseline input identity mismatch');
-          NODE
-          git -C reference-baseline apply "$GITHUB_WORKSPACE/tests/e2e/reference-baseline.patch"
-          test "$(git -C reference-baseline diff --name-only)" = src/scene/CampusScene.ts
-          git -C reference-baseline apply --reverse --check "$GITHUB_WORKSPACE/tests/e2e/reference-baseline.patch"
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs'; import crypto from 'node:crypto';
-          const m=JSON.parse(fs.readFileSync('tests/e2e/reference-baseline-manifest.json','utf8'));
-          const actual=crypto.createHash('sha256').update(fs.readFileSync('reference-baseline/'+m.path)).digest('hex');
-          if(actual!==m.patchedSha256)throw Error('Patched baseline identity mismatch');
+          if(m.baselineCommit!=='c17b46220743fe0059bf5b3bfedacebe37a1212a'||m.requiresPatch!==false)throw Error('Baseline input contract mismatch');
+          for(const entry of m.sourceFiles)if(hash('reference-baseline/'+entry.path)!==entry.sha256)throw Error('Baseline source identity mismatch: '+entry.path);
           console.log('[REFERENCE_INPUT]',JSON.stringify({...m,candidateCommit:process.env.GITHUB_SHA}));
           NODE
+          test -z "$(git -C reference-baseline status --porcelain)"
           ln -s "$GITHUB_WORKSPACE/node_modules" reference-baseline/node_modules
           ln -s "$GITHUB_WORKSPACE/games/hks/node_modules" reference-baseline/games/hks/node_modules
           npm --prefix reference-baseline run build

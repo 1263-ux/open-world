@@ -1,0 +1,274 @@
+{
+  "source": "https://kaylousberg.itch.io/kaykit-forest",
+  "official": "https://kaylousberg.com/game-assets/forest-nature-pack",
+  "pack": "KayKit Forest Nature Pack 1.0 FREE",
+  "retrieved": "2026-11-02",
+  "archiveBytes": 6435630,
+  "archiveSHA256": "2ee83e63bb7695f2d884ec27ddf6fce020789a452e7d5c5b0bbdfc4f6ea1fc8c",
+  "license": "CC0-1.0; actual pack License.txt preserved; attribution appreciated, not mandatory",
+  "atlas": {
+    "filename": "forest_texture.png",
+    "width": 1024,
+    "height": 1024
+  },
+  "models": [
+    {
+      "name": "Tree_1_B_Color1",
+      "triangles": 636,
+      "vertices": 475,
+      "min": [
+        -1.7895218133926392,
+        -0.3410367965698242,
+        -1.7227431535720825
+      ],
+      "max": [
+        2.217304229736328,
+        4.588586807250977,
+        1.722744107246399
+      ],
+      "dimensions": [
+        4.006826,
+        4.929624,
+        3.445487
+      ],
+      "nodes": [
+        {
+          "mesh": 0,
+          "name": "Tree_1_B_Color1"
+        }
+      ],
+      "material": [
+        {
+          "name": "forest",
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 0
+            },
+            "metallicFactor": 0,
+            "roughnessFactor": 0.6000000238418579
+          }
+        }
+      ],
+      "primitives": 1
+    },
+    {
+      "name": "Tree_1_C_Color1",
+      "triangles": 1364,
+      "vertices": 1191,
+      "min": [
+        -2.745804786682129,
+        -0.3923197388648987,
+        -2.8766753673553467
+      ],
+      "max": [
+        3.945490837097168,
+        7.42193078994751,
+        2.8766770362854004
+      ],
+      "dimensions": [
+        6.691296,
+        7.814251,
+        5.753352
+      ],
+      "nodes": [
+        {
+          "mesh": 0,
+          "name": "Tree_1_C_Color1"
+        }
+      ],
+      "material": [
+        {
+          "name": "forest",
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 0
+            },
+            "metallicFactor": 0,
+            "roughnessFactor": 0.6000000238418579
+          }
+        }
+      ],
+      "primitives": 1
+    },
+    {
+      "name": "Tree_3_B_Color1",
+      "triangles": 988,
+      "vertices": 730,
+      "min": [
+        -2.091639995574951,
+        -0.3410367965698242,
+        -2.0647082328796387
+      ],
+      "max": [
+        2.0377767086029053,
+        4.011837005615234,
+        2.0647079944610596
+      ],
+      "dimensions": [
+        4.129417,
+        4.352874,
+        4.129416
+      ],
+      "nodes": [
+        {
+          "mesh": 0,
+          "name": "Tree_3_B_Color1"
+        }
+      ],
+      "material": [
+        {
+          "name": "forest",
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 0
+            },
+            "metallicFactor": 0,
+            "roughnessFactor": 0.6000000238418579
+          }
+        }
+      ],
+      "primitives": 1
+    },
+    {
+      "name": "Bush_3_C_Color1",
+      "triangles": 272,
+      "vertices": 185,
+      "min": [
+        -1.2450237274169922,
+        -0.026809334754943848,
+        -1.2450233697891235
+      ],
+      "max": [
+        1.2450236082077026,
+        1.1238441467285156,
+        1.2450237274169922
+      ],
+      "dimensions": [
+        2.490047,
+        1.150653,
+        2.490047
+      ],
+      "nodes": [
+        {
+          "mesh": 0,
+          "name": "Bush_3_C_Color1"
+        }
+      ],
+      "material": [
+        {
+          "name": "forest",
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 0
+            },
+            "metallicFactor": 0,
+            "roughnessFactor": 0.6000000238418579
+          }
+        }
+      ],
+      "primitives": 1
+    },
+    {
+      "name": "Grass_1_B_Color1",
+      "triangles": 132,
+      "vertices": 168,
+      "min": [
+        -0.26601558923721313,
+        -0.05628953129053116,
+        -0.3368377983570099
+      ],
+      "max": [
+        0.23905980587005615,
+        0.48120546340942383,
+        0.2188846468925476
+      ],
+      "dimensions": [
+        0.505075,
+        0.537495,
+        0.555722
+      ],
+      "nodes": [
+        {
+          "mesh": 0,
+          "name": "Grass_1_B_Color1"
+        }
+      ],
+      "material": [
+        {
+          "name": "forest",
+          "pbrMetallicRoughness": {
+            "baseColorTexture": {
+              "index": 0
+            },
+            "metallicFactor": 0,
+            "roughnessFactor": 0.6000000238418579
+          }
+        }
+      ],
+      "primitives": 1
+    }
+  ],
+  "files": {
+    "License.txt": {
+      "bytes": 1469,
+      "sha256": "987811fa42c7548ad487324531813b0210ee6d1ebd410089e881820630e3be54"
+    },
+    "forest_texture.png": {
+      "bytes": 48679,
+      "sha256": "406c01e0ac1d3368fc7b26ff5fb0d3335ba5e48bd19a703540ed92ee3971ea39"
+    },
+    "Grass_1_B_Color1.bin": {
+      "bytes": 6168,
+      "sha256": "217a485ca9f647a77e8cadb79972b2a4e04757547f05aab7b3dfb70ccf02eb1a"
+    },
+    "Grass_1_B_Color1.gltf": {
+      "bytes": 3064,
+      "sha256": "a11d2572b48595f1b05b560e347be83e08aa4189a19686ea211c9207d343be1d"
+    },
+    "Bush_3_C_Color1.bin": {
+      "bytes": 7552,
+      "sha256": "35bf6f924385486024949effbc8c08422cb84ef93873e05996944713d216e07a"
+    },
+    "Bush_3_C_Color1.gltf": {
+      "bytes": 3060,
+      "sha256": "213548d4e6dd7d9cb4e225136a545c477e91530f421fdabcc919a8d50922a09c"
+    },
+    "Tree_3_B_Color1.bin": {
+      "bytes": 29288,
+      "sha256": "c7b09e0fd302d2a96b02aaa7a5907f2a364a1e7287ce3cb3287406dae331987b"
+    },
+    "Tree_3_B_Color1.gltf": {
+      "bytes": 3060,
+      "sha256": "13f4ede4272f07308d06da5d6f6ab8ff894e3175ed964de8bc356fa1a1ccf319"
+    },
+    "Tree_1_C_Color1.bin": {
+      "bytes": 46296,
+      "sha256": "b5d131c607d96b71583e515a48e28c22b1c67831a0290c850aa32c8980480eed"
+    },
+    "Tree_1_C_Color1.gltf": {
+      "bytes": 3064,
+      "sha256": "ffb1e44646cd8dbe9902dd31bf94e64e1a3de5523d1b1f819acdbef09b42d45f"
+    },
+    "Tree_1_B_Color1.bin": {
+      "bytes": 19016,
+      "sha256": "5d4129bdc6f13a24e076f7fa870c6695dc20491f4820c54153fe9d1d90b40522"
+    },
+    "Tree_1_B_Color1.gltf": {
+      "bytes": 3058,
+      "sha256": "03f4773b06adf252ac8ca0a9bfdc77f315c1f4036b6151796f110b4897e586c5"
+    }
+  },
+  "derived": {
+    "filename": "campus-nature.glb",
+    "bytes": 161688,
+    "sha256": "cc9eaa1b348caea73731c2c5425ef9b4e856be6dcc52d5bfca8274b1bb4ef079",
+    "modelNames": {
+      "tree-round": "Tree_1_B_Color1",
+      "tree-tall": "Tree_1_C_Color1",
+      "tree-spreading": "Tree_3_B_Color1",
+      "shrub": "Bush_3_C_Color1",
+      "grass": "Grass_1_B_Color1"
+    },
+    "transforms": "None. Source position/normal/UV/index accessor and binary bytes preserved. Five original meshes packed into one GLB, one shared embedded original PNG and original material; only buffer/accessor offsets and names remapped. Original root y=0 is ground anchor; negative root vertices remain below it. Runtime collision copies cap original wood end rings, never alter visible triangles. Grass is soft/non-solid."
+  }
+}

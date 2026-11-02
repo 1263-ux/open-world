@@ -38,6 +38,10 @@ export class PlayerController {
   get cameraSettled(): boolean {
     return this.cameraAtTarget && this.cameraTargetYaw === this.yaw && this.cameraTargetPitch === this.pitch && this.cameraTargetPawn.equals(this.avatar.position);
   }
+  /** Live input state, not last-frame motion telemetry; async scenery must never consume a held gesture. */
+  get hasActiveInput(): boolean {
+    return this.keys.size > 0 || this.pointer.length > 0 || this.joystick.lengthSq() > 0 || this.runHeld || this.jumpQueued;
+  }
   private gait = 0;
   private paused = false;
   private enabled = true;
@@ -259,7 +263,8 @@ export class PlayerController {
     // This is a designed gameplay viewpoint, not a surveyed entrance or a
     // replacement for the source's original route start.
     this.setPosition(data.id === 'yingxi' ? [-20, 175.5] : data.start);
-    this.yaw = data.id === 'huyu' ? 0 : -Math.PI / 2;
+    // Designed first view faces the nearby north gate from the original safe ground.
+    this.yaw = data.id === 'huyu' ? Math.PI : -Math.PI / 2;
     this.pitch = -.15;
     this.avatar.rotation.y = this.yaw;
     this.lastAdvance = performance.now();

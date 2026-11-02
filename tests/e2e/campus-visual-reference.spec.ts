@@ -3,7 +3,7 @@ import { REFERENCE_SHOTS, REFERENCE_VIEWPORT, captureReference, type ReferencePo
 
 const baseline=process.env.BASELINE_REFERENCE_URL,candidate=process.env.CANDIDATE_REFERENCE_URL;
 test('four true before/after groups share reference quality and real-input camera poses',async({browser},info)=>{
-  test.skip(!baseline||!candidate,'Needs the explicitly patched e7c2 baseline and candidate static servers in the same authorized job; current base is NOT old art.');
+  test.skip(!baseline||!candidate,'Needs the unmodified v8 c17b baseline and candidate static servers in the same authorized job; current base is NOT old art.');
   test.setTimeout(720000);
   for(const url of [baseline!,candidate!])expect(['127.0.0.1','localhost']).toContain(new URL(url).hostname);
   const before=new Map<string,ReferencePose>();

@@ -18,6 +18,7 @@ async function ready(page: Page, reference = true) {
   await expect(canvas).toHaveAttribute('data-campus-ready', 'yingxi', { timeout: 30000 });
   await page.getByRole('button', { name: '开始手记', exact: true }).click();
   for (const name of ['player-model', 'hero-model', 'model-yx-garden-setting']) await expect(canvas).toHaveAttribute(`data-${name}`, 'ready', { timeout: 30000 });
+  await expect(canvas).toHaveAttribute('data-arrival-nature-status', 'ready', { timeout: 30000 });
   await expect(canvas).toHaveAttribute('data-render-quality', reference ? 'reference' : 'adaptive');
   if (reference) await expect(canvas).toHaveAttribute('data-render-ratio', '1.00');
   return canvas;
@@ -26,10 +27,13 @@ async function toggle(page: Page, canvas: Locator, expected: 'base' | 'ideal', t
   const before = await snapshot(canvas), saved = await progress(page);
   if (touch) await page.getByTestId('campus-mode-toggle').tap(); else await page.getByTestId('campus-mode-toggle').click();
   await expect(canvas).toHaveAttribute('data-campus-mode', expected);
-  await expect(page.getByTestId('ideal-activity-card')).toHaveCount(expected === 'base' ? 0 : 1);
+  const campus = await canvas.getAttribute('data-campus-ready') as CampusId;
+  const target = IDEAL_ACTIVITY_POINTS[campus].target;
+  const near = Math.hypot(before.xyz[0]! - target[0], before.xyz[2]! - target[2]) <= 8;
+  await expect(page.getByTestId('ideal-activity-card')).toHaveCount(expected === 'ideal' && near ? 1 : 0);
   await waitForSettledCamera(page, canvas, 45000);
   const after = await snapshot(canvas);
-  if (expected === 'ideal') {
+  if (expected === 'ideal' && near) {
     const card = await page.getByTestId('ideal-activity-card').boundingBox(), feedback = await page.getByTestId('campus-mode-feedback').boundingBox();
     expect(card).not.toBeNull(); expect(feedback).not.toBeNull();
     const overlapX = Math.max(0, Math.min(card!.x + card!.width, feedback!.x + feedback!.width) - Math.max(card!.x, feedback!.x));
@@ -71,6 +75,16 @@ async function evidence(page: Page, canvas: Locator, info: TestInfo, label: stri
 async function useActivity(page: Page, canvas: Locator, kind: 'reading' | 'photos', imageCount: number, touch = false) {
   // Publish the final input-event pose before modal pause stops RAF telemetry.
   await waitForSettledCamera(page, canvas, 45000);
+  await expect(page.getByTestId('ideal-activity-card')).toBeVisible();
+  if (touch) {
+    const card = await page.getByTestId('ideal-activity-card').boundingBox(); expect(card).not.toBeNull();
+    for (const selector of ['.virtual-stick', '.touch-run', '.touch-jump']) {
+      const control = await page.locator(selector).boundingBox(); expect(control).not.toBeNull();
+      const dx = Math.max(0, Math.min(card!.x + card!.width, control!.x + control!.width) - Math.max(card!.x, control!.x));
+      const dy = Math.max(0, Math.min(card!.y + card!.height, control!.y + control!.height) - Math.max(card!.y, control!.y));
+      expect(dx * dy, `Near-table prompt must not cover ${selector}`).toBe(0);
+    }
+  }
   const before = await activityPose(canvas), saved = await activityProgress(page);
   console.log('[IDEAL_ACTIVITY_STAGE]', JSON.stringify({ stage: 'open', kind, imageCount, touch, wall: Date.now(), pose: before }));
   const open = page.getByTestId('ideal-activity-open'); await expect(open).toBeVisible();
@@ -102,6 +116,14 @@ async function useActivity(page: Page, canvas: Locator, kind: 'reading' | 'photo
   await expect(dialog).toHaveCount(0); await expect(canvas).toHaveAttribute('data-paused', 'false'); await expect(canvas).toBeFocused();
   expect(await activityPose(canvas)).toEqual(before); expect(await activityProgress(page)).toEqual(saved);
   await expect(page.getByTestId('ideal-activity-open')).toBeVisible();
+  if (kind === 'photos') {
+    if (touch) await page.getByTestId('open-notebook').tap(); else await page.getByTestId('open-notebook').click();
+    await expect(page.getByTestId('journey-panel')).toBeVisible(); await expect(page.getByTestId('ideal-activity-card')).toHaveCount(0);
+    const roam = page.getByTestId('journey-panel').getByRole('button', { name: '继续漫游', exact: true });
+    if (touch) await roam.tap(); else await roam.click();
+    await expect(page.getByTestId('ideal-activity-open')).toBeVisible();
+    expect(await activityProgress(page)).toEqual(saved);
+  }
   console.log('[IDEAL_ACTIVITY_STAGE]', JSON.stringify({ stage: 'closed', kind, imageCount, touch, wall: Date.now(), pose: await activityPose(canvas) }));
 }
 
@@ -111,10 +133,11 @@ test('both campuses: same-pose mode swaps, stable resources, two real entrances 
     if (id === 'huyu') {
       await page.getByTestId('campus-huyu').click(); await expect(canvas).toHaveAttribute('data-campus-ready', 'huyu', { timeout: 30000 });
       await expect(canvas).toHaveAttribute('data-campus-mode', 'ideal');
-      await expect(page.getByTestId('ideal-activity-card')).toContainText('梅影书庭');
+      await expect(page.getByTestId('ideal-activity-card')).toHaveCount(0); // Far-away prompts no longer compete with the current objective.
       await expect(page.getByTestId('ideal-activity-open')).toHaveCount(0);
       await expect(canvas).toHaveAttribute('data-hero-model', 'ready', { timeout: 30000 });
       await expect(canvas).toHaveAttribute('data-huyu-tree-texture', 'ready', { timeout: 30000 });
+      await expect(canvas).toHaveAttribute('data-arrival-nature-status', 'ready', { timeout: 30000 });
       await toggle(page, canvas, 'base');
     }
     const point = IDEAL_FACILITIES[id].sharedGroundZones[0]!.center;
