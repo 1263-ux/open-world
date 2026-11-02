@@ -44,11 +44,17 @@ async function natureEvidence(page: Page, campus: Locator, id: 'huyu' | 'yingxi'
   await expect(campus).toHaveAttribute('data-campus-ready',id,{timeout:30000});
   await expect(campus).toHaveAttribute('data-arrival-nature-status','ready',{timeout:30000});
   await expect(campus).toHaveAttribute('data-arrival-nature-instances',id==='huyu'?'28':'34');
-  const evidence=await campus.evaluate(e=>{const d=(e as HTMLElement).dataset;return {campus:d.campusReady,status:d.arrivalNatureStatus,instances:Number(d.arrivalNatureInstances),generation:d.arrivalNatureGeneration,world:d.worldGeneration,stats:JSON.parse(d.arrivalNatureStats??'null'),ratio:d.renderRatio,shadow:d.shadowType,frame:d.frame,xyz:[d.playerX,d.playerY,d.playerZ]};});
+  const readNature=()=>campus.evaluate(e=>{const d=(e as HTMLElement).dataset;return {campus:d.campusReady,status:d.arrivalNatureStatus,instances:Number(d.arrivalNatureInstances),generation:d.arrivalNatureGeneration,world:d.worldGeneration,stats:JSON.parse(d.arrivalNatureStats??'null'),quality:d.renderQuality,ratio:d.renderRatio,shadow:d.shadowType,policyShadowSize:Number(d.shadowSize),shadowActual:[Number(d.shadowActualSize),Number(d.shadowActualHeight)],frame:d.frame,xyz:[d.playerX,d.playerY,d.playerZ]};});
+  const evidence=await readNature();
   expect(evidence.generation).toBe(evidence.world);expect(evidence.stats.instances).toBe(evidence.instances);
   if(id==='yingxi'){await expect(campus).toHaveAttribute('data-near-hall-tree-replacement','4/6');await expect(campus).toHaveAttribute('data-near-hall-tree-replacement-ids','0,1,2,4');}
   console.log('[OFFLINE_NATURE]',JSON.stringify(evidence));await info.attach(`offline-${id}-nature`,{body:JSON.stringify(evidence,null,2),contentType:'application/json'});
   await page.screenshot({path:info.outputPath(`offline-${id}-campus.png`)});
+  const after=await readNature();
+  const stableQuality=evidence.quality===after.quality&&evidence.ratio===after.ratio&&evidence.shadow===after.shadow&&evidence.policyShadowSize===after.policyShadowSize&&evidence.shadowActual.every((value,i)=>value===after.shadowActual[i]);
+  // Capture conditions only: no forced tier, retry, extra wait, or aesthetic pass.
+  const capture={before:evidence,after,stableQuality,lowTierCaptureConditions:stableQuality&&Number(after.ratio)<=.5&&after.shadow==='0'&&after.shadowActual.every(value=>value===1024)};
+  console.log('[OFFLINE_CAPTURE_CONDITIONS]',JSON.stringify(capture));await info.attach(`offline-${id}-capture-conditions`,{body:JSON.stringify(capture,null,2),contentType:'application/json'});
 }
 async function snapshot(c: Locator) { return JSON.parse(await c.getAttribute('data-hks-state') ?? '{}'); }
 async function clickGame(page: Page, c: Locator, x: number, y: number) {

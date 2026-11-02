@@ -14,6 +14,15 @@ export const ARRIVAL_ROUTES: Record<CampusId, readonly Point2[]> = {
   huyu: [[18.26, -177.03], [12.26, -195.03], [-35.74, -147.03], [-35.74, -105.03]],
   yingxi: [[-20, 175.5], [-48, 175.5], [-38.56, 172.76], [33.44, 172.76], [35, 188.4], [35, 192.8]],
 };
+/** Designed walk surface along the already-authored optional route. The scene's
+ * questOrder-only gamePaths do NOT render this link; this is explicit ground
+ * completion, never a new surveyed road, obstacle, or navigation destination. */
+export const HUYU_ARRIVAL_WALK_CONNECTION = {
+  points: [[12.26,-195.03],[-35.74,-147.03],[-35.74,-105.03]] as readonly Point2[],
+  width: 2.4,
+  elevation: .03,
+};
+
 // Paired broad shoulders establish continuity without inventing a mapped road.
 export const ARRIVAL_GROUND: Record<CampusId, readonly Rect[]> = {
   huyu: [[-10,-203,-8,-164],[36,-203,38,-164],[-10,-204,38,-202],[-10,-165,38,-163],
@@ -111,6 +120,26 @@ export function createCampusArrivalLandscape(data:CampusData, isClear?:(x:number
     for(const dz of [-1.7,1.7]) place({kind:'grass',position:[x+.5,0,z+dz],scale:1.1,rotationY:i});
   });
   tessellate();
+  if(data.id==='huyu') {
+    const {points,width,elevation:y}=HUYU_ARRIVAL_WALK_CONNECTION;
+    // A shared miter cross-section joins each adjacent pair exactly. Two separate
+    // segment rectangles would leave a triangular hole or coplanar corner overlap.
+    const normals=points.slice(1).map((b,i)=>{
+      const a=points[i],length=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      return new THREE.Vector2(-(b[1]-a[1])/length,(b[0]-a[0])/length);
+    });
+    const edges=points.map((p,i)=>{
+      const n=i===0?normals[0].clone():i===points.length-1?normals[i-1].clone():normals[i-1].clone().add(normals[i]).normalize();
+      const offset=n.multiplyScalar(width/2/(i>0&&i<points.length-1?n.dot(normals[i]):1));
+      return [[p[0]+offset.x,p[1]+offset.y],[p[0]-offset.x,p[1]-offset.y]] as [Point2,Point2];
+    });
+    for(let i=1;i<edges.length;i++) {
+      const [al,ar]=edges[i-1],[bl,br]=edges[i];
+      for(const p of [al,bl,ar,bl,br,ar]) positions[0].push(p[0],y,p[1]);
+    }
+    // Lower than all prior patches/hardscape: overlap hides the junction without
+    // z-fighting or introducing a physical step. Same existing material/draw batch.
+  }
   const materials=[0xbab7a5,0x7d8978,0x747958].map(color=>new THREE.MeshStandardMaterial({color,roughness:1}));
   positions.forEach((p,i)=>{if(!p.length)return;const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.computeVertexNormals();const mesh=new THREE.Mesh(g,materials[i]);mesh.receiveShadow=true;mesh.name=['arrival-mineral-shoulders','arrival-flush-edge','arrival-tree-beds'][i];visual.add(mesh);});
   const natureTriangles=placements.reduce((n,p)=>n+NATURE_MODEL_BOUNDS[p.kind].triangles,0);

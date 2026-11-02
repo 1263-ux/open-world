@@ -20,6 +20,18 @@ import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRe
 
 import type { IdealActivityInspection, CampusMode, CampusModeSwitchStatus, CampusModeSwitchResult, CampusData, CampusRoad, CampusSceneHandle, Landmark, PhotoInspection, PhotoPoint, Point2, SceneEvent, SceneState } from '../shared/contracts';
 
+/** Keep generated park trunks outside the full authored pedestrian corridor.
+ * 1.2m half-path + .34m player radius + .45m visible trunk + .11m margin.
+ * This only admits scenery; it never changes routes or collision dimensions. */
+export const PARK_TREE_ROUTE_CLEARANCE = 2.1;
+export function parkTreeClearsAuthoredRoutes(point: Point2, routes: CampusData['routes']): boolean {
+  return Object.values(routes).every(points => points.slice(1).every((b, index) => {
+    const a = points[index], dx = b[0] - a[0], dz = b[1] - a[1];
+    const t = THREE.MathUtils.clamp(((point[0] - a[0]) * dx + (point[1] - a[1]) * dz) / (dx * dx + dz * dz || 1), 0, 1);
+    return Math.hypot(point[0] - a[0] - t * dx, point[1] - a[1] - t * dz) >= PARK_TREE_ROUTE_CLEARANCE;
+  }));
+}
+
 const noopHandle = (): CampusSceneHandle => ({
   getRenderQuality: () => createAdaptiveRenderQuality().getState(),
   setRenderQuality: () => createAdaptiveRenderQuality().getState(),
@@ -889,6 +901,14 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         }
       }
     }
+    // Retained trees keep their original style index: removing a conflicting
+    // generated trunk must not rescale unrelated crowns elsewhere in the park.
+    const parkTreeCandidates = treePositions.slice();
+    const parkTreeStyleIndices = new Map(parkTreeCandidates.map((point, index) => [point, index]));
+    const rejectedParkTrees = treePositions.filter(point => !parkTreeClearsAuthoredRoutes(point, data.routes));
+    const admittedParkTrees = treePositions.filter(point => parkTreeClearsAuthoredRoutes(point, data.routes));
+    world.userData.parkTreeAdmission = { candidates: treePositions.length, retained: admittedParkTrees.length, rejected: rejectedParkTrees };
+    treePositions.splice(0, treePositions.length, ...admittedParkTrees);
     // Every decorative collider must clear every route segment, including
     // nearby crossing/return segments, not just the segment it was derived from.
     const clearsRoutes = (x: number, z: number, clearance: number): boolean => Object.values(data.routes).every(points =>
@@ -956,9 +976,10 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
           const crowns = new THREE.InstancedMesh(geometry, crownMaterial, group.length);
           group.forEach((i, local) => {
             const [x, z] = treePositions[i], variation = getFoliageVariation(x, z);
+            const styleIndex = parkTreeStyleIndices.get(treePositions[i])!;
             // Preserve each existing tree's scale and height; only its bounded silhouette and subtle tint vary.
-            dummy.position.set(x, 4.6 + (i % 3) * .22, z); dummy.rotation.set(0, variation.yaw, 0);
-            dummy.scale.set(2.1 + (i % 3) * .15, 2.4, 2.0 + (i % 2) * .25); dummy.updateMatrix(); crowns.setMatrixAt(local, dummy.matrix);
+            dummy.position.set(x, 4.6 + (styleIndex % 3) * .22, z); dummy.rotation.set(0, variation.yaw, 0);
+            dummy.scale.set(2.1 + (styleIndex % 3) * .15, 2.4, 2.0 + (styleIndex % 2) * .25); dummy.updateMatrix(); crowns.setMatrixAt(local, dummy.matrix);
             crowns.setColorAt(local, new THREE.Color().setScalar(variation.colorScale));
           });
           crowns.instanceMatrix.needsUpdate = true;
@@ -984,7 +1005,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       const z = (a[1] + b[1]) / 2 + dx / length * 3.4;
       const samples: Point2[] = [[x, z], [x + 2, z], [x - 2, z], [x, z + 2], [x, z - 2]];
       const gardenConflict = data.id === 'yingxi' && ((x >= QINGZE_DECORATION_BOUNDS.minX && x <= QINGZE_DECORATION_BOUNDS.maxX && z >= QINGZE_DECORATION_BOUNDS.minZ && z <= QINGZE_DECORATION_BOUNDS.maxZ) || (x >= -8 && x <= 8 && z >= 174 && z <= 190));
-      if (gardenConflict || !clearsRoutes(x, z, 2.8) || !samples.every(([sx, sz]) => inside(sx, sz, boundary) && !buildings.some(f => inside(sx, sz, f.polygon))) || benchSites.some(site => Math.hypot(site.x - x, site.z - z) < 18) || treePositions.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < 3)) continue;
+      if (gardenConflict || !clearsRoutes(x, z, 2.8) || !samples.every(([sx, sz]) => inside(sx, sz, boundary) && !buildings.some(f => inside(sx, sz, f.polygon))) || benchSites.some(site => Math.hypot(site.x - x, site.z - z) < 18) || parkTreeCandidates.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < 3)) continue;
       benchSites.push({ x, z, angle: Math.atan2(-dz, dx) });
     }
     if (benchSites.length) {
@@ -1086,7 +1107,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     collisionProps.updateMatrixWorld(true);
     const oldPropBounds: THREE.Box3[] = [];
     collisionProps.traverse(object => { if (object instanceof THREE.Mesh) oldPropBounds.push(new THREE.Box3().setFromObject(object)); });
-    const oldTrees: Point2[] = [...treePositions, ...(data.id === 'yingxi' ? NEAR_HALL_TREE_SITES : [[-5,-188],[-95,-14],[78,-57]] as Point2[])];
+    const oldTrees: Point2[] = [...parkTreeCandidates, ...(data.id === 'yingxi' ? NEAR_HALL_TREE_SITES : [[-5,-188],[-95,-14],[78,-57]] as Point2[])];
     arrival = createCampusArrivalLandscape(data, (x,z,radius) =>
       oldTrees.every(([tx,tz]) => Math.hypot(x-tx,z-tz) > radius+3.5) && oldPropBounds.every(box =>
         Math.hypot(Math.max(box.min.x-x,0,x-box.max.x),Math.max(box.min.z-z,0,z-box.max.z)) > radius+.3));

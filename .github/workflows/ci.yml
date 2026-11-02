@@ -38,7 +38,7 @@ jobs:
         run: npm run test:e2e -- tests/e2e/control-direction.spec.ts --output=test-results/control-direction
       - name: Base and ideal campus switching, shared-ground safety and persistence
         if: ${{ !cancelled() }}
-        run: npm run test:e2e -- tests/e2e/campus-mode.spec.ts --output=test-results/campus-mode
+        run: npm run test:e2e -- tests/e2e/campus-mode.spec.ts --grep-invert "actual joystick and touch mode swaps preserve pose and report natural adaptive quality$" --output=test-results/campus-mode-desktop
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -191,13 +191,26 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Real headed browser focus and missed-keyup recovery
         run: RUN_HEADED_FOCUS=1 xvfb-run -a npm run test:e2e -- tests/e2e/focus.spec.ts --headed --output=test-results/focus
+      - name: Natural adaptive touch mode, interaction and preserved state
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: touch-mode-playwright-report
+        run: npm run test:e2e -- tests/e2e/campus-mode.spec.ts --grep "actual joystick and touch mode swaps preserve pose and report natural adaptive quality$" --output=test-results/touch-mode
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: campus-touch-mode-browser-report
+          path: |
+            touch-mode-playwright-report/
+            test-results/touch-mode/
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: campus-focus-browser-report
           path: |
             playwright-report/
-            test-results/
+            test-results/focus/
           retention-days: 7
 
   quality:

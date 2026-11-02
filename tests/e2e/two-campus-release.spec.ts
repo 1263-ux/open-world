@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { position, walkTo } from './campus-walk';
+import { walkLandmark } from './landmark-walk';
 import { campuses } from '../../src/campus-data/campuses';
 
 async function waitForCampus(canvas: Locator, id: 'yingxi' | 'huyu') {
@@ -73,7 +74,7 @@ test.describe('two-campus release journeys', () => {
       const landmark = campuses.huyu.landmarks.find(item => item.id === id);
       if (!landmark) throw Error(`Missing landmark ${id}`);
       const before = await position(canvas);
-      await walkTo(page, canvas, campuses.huyu, landmark.arrival);
+      await walkLandmark(page, canvas, campuses.huyu, id);
       const after = await position(canvas);
       expect(Math.hypot(after[0] - landmark.arrival[0], after[2] - landmark.arrival[1])).toBeLessThan(4.5);
       observations.push({ id, before, after, target: landmark.arrival });
@@ -109,7 +110,7 @@ test.describe('two-campus release journeys', () => {
     for (const id of ['yx-mechanical', 'yx-garden', 'yx-library']) {
       const landmark = campuses.yingxi.landmarks.find(item => item.id === id);
       if (!landmark) throw Error(`Missing landmark ${id}`);
-      await walkTo(page, canvas, campuses.yingxi, landmark.arrival);
+      await walkLandmark(page, canvas, campuses.yingxi, id);
       const p = await position(canvas);
       expect(Math.hypot(p[0] - landmark.arrival[0], p[2] - landmark.arrival[1])).toBeLessThan(4.5);
       await aimAt(page, canvas, landmark.position);

@@ -41,14 +41,14 @@ describe('render-only quality policy', () => {
     feed(policy, 0, 5400, 200);
     expect(rendering(policy.getState())).toEqual([1.5, 'pcf', 1024]);
     feed(policy, 5400, 30000, 200);
-    expect(rendering(policy.getState())).toEqual([.5, 'basic', 512]);
+    expect(rendering(policy.getState())).toEqual([.5, 'basic', 1024]);
     expect(policy.getState().reason).toBe('load-reduction');
   });
 
   it('has bounded low-load response even when only two frames fit a window', () => {
     const policy = createAdaptiveRenderQuality({ nowMs: 0 });
     feed(policy, 0, 30000, 1000);
-    expect(rendering(policy.getState())).toEqual([.5, 'basic', 512]);
+    expect(rendering(policy.getState())).toEqual([.5, 'basic', 1024]);
   });
 
   for (const frameMs of [2500, 6000]) it(`bounds anomaly grace for sustained ${frameMs} ms foreground frames`, () => {
@@ -56,7 +56,7 @@ describe('render-only quality policy', () => {
     policy.observe(frameMs, frameMs);
     expect(policy.getState().adaptiveLevel).toBe(0); // isolated stall is forgiven
     let now = feed(policy, frameMs, 60000, frameMs);
-    expect(rendering(policy.getState())).toEqual([.5, 'basic', 512]);
+    expect(rendering(policy.getState())).toEqual([.5, 'basic', 1024]);
     now = feed(policy, now, 60000, 1000 / 30);
     expect(rendering(policy.getState())).toEqual([1, 'pcf', 2048]);
     policy.observe(frameMs, now + frameMs); // healthy windows re-arm one allowance
@@ -67,7 +67,7 @@ describe('render-only quality policy', () => {
   it('samples repeated wall gaps even when the reported frame duration was clamped', () => {
     const policy = createAdaptiveRenderQuality({ nowMs: 0 });
     for (let now = 6000; now <= 90000; now += 6000) policy.observe(1000, now);
-    expect(rendering(policy.getState())).toEqual([.5, 'basic', 512]);
+    expect(rendering(policy.getState())).toEqual([.5, 'basic', 1024]);
     policy.resetSampling(90000); // explicit lifecycle reset still grants fresh grace
     expect(policy.observe(6000, 96000).reason).toBe('sampling-grace');
     expect(policy.getState().renderRatio).toBe(.5);
@@ -198,7 +198,7 @@ describe('render-only quality policy', () => {
       expect(state.renderRatio).toBeGreaterThanOrEqual(.5);
       expect(state.renderRatio).toBeLessThanOrEqual(1.25);
       expect(['pcf', 'basic']).toContain(state.shadowType);
-      expect([512, 1024, 2048]).toContain(state.shadowMapSize);
+      expect([1024, 2048]).toContain(state.shadowMapSize);
     }
   });
 });

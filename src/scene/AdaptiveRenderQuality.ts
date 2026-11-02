@@ -54,7 +54,7 @@ function automaticProfiles(cap: number): Profile[] {
     { renderRatio: cap, shadowType: 'pcf', shadowMapSize: 1024 },
     { renderRatio: Math.min(cap, 1), shadowType: 'pcf', shadowMapSize: 1024 },
     { renderRatio: Math.min(cap, .75), shadowType: 'pcf', shadowMapSize: 1024 },
-    { renderRatio: .5, shadowType: 'basic', shadowMapSize: 512 },
+    { renderRatio: .5, shadowType: 'basic', shadowMapSize: 1024 },
   ];
   return profiles.filter((profile, index) => index === 0 || JSON.stringify(profile) !== JSON.stringify(profiles[index - 1]));
 }

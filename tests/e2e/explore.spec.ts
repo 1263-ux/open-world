@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Locator } from '@playwright/test';
 import { campuses } from '../../src/campus-data/campuses';
-import { position, walkTo } from './campus-walk';
+import { position } from './campus-walk';
+import { walkLandmark } from './landmark-walk';
 import { dragLook, waitForSettledCamera } from './complete-release-helpers';
 
 
@@ -20,7 +21,7 @@ async function selectHuyu(page: Page) {
 async function record(page: Page, canvas: Locator, campus: typeof campuses.huyu, index: number) {
   const landmark = campus.landmarks.find(item => item.id === campus.questOrder[index])!;
   await page.getByTestId('quest-travel').click();
-  await walkTo(page, canvas, campus, landmark.arrival);
+  await walkLandmark(page, canvas, campus, landmark.id);
   await expect(page.getByTestId('arrival-status')).toContainText('已到达', { timeout: 15000 });
   await page.getByTestId('answer-1').click(); await expect(page.getByTestId('quest-check-in')).toBeDisabled();
   await page.getByTestId('answer-0').click(); await page.getByTestId('quest-check-in').click();
@@ -100,7 +101,7 @@ test('desktop: player-directed walk, observations, chapter completion and replay
   await page.getByTestId('quest-travel').click();
   const before = await position(canvas); await page.waitForTimeout(1200); const after = await position(canvas);
   expect(Math.hypot(after[0]-before[0], after[2]-before[2]), 'A direction guide must not auto-walk the player').toBeLessThan(.25);
-  await walkTo(page, canvas, campuses.huyu, campuses.huyu.landmarks.find(item => item.id === campuses.huyu.questOrder[0])!.arrival);
+  await walkLandmark(page, canvas, campuses.huyu, campuses.huyu.questOrder[0]!);
   await expect(page.getByTestId('arrival-status')).toContainText('已到达', { timeout: 15000 });
   await page.getByTestId('answer-1').click(); await expect(page.getByTestId('quest-check-in')).toBeDisabled();
   await page.getByTestId('answer-0').click(); await page.getByTestId('quest-check-in').click();

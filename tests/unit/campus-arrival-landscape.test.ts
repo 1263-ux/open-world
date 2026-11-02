@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { campuses } from '../../src/campus-data/campuses';
-import { ARRIVAL_DESIGN_STATUS, ARRIVAL_ROUTES, arrivalSiteIsClear, createCampusArrivalLandscape } from '../../src/scene/CampusArrivalLandscape';
+import { ARRIVAL_DESIGN_STATUS, ARRIVAL_ROUTES, HUYU_ARRIVAL_WALK_CONNECTION, arrivalSiteIsClear, createCampusArrivalLandscape } from '../../src/scene/CampusArrivalLandscape';
 import { PlayerController } from '../../src/scene/PlayerController';
 import { StudentModel } from '../../src/scene/StudentModel';
 import { ElementDouble } from './controller-harness';
@@ -101,4 +101,39 @@ it('Huyu gate continuation uses existing Meihua route and clears source walls pl
   } finally {
     player.dispose();landscape.dispose();props.children.forEach(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose();});mat.dispose();vi.restoreAllMocks();vi.unstubAllGlobals();
   }
+});
+
+it('fills the optional gate-to-west-corner walk continuously with four shared-edge ground triangles',()=>{
+  const result=createCampusArrivalLandscape(campuses.huyu),config=HUYU_ARRIVAL_WALK_CONNECTION;
+  try {
+    expect(config.points).toEqual(campuses.huyu.routes['hy-north-gate>hy-meihua'].slice(0,3));
+    expect(config.width).toBe(2.4);expect(config.elevation).toBeLessThan(.035);
+    const mesh=result.visual.getObjectByName('arrival-mineral-shoulders') as THREE.Mesh;
+    const p=mesh.geometry.getAttribute('position'),triangles:THREE.Triangle[]=[];
+    for(let i=0;i<p.count;i+=3)if(Math.abs(p.getY(i)-config.elevation)<1e-6)triangles.push(new THREE.Triangle(...[0,1,2].map(j=>new THREE.Vector3().fromBufferAttribute(p,i+j)) as [THREE.Vector3,THREE.Vector3,THREE.Vector3]));
+    expect(triangles).toHaveLength(4);
+    const coords=(v:THREE.Vector3)=>v.toArray().map(n=>n.toFixed(5)).join(',');
+    // The first ribbon's terminal edge is exactly the next ribbon's start edge.
+    expect(coords(triangles[1].a)).toBe(coords(triangles[2].a));
+    expect(coords(triangles[1].b)).toBe(coords(triangles[2].c));
+    const normal=new THREE.Vector3();for(const t of triangles)expect(t.getNormal(normal).y).toBeGreaterThan(.99);
+    const ray=new THREE.Ray(),hit=new THREE.Vector3();
+    for(let i=1;i<config.points.length;i++){
+      const a=config.points[i-1],b=config.points[i],dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,dz);
+      for(let d=.01;d<length;d+=.25)for(const offset of [-1.15,0,1.15]){
+        const x=a[0]+dx*d/length-dz*offset/length,z=a[1]+dz*d/length+dx*offset/length;
+        ray.set(new THREE.Vector3(x,1,z),new THREE.Vector3(0,-1,0));
+        expect(triangles.some(t=>ray.intersectTriangle(t.a,t.b,t.c,false,hit)!==null),`uncovered walkway ${x},${z}`).toBe(true);
+        expect(arrivalSiteIsClear(campuses.huyu,x,z,.01,false),`walk surface touches source footprint ${x},${z}`).toBe(true);
+      }
+    }
+    // Analytic area: miter joins add no duplicate area or holes between segments.
+    const routeLength=config.points.slice(1).reduce((n,b,i)=>n+Math.hypot(b[0]-config.points[i][0],b[1]-config.points[i][1]),0);
+    expect(triangles.reduce((n,t)=>n+t.getArea(),0)).toBeCloseTo(routeLength*config.width,3);
+    expect(result.metrics.groundDrawBatches).toBe(3);
+    expect(result.metrics.groundTriangles+result.metrics.natureTriangles).toBeLessThan(20000);
+    const other=createCampusArrivalLandscape(campuses.yingxi);
+    expect(other.route).toEqual(ARRIVAL_ROUTES.yingxi);
+    expect(other.placements.some(p=>p.position[0]===7&&p.position[2]===179)).toBe(true);other.dispose();
+  } finally {result.dispose();}
 });

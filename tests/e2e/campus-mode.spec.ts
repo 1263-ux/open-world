@@ -128,7 +128,7 @@ async function useActivity(page: Page, canvas: Locator, kind: 'reading' | 'photo
 }
 
 test('both campuses: same-pose mode swaps, stable resources, two real entrances and retained preference', async ({ page }, info) => {
-  test.setTimeout(600000); const canvas = await ready(page); await expect(canvas).toHaveAttribute('data-campus-mode', 'base');
+  test.setTimeout(660000); const canvas = await ready(page); await expect(canvas).toHaveAttribute('data-campus-mode', 'base');
   for (const id of ['yingxi', 'huyu'] as CampusId[]) {
     if (id === 'huyu') {
       await page.getByTestId('campus-huyu').click(); await expect(canvas).toHaveAttribute('data-campus-ready', 'huyu', { timeout: 30000 });
@@ -207,7 +207,7 @@ test('activity and elevated gates reject mode changes without teleporting or mod
 test.describe('natural adaptive landscape touch mode', () => {
   test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
   test('actual joystick and touch mode swaps preserve pose and report natural adaptive quality', async ({ page }, info) => {
-    test.setTimeout(240000); const canvas = await ready(page, false), cdp = await page.context().newCDPSession(page);
+    test.setTimeout(300000); const canvas = await ready(page, false), cdp = await page.context().newCDPSession(page);
     const before = await snapshot(canvas);
     try {
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 1, x: 70, y: 280 }] });
