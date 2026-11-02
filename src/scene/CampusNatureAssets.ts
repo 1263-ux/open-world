@@ -22,6 +22,31 @@ export const CAMPUS_NATURE_URL = `${import.meta.env.BASE_URL}models/nature/campu
 export const NATURE_ATLAS_GPU_BYTES = 1024 * 1024 * 4 * 4 / 3;
 const kinds = Object.keys(NATURE_MODEL_BOUNDS) as NatureKind[];
 
+// Derived rendering only: original CC0 GLB/atlas bytes and authored contrast stay intact.
+// r186 map_fragment produces linear diffuseColor; harmonize before lighting, not
+// after tone mapping. Rec.709 desaturation preserves luma; tint is a subtle channel adjustment, not a global exposure cut.
+export const NATURE_ALBEDO_TONE = Object.freeze({
+  version: 1, desaturation: .32, tint: Object.freeze([.98, 1, .96] as const),
+});
+const natureToneCacheKey = `campus-nature-albedo-v${NATURE_ALBEDO_TONE.version}:${NATURE_ALBEDO_TONE.desaturation}:${NATURE_ALBEDO_TONE.tint.join(',')}`;
+function harmonizeNatureAlbedo(material: THREE.MeshStandardMaterial): void {
+  const tone = NATURE_ALBEDO_TONE;
+  material.onBeforeCompile = shader => {
+    const anchor = '#include <map_fragment>';
+    if (!shader.fragmentShader.includes(anchor)) throw new Error('Campus nature albedo requires the r186 map_fragment chunk');
+    shader.fragmentShader = shader.fragmentShader.replace(anchor, `${anchor}
+#ifdef USE_MAP
+  float campusNatureLuma = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(campusNatureLuma), ${tone.desaturation.toFixed(6)});
+  diffuseColor.rgb *= vec3(${tone.tint.map(n => n.toFixed(6)).join(', ')});
+#endif`);
+  };
+  // Shader cache identity includes every fixed rendering parameter, not callback text.
+  material.customProgramCacheKey = () => natureToneCacheKey;
+  material.needsUpdate = true;
+}
+
+
 function placementMatrix(p: NaturePlacement) {
   if (!NATURE_MODEL_BOUNDS[p.kind] || !Number.isFinite(p.scale) || p.scale <= 0 || p.scale > 4
     || p.position.length !== 3 || !p.position.every(Number.isFinite) || !Number.isFinite(p.rotationY ?? 0))
@@ -125,6 +150,7 @@ export function createCampusNatureAssets(
   } catch (error) { Object.values(solids).flat().forEach(g => g.dispose()); throw error; }
   if (material.map) { material.map.colorSpace = THREE.SRGBColorSpace; material.map.needsUpdate = true; }
   material.name = 'KayKit forest CC0 shared';
+  harmonizeNatureAlbedo(material);
   const collisionMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
   let active = 0, requested = false, disposed = false;
   const finish = () => {

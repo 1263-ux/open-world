@@ -44,6 +44,19 @@ for (const mode of ['desktop', 'landscape touch'] as const) {
             Math.max(0, Math.min(minimapBox.y + minimapBox.height, b.y + b.height) - Math.max(minimapBox.y, b.y));
           expect(overlap, 'Minimap must not obstruct primary controls').toBe(0);
         }
+        const objective = page.getByTestId('current-objective');
+        await expect(objective).toBeVisible();
+        const objectiveBox = await objective.boundingBox(); if (!objectiveBox) throw Error('Missing current-objective bounds');
+        const objectiveOverlap = Math.max(0, Math.min(minimapBox.x + minimapBox.width, objectiveBox.x + objectiveBox.width) - Math.max(minimapBox.x, objectiveBox.x)) *
+          Math.max(0, Math.min(minimapBox.y + minimapBox.height, objectiveBox.y + objectiveBox.height) - Math.max(minimapBox.y, objectiveBox.y));
+        expect(objectiveOverlap, 'Current objective must leave the actual minimap visible and clickable').toBe(0);
+        if (mode === 'landscape touch') {
+          const stick = await page.locator('.virtual-stick').boundingBox(); if (!stick) throw Error('Missing visible stick bounds');
+          const stickOverlap = Math.max(0, Math.min(stick.x + stick.width, objectiveBox.x + objectiveBox.width) - Math.max(stick.x, objectiveBox.x)) *
+            Math.max(0, Math.min(stick.y + stick.height, objectiveBox.y + objectiveBox.height) - Math.max(stick.y, objectiveBox.y));
+          expect(stickOverlap, 'Current objective must also leave the visible joystick unobstructed').toBe(0);
+        }
+
         const before = await position(canvas);
         if (mode === 'desktop') {
           await canvas.focus(); await page.keyboard.down('w');

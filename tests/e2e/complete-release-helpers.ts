@@ -13,6 +13,28 @@ export async function ready(page:Page){
   await expect(canvas).toHaveAttribute('data-model-yx-garden-setting','ready',{timeout:30000});
   return canvas;
 }
+/** The existing north corridor stays clear of actual new planting. The generic
+ * source-building A* does not know the tree at (7,179), so do not cut diagonally
+ * through its green bed on the hall-to-garden connection. Real input only. */
+export function gardenApproachRoute(from: Point2): Point2[] {
+  const target=PHOTO_POINTS[1]!.position;
+  return [[from[0],172.76],[33,172.76],[33,target[1]],[...target]];
+}
+export function gardenWalkingSegments(start:Point2):Point2[] {
+  const points:Point2[]=[];let from=start;
+  for(const point of gardenApproachRoute(start)){
+    // Same exact straight segment and corners, not a shortcut. Keep each
+    // authored target within5m of the preceding one under its180-pulse bound.
+    const pieces=Math.max(1,Math.ceil(Math.hypot(point[0]-from[0],point[1]-from[1])/5));
+    for(let i=1;i<=pieces;i++)points.push([from[0]+(point[0]-from[0])*i/pieces,from[1]+(point[1]-from[1])*i/pieces]);
+    from=point;
+  }
+  return points;
+}
+export async function walkGardenApproach(page:Page,canvas:Locator) {
+  const [x,,z]=await position(canvas);
+  for(const point of gardenWalkingSegments([x,z]))await walkAuthoredSegment(page,canvas,point);
+}
 export async function ascend(page:Page,canvas:Locator){
   const a=VIEWING_PLATFORM.approach;await walkTo(page,canvas,campuses.yingxi,[a[0],a[2]],.9);
   await walkTo(page,canvas,campuses.yingxi,VIEWING_PLATFORM.photo.position,.9);
@@ -88,15 +110,15 @@ export async function rotateTo(page: Page, canvas: Locator, targetYaw: number, t
 /** Bounded real-input search. Yaw points toward each published subject, while
  * each pitch is tried by a mouse/touch gesture and judged by live read-only
  * framing/occlusion feedback after the camera has rendered and settled. */
-export async function waitForSettledCamera(page:Page,canvas:Locator,settleTimeout=20000){
+export async function waitForSettledCamera(page:Page,canvas:Locator,settleTimeout=20000,nextFrameTimeout=10000){
   await expect(canvas).toHaveAttribute('data-camera-settled','true',{timeout:settleTimeout});
   const frame=Number(await canvas.getAttribute('data-frame'));
-  await expect.poll(async()=>Number(await canvas.getAttribute('data-frame')),{timeout:10000,intervals:[100]}).toBeGreaterThan(frame);
+  await expect.poll(async()=>Number(await canvas.getAttribute('data-frame')),{timeout:nextFrameTimeout,intervals:[100]}).toBeGreaterThan(frame);
   // Allow the existing 250ms guide refresh to observe the exact settled pose.
   await page.waitForTimeout(300);
   await expect(canvas).toHaveAttribute('data-camera-settled','true');
 }
-export async function aimAtSubject(page: Page, canvas: Locator, pointIndex: number, touch=false, info?: TestInfo, settleTimeout=20000) {
+export async function aimAtSubject(page: Page, canvas: Locator, pointIndex: number, touch=false, info?: TestInfo, settleTimeout=20000, firstNextFrameTimeout=10000) {
   const guide=page.getByTestId('photo-guide'),target=PHOTO_POINTS[pointIndex]!.target;
   await expect(guide).toHaveAttribute('data-photo-in-range','true',{timeout:15000});
   const attempts:Array<{pitchTarget:number;yaw:number;pitch:number;framed:string|null;obstructed:string|null}> = [];
@@ -107,7 +129,7 @@ export async function aimAtSubject(page: Page, canvas: Locator, pointIndex: numb
       const desiredYaw=Math.atan2(target[0]-x,target[2]-z);
       const turn=Math.atan2(Math.sin(desiredYaw-yaw),Math.cos(desiredYaw-yaw));
       await dragLook(page,canvas,-turn/.005,(pitchTarget-pitch)/.004,touch);
-      await waitForSettledCamera(page,canvas,settleTimeout);
+      await waitForSettledCamera(page,canvas,settleTimeout,attempts.length===0?firstNextFrameTimeout:10000);
       const framed=await guide.getAttribute('data-photo-framed'),obstructed=await guide.getAttribute('data-photo-obstructed');
       attempts.push({pitchTarget,yaw:Number(await canvas.getAttribute('data-camera-yaw')),pitch:Number(await canvas.getAttribute('data-camera-pitch')),framed,obstructed});
       if(framed==='true' && obstructed==='false') return;

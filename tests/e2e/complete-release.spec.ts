@@ -3,15 +3,15 @@ import { campuses } from '../../src/campus-data/campuses';
 import { PHOTO_POINTS } from '../../src/games/photography';
 import { JOURNEY_STORAGE_KEY } from '../../src/games/journey-storage';
 import { position, walkTo } from './campus-walk';
-import { aimAtSubject, ascend, descend, launch, planeState, reachStation, ready, waitForFlightSuccess } from './complete-release-helpers';
+import { aimAtSubject, ascend, descend, launch, planeState, reachStation, ready, walkGardenApproach, waitForFlightSuccess } from './complete-release-helpers';
 // One continuous real-input release journey; no teleport, stamps or score injection.
 test('complete fresh journal: three photographs, genuine ascent/descent, flight, saved result and restart',async({page},info)=>{
   test.setTimeout(600000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   const canvas=await ready(page);await page.getByRole('button',{name:'开始手记',exact:true}).click();
   for(const id of ['hall','garden']){
     const index=PHOTO_POINTS.findIndex(p=>p.id===id),point=PHOTO_POINTS[index]!;
-    await walkTo(page,canvas,campuses.yingxi,point.position,Math.min(point.radius-1,3));
-    await aimAtSubject(page,canvas,index,false,info);await expect(page.getByTestId('photo-record')).toBeEnabled();await page.getByTestId('photo-record').click();
+    if(id==='garden')await walkGardenApproach(page,canvas);else await walkTo(page,canvas,campuses.yingxi,point.position,Math.min(point.radius-1,3));
+    await aimAtSubject(page,canvas,index,false,info,20000,id==='hall'?20000:10000);await expect(page.getByTestId('photo-record')).toBeEnabled();await page.getByTestId('photo-record').click();
   }
   await ascend(page,canvas);const elevated=await position(canvas);
   await page.getByRole('button',{name:'打开校园地图'}).click();await page.getByRole('button',{name:'返回人物视角'}).click();

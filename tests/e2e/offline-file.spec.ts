@@ -1,5 +1,5 @@
 // Set OFFLINE_HTML to the absolute extracted offline index.html. Run with scripts/offline/playwright.config.ts.
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { assertKnowledgeDismissHint, assertLandscapeCanvasAndHud, observeNaturalKnowledgeScroll } from './hks-landscape-layout';
 
@@ -40,6 +40,16 @@ async function guard(page: Page) {
   });
   return blocked;
 }
+async function natureEvidence(page: Page, campus: Locator, id: 'huyu' | 'yingxi', info: TestInfo) {
+  await expect(campus).toHaveAttribute('data-campus-ready',id,{timeout:30000});
+  await expect(campus).toHaveAttribute('data-arrival-nature-status','ready',{timeout:30000});
+  await expect(campus).toHaveAttribute('data-arrival-nature-instances',id==='huyu'?'28':'34');
+  const evidence=await campus.evaluate(e=>{const d=(e as HTMLElement).dataset;return {campus:d.campusReady,status:d.arrivalNatureStatus,instances:Number(d.arrivalNatureInstances),generation:d.arrivalNatureGeneration,world:d.worldGeneration,stats:JSON.parse(d.arrivalNatureStats??'null'),ratio:d.renderRatio,shadow:d.shadowType,frame:d.frame,xyz:[d.playerX,d.playerY,d.playerZ]};});
+  expect(evidence.generation).toBe(evidence.world);expect(evidence.stats.instances).toBe(evidence.instances);
+  if(id==='yingxi'){await expect(campus).toHaveAttribute('data-near-hall-tree-replacement','4/6');await expect(campus).toHaveAttribute('data-near-hall-tree-replacement-ids','0,1,2,4');}
+  console.log('[OFFLINE_NATURE]',JSON.stringify(evidence));await info.attach(`offline-${id}-nature`,{body:JSON.stringify(evidence,null,2),contentType:'application/json'});
+  await page.screenshot({path:info.outputPath(`offline-${id}-campus.png`)});
+}
 async function snapshot(c: Locator) { return JSON.parse(await c.getAttribute('data-hks-state') ?? '{}'); }
 async function clickGame(page: Page, c: Locator, x: number, y: number) {
   const box=await c.boundingBox(); if(!box) throw Error('No game canvas');
@@ -67,12 +77,12 @@ async function start(page: Page, canvas: Locator) {
   await expect.poll(async()=> (await snapshot(canvas)).scene,{timeout:15000}).toContain('GameScene');
 }
 test('file:// campus, embedded model, Hks movement and repeated return without asset requests', async ({ page }, info) => {
-  test.setTimeout(120000); const blocked=await guard(page), errors:string[]=[];
+  test.setTimeout(150000); const blocked=await guard(page), errors:string[]=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(target); const campus=page.getByTestId('campus-canvas');
   await expect(campus).toBeVisible(); await expect(page.getByTestId('scene-error')).toHaveCount(0);
-  await page.getByTestId('campus-yingxi').click(); await expect(campus).toHaveAttribute('data-hero-model','ready',{timeout:30000});
-  await page.getByTestId('campus-huyu').click(); await expect(campus).toHaveAttribute('data-hero-model','ready',{timeout:30000});
+  await page.getByTestId('campus-yingxi').click(); await expect(campus).toHaveAttribute('data-hero-model','ready',{timeout:30000}); await natureEvidence(page,campus,'yingxi',info);
+  await page.getByTestId('campus-huyu').click(); await expect(campus).toHaveAttribute('data-hero-model','ready',{timeout:30000}); await natureEvidence(page,campus,'huyu',info);
   if (!await page.getByTestId('quest-start').isVisible()) await page.getByTestId('open-quest').click();
   await page.getByTestId('quest-start').click();
   const status=await page.getByTestId('quest-status').textContent(); const canvas=await launch(page);
@@ -91,14 +101,14 @@ test('file:// campus, embedded model, Hks movement and repeated return without a
 test.describe('file:// touch-capable phone', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 844, height: 390 } });
   test('models load and real touch moves Hks without external requests', async ({ page }, info) => {
-    test.setTimeout(120000); const blocked=await guard(page), errors:string[]=[];
+    test.setTimeout(150000); const blocked=await guard(page), errors:string[]=[];
     page.on('pageerror', e=>errors.push(e.message));
     await page.goto(target); const campus=page.getByTestId('campus-canvas');
     await expect(campus).toBeVisible(); await page.getByTestId('campus-huyu').click();
     // Huyu reports ready only after both registered models are ready.
-    await expect(campus).toHaveAttribute('data-hero-model','ready',{timeout:30000});
+    await expect(campus).toHaveAttribute('data-hero-model','ready',{timeout:30000}); await natureEvidence(page,campus,'huyu',info);
     await page.getByTestId('campus-yingxi').click();
-    await expect(campus).toHaveAttribute('data-hero-model','ready',{timeout:30000});
+    await expect(campus).toHaveAttribute('data-hero-model','ready',{timeout:30000}); await natureEvidence(page,campus,'yingxi',info);
     const canvas=await launch(page); await start(page,canvas); const before=await snapshot(canvas);
     await assertLandscapeCanvasAndHud(page,canvas,info);
     // Wait for the real first-encounter knowledge card; capture it before dismissing it.

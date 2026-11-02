@@ -9,10 +9,15 @@ export const REFERENCE_VIEWPORT = { width: 1280, height: 720 };
 interface Shot { id: string; purpose: string; campus: CampusId; foot: Point2; look: Point2; pitch?: number; via?: Point2[] }
 export const REFERENCE_SHOTS: Shot[] = [
   { id: 'huyu-gate-arrival', purpose: '虎峪原安全spawn内侧：北门形态与入口铺装/植栽景序，不冒充门外正面', campus: 'huyu', foot: [18.26, -177.03], look: [14, -200] },
-  { id: 'huyu-campus-approach', purpose: '虎峪入校中段：连续铺装、植栽与主楼方向可读性', campus: 'huyu', foot: [18.26, -158], look: [15.79, -132.35] },
+  { id: 'huyu-campus-approach', purpose: '虎峪原路线西转角：沿梅花方向的连续通行与景序，不以主楼贴墙作为终点', campus: 'huyu', foot: [-35.74, -147.03], look: [-35.74, -105.03] },
   { id: 'yingxi-hall-arrival', purpose: '迎西真实spawn：机械馆前景与新树形/首程入口', campus: 'yingxi', foot: [-20, 175.5], look: [-53.045, 175.65] },
   { id: 'yingxi-garden-approach', purpose: '迎西走廊中段朝清泽园：连续近中远景与可走入口', campus: 'yingxi', foot: [7, 172.76], look: [35, 192.8] },
 ];
+// Yaw is periodic; preserve strict angular tolerance without equating different directions.
+export function referenceYawError(actual: number, expected: number): number {
+  if (!Number.isFinite(actual) || !Number.isFinite(expected)) return Number.POSITIVE_INFINITY;
+  const delta = actual - expected; return Math.abs(Math.atan2(Math.sin(delta), Math.cos(delta)));
+}
 export interface ReferencePose { xyz: number[]; yaw: number; pitch: number; camera: number[]; quality: string; ratio: number; shadow: number; frame: number }
 async function read(canvas: Locator): Promise<ReferencePose> {
   return canvas.evaluate(e => { const d = (e as HTMLElement).dataset; return {
@@ -78,7 +83,9 @@ export async function captureReference(page: Page, canvas: Locator, shot: Shot, 
     if (baseline) {
       expect(pose.shadow).toBe(baseline.shadow); expect(pose.ratio).toBe(baseline.ratio);
       expect(Math.hypot(...pose.xyz.map((v, i) => v - baseline.xyz[i]!))).toBeLessThanOrEqual(.03);
-      expect(Math.abs(pose.yaw - baseline.yaw)).toBeLessThanOrEqual(.0002); expect(Math.abs(pose.pitch - baseline.pitch)).toBeLessThanOrEqual(.0002);
+      const rawYawDelta = pose.yaw - baseline.yaw, wrappedYawError = referenceYawError(pose.yaw, baseline.yaw);
+      console.log('[REFERENCE_YAW_ALIGNMENT]', JSON.stringify({ shot: shot.id, rawYawDelta, wrappedYawError, tolerance: .0002 }));
+      expect(wrappedYawError).toBeLessThanOrEqual(.0002); expect(Math.abs(pose.pitch - baseline.pitch)).toBeLessThanOrEqual(.0002);
       expect(Math.hypot(...pose.camera.map((v, i) => v - baseline.camera[i]!))).toBeLessThanOrEqual(.04);
     }
     return pose;

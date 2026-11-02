@@ -195,7 +195,24 @@ export function nearHallTreeClearsProtectedPaths(colliders: THREE.Group, campus:
       for(let j=0;j<=steps;j++) { const t=j/steps,hit=octree.capsuleIntersect(capsuleAt(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t)); if(hit&&hit.depth>.001)return false; }
     }
   }
-  return !octree.capsuleIntersect(capsuleAt(-20,175.5));
+  if (octree.capsuleIntersect(capsuleAt(-20,175.5))) return false;
+  // Authoring-only side clearance for the ordinary third-person arrival view.
+  // This does not shrink tree solids or alter the runtime camera/photo rays.
+  // Include the normal walker's arrival tolerance, not only a centerline ray.
+  const views = [
+    { foot: [-20,175.5], look: [-53.045,175.65] },
+    { foot: [-38.56,172.76], look: [7,172.76] },
+    { foot: [7,172.76], look: [35,192.8] },
+  ];
+  for (const view of views) for (const dx of [-.9,0,.9]) for (const dz of [-.9,0,.9]) {
+    const x=view.foot[0]+dx,z=view.foot[1]+dz;
+    const yaw=Math.atan2(view.look[0]-x,view.look[1]-z),pitch=-.15;
+    const target=new THREE.Vector3(x,1.52,z);
+    const camera=target.clone().add(new THREE.Vector3(-Math.sin(yaw)*Math.cos(pitch)*6,Math.sin(pitch)*6+1.1,-Math.cos(yaw)*Math.cos(pitch)*6));
+    const hit=octree.capsuleIntersect(new Capsule(camera,target,.8));
+    if(hit&&hit.depth>.001)return false;
+  }
+  return true;
 }
 function addCorridor(world: THREE.Group, colliders: THREE.Group): THREE.Group {
   const stone = new THREE.MeshStandardMaterial({ color: 0xd2c8b2, roughness: 1 });

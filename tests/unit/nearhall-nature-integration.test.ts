@@ -50,7 +50,7 @@ it('retains real GLB route clearance and both positive/negative near-hall photo 
  const solid=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,3.4,8),new THREE.MeshBasicMaterial());solid.position.set(x,1.7,z);batch.colliders.add(solid);}
 
  batch.visual.traverse(object=>{if(object instanceof THREE.Mesh){const materials=Array.isArray(object.material)?object.material:[object.material];for(const material of materials){expect(material.transparent).toBe(false);expect(material.opacity).toBe(1);expect(material.alphaTest).toBe(0);}}});
- player.setCampus(campuses.yingxi,batch.colliders);player.resize(1280,720);batch.visual.updateMatrixWorld(true);
+ player.setCampus(campuses.yingxi,batch.colliders);player.resize(1280,660);batch.visual.updateMatrixWorld(true);
  const c=player as unknown as {yaw:number;pitch:number};const point=PHOTO_POINTS[0]!,result=[];const raycaster=new THREE.Raycaster();
  for(const z of [175.5,170.5,169,172,174,173.726,173.996])for(const pitch of [-.15,-.2,-.25,-.3,-.35,-.4,-.45,-.5,-.55,-.6]){
   player.setPosition([-20,z]);for(let i=0;i<3;i++)player.update(1/60);c.yaw=Math.atan2(point.target[0]+20,point.target[2]-z);c.pitch=pitch;player.updateCamera(true);player.camera.updateMatrixWorld(true);
@@ -59,10 +59,14 @@ it('retains real GLB route clearance and both positive/negative near-hall photo 
   if(framed)for(const xyz of [point.target,...point.focusExtent]){const delta=new THREE.Vector3(...xyz).sub(player.camera.position);raycaster.set(player.camera.position,delta.clone().normalize());raycaster.far=delta.length()-.2;if(raycaster.intersectObject(batch.visual,true).length){obstructed=true;break;}}
   result.push({z,pitch,framed,obstructed,camera:player.camera.position.toArray()});
  }
- expect(admitted.map(p=>p.id)).toEqual([0,1,2,4,5].map(i=>`near-hall-tree-${i}`));
+ expect(admitted.map(p=>p.id)).toEqual([0,1,2,4].map(i=>`near-hall-tree-${i}`));
  expect(result.find(r=>r.z===175.5&&r.pitch===-.25)).toMatchObject({framed:true,obstructed:false});
  expect(result.find(r=>r.z===170.5&&r.pitch===-.2)).toMatchObject({framed:true,obstructed:true});
  expect(result.find(r=>r.z===169&&r.pitch===-.25)).toMatchObject({framed:true,obstructed:true});
+ // Actual captured foreground pose: retained narrow old tree must not clip
+ // the normal central camera ray. Frustum artwork remains a separate pixel gate.
+ player.setPosition([6.562,172.005]);for(let i=0;i<3;i++)player.update(1/60);c.yaw=.9394;c.pitch=-.15;player.updateCamera(true);
+ expect(player.camera.position.distanceTo(new THREE.Vector3(1.773737,1.723371,168.503415))).toBeLessThan(.002);
  // Independent dense samples of the actual committed mixture, not merely a
  // call to the production admission predicate. Ground is excluded from this tree Octree.
  const octree=new Octree().fromGraphNode(batch.colliders);
@@ -74,4 +78,4 @@ it('retains real GLB route clearance and both positive/negative near-hall photo 
    }
  }
  batch.dispose();lib.dispose();
-});
+}, 15000);

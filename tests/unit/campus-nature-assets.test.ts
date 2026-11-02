@@ -6,7 +6,7 @@ import { Capsule } from 'three/addons/math/Capsule.js';
 import { Octree } from 'three/addons/math/Octree.js';
 import {
   createCampusNatureAssets, createNatureCollisionGeometries, getNaturePlacementBounds,
-  loadCampusNatureAssets, NATURE_ATLAS_GPU_BYTES, type NatureKind,
+  loadCampusNatureAssets, NATURE_ATLAS_GPU_BYTES, NATURE_ALBEDO_TONE, type NatureKind,
 } from '../../src/scene/CampusNatureAssets';
 
 const parseMock = vi.hoisted(() => vi.fn());
@@ -54,6 +54,28 @@ describe('licensed campus nature subset', () => {
     expect(readFileSync(new URL('../../public/models/nature/License.txt', import.meta.url), 'utf8')).toMatch(/CC0/);
     expect(NATURE_ATLAS_GPU_BYTES).toBeLessThan(5.34 * 1024 * 1024);
     Object.values(geometries).forEach(g => g.dispose());
+  });
+  it('harmonizes only linear mapped albedo with stable explicit shader cache identity', () => {
+    const { geometries } = sources(), mat = material(), originalAtlas = mat.map;
+    const lib = createCampusNatureAssets(geometries, mat);
+    const shader = { fragmentShader: THREE.ShaderLib.standard.fragmentShader } as Parameters<typeof mat.onBeforeCompile>[0];
+    mat.onBeforeCompile(shader, {} as THREE.WebGLRenderer);
+    const mapAt = shader.fragmentShader.indexOf('#include <map_fragment>');
+    const toneAt = shader.fragmentShader.indexOf('float campusNatureLuma');
+    const lightingAt = shader.fragmentShader.indexOf('#include <lights_physical_fragment>');
+    expect(toneAt).toBeGreaterThan(mapAt); expect(lightingAt).toBeGreaterThan(toneAt);
+    expect(shader.fragmentShader).toContain('vec3(0.2126, 0.7152, 0.0722)');
+    expect(shader.fragmentShader).toContain('vec3(campusNatureLuma), 0.320000)');
+    expect(shader.fragmentShader).toContain('vec3(0.980000, 1.000000, 0.960000)');
+    expect(shader.fragmentShader).not.toContain('diffuseColor.a =');
+    expect(mat.customProgramCacheKey()).toBe('campus-nature-albedo-v1:0.32:0.98,1,0.96');
+    expect(Object.isFrozen(NATURE_ALBEDO_TONE)).toBe(true); expect(Object.isFrozen(NATURE_ALBEDO_TONE.tint)).toBe(true);
+    expect(mat.map).toBe(originalAtlas); expect(mat.map!.colorSpace).toBe(THREE.SRGBColorSpace);
+    const batch = lib.createBatch([{ kind: 'tree-round', position: [0, 0, 0], scale: 1 }, { kind: 'shrub', position: [8, 0, 0], scale: 1 }]);
+    expect(new Set(batch.visual.children.map(o => (o as THREE.Mesh).material)).size).toBe(1);
+    expect(batch.stats.visibleBatches).toBe(2); expect(lib.atlasGpuBytes).toBe(NATURE_ATLAS_GPU_BYTES);
+    expect(() => mat.onBeforeCompile({ fragmentShader: 'incompatible' } as Parameters<typeof mat.onBeforeCompile>[0], {} as THREE.WebGLRenderer)).toThrow(/map_fragment/);
+    batch.dispose(); lib.dispose();
   });
   it('retains original model dimensions, root origin, UV and all visible triangles', () => {
     const { geometries } = sources(); const lib = createCampusNatureAssets(geometries, material());

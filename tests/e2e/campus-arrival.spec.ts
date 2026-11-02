@@ -19,7 +19,7 @@ async function capture(page:Page,canvas:Locator,info:TestInfo,campus:CampusId,st
   console.log('[DEFAULT_ARRIVAL]',JSON.stringify(evidence));await info.attach(`${campus}-${stage}-conditions`,{body:JSON.stringify(evidence,null,2),contentType:'application/json'});
   await page.screenshot({path:info.outputPath(`${campus}-default-${stage}.png`)});
   expect(state.mode).toBe('auto');expect(state.quality).not.toBe('reference');expect(Number.isFinite(state.ratio)).toBe(true);expect(state.ratio).toBeGreaterThanOrEqual(.5);
-  expect(state.nature).toBe('ready');expect(state.instances).toBe(campus==='huyu'?28:35);expect(state.geometryMetrics.placementCount).toBe(campus==='huyu'?28:30);expect(state.geometryMetrics.kinds).toEqual(campus==='huyu'?{'tree-round':1,'tree-tall':2,'tree-spreading':1,shrub:6,grass:18}:{'tree-round':1,'tree-tall':2,'tree-spreading':2,shrub:7,grass:18});if(campus==='yingxi'){expect(state.replacement).toBe('5/6');expect(state.replacementIds).toBe('0,1,2,4,5');}expect(state.generation).toBe(state.world);
+  expect(state.nature).toBe('ready');expect(state.instances).toBe(campus==='huyu'?28:34);expect(state.geometryMetrics.placementCount).toBe(campus==='huyu'?28:30);expect(state.geometryMetrics.kinds).toEqual(campus==='huyu'?{'tree-round':1,'tree-tall':2,'tree-spreading':1,shrub:6,grass:18}:{'tree-round':1,'tree-tall':2,'tree-spreading':2,shrub:7,grass:18});if(campus==='yingxi'){expect(state.replacement).toBe('4/6');expect(state.replacementIds).toBe('0,1,2,4');}expect(state.generation).toBe(state.world);
 }
 for(const campus of ['huyu','yingxi'] as const) test(`${campus}: ordinary spawn arrival and visible quality choices preserve gameplay`,async({page},info)=>{
   test.setTimeout(240000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));const started=Date.now();
@@ -40,8 +40,13 @@ for(const campus of ['huyu','yingxi'] as const) test(`${campus}: ordinary spawn 
   await capture(page,canvas,info,campus,'entry',started); // No test rotation before true production first view.
   const walk=async(target:Point2)=>touchWalkTo(page,canvas,[...target],info,.9,false,campus);
   if(campus==='huyu'){
-    await walk([14,-195]);await look(page,canvas,[15.79,-132.35]);await capture(page,canvas,info,campus,'turn',started);
-    await walk([18.26,-177.03]);await walk([18.26,-147.03]);await look(page,canvas,[15.79,-132.35]);
+    await walk([12.26,-195.03]);
+    const beforeContinue=await activityPose(canvas),progressBeforeContinue=await activityProgress(page);
+    await page.getByTestId('continue-campus-arrival').click();
+    await expect(page.getByTestId('current-objective')).toHaveAttribute('data-target-id','hy-meihua');
+    expect(await activityPose(canvas)).toEqual(beforeContinue);expect(await activityProgress(page)).toEqual(progressBeforeContinue);
+    await look(page,canvas,[-35.74,-147.03]);await capture(page,canvas,info,campus,'turn',started);
+    await walk([-35.74,-147.03]);await look(page,canvas,[-35.74,-105.03]);
   }else{
     await walk([-48,175.5]);await walk([-38.56,172.76]);await look(page,canvas,[7,172.76]);await capture(page,canvas,info,campus,'turn',started);
     await walk([7,172.76]);await look(page,canvas,[35,192.8]);
@@ -51,7 +56,7 @@ for(const campus of ['huyu','yingxi'] as const) test(`${campus}: ordinary spawn 
   await info.attach(`${campus}-natural-90s`,{body:JSON.stringify(sampled),contentType:'application/json'});
   const saved=await activityProgress(page),pose=await activityPose(canvas),control=page.getByTestId('render-quality-select');
   if(campus==='huyu'){
-    await page.getByTestId('objective-story').click(); await expect(page.getByRole('heading',{name:'北门（示意）',exact:true})).toBeVisible();await expect(page.locator('.model-evidence')).toBeVisible();
+    await page.getByTestId('objective-story').click(); await expect(page.getByRole('heading',{name:'梅花教室组合',exact:true})).toBeVisible();await expect(page.getByTestId('campus-story')).toBeVisible();
     expect(await activityPose(canvas)).toEqual(pose);expect(await activityProgress(page)).toEqual(saved);
     await page.getByTestId('landmark-close').click();await expect(page.getByTestId('objective-story')).toBeFocused();
     expect(await activityPose(canvas)).toEqual(pose);expect(await activityProgress(page)).toEqual(saved);

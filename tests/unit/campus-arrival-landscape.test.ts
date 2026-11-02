@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { campuses } from '../../src/campus-data/campuses';
 import { ARRIVAL_DESIGN_STATUS, ARRIVAL_ROUTES, arrivalSiteIsClear, createCampusArrivalLandscape } from '../../src/scene/CampusArrivalLandscape';
+import { PlayerController } from '../../src/scene/PlayerController';
+import { StudentModel } from '../../src/scene/StudentModel';
+import { ElementDouble } from './controller-harness';
 import { getNaturePlacementBounds } from '../../src/scene/CampusNatureAssets';
 
 describe('continuous arrival design: real data admission and resource ownership',()=>{
@@ -52,4 +55,50 @@ describe('continuous arrival design: real data admission and resource ownership'
     expect(arrivalSiteIsClear(campuses.yingxi,35,205,1)).toBe(false);
     for(const id of ['huyu','yingxi'] as const) for(const [x,z] of ARRIVAL_ROUTES[id]) expect(arrivalSiteIsClear(campuses[id],x,z,.5)).toBe(false);
   });
+});
+
+// CPU-only route regression, not rendered full-world proof. Plant AABBs here are
+// deliberately conservative supersets; Scene's old props remain an E2E check.
+it('Huyu gate continuation uses existing Meihua route and clears source walls plus new plant envelopes',()=>{
+  const data=campuses.huyu, route=ARRIVAL_ROUTES.huyu;
+  expect(route.slice(1)).toEqual(data.routes['hy-north-gate>hy-meihua'].slice(0,3));
+  expect(data.questOrder).toEqual(['hy-main','hy-library','hy-training']);
+  const length=route.slice(1).reduce((n,p,i)=>n+Math.hypot(p[0]-route[i][0],p[1]-route[i][1]),0);
+  expect(length).toBeLessThan(130);expect(length/3.4).toBeLessThan(39);
+  vi.stubGlobal('Element',ElementDouble);
+  vi.stubGlobal('document',Object.assign(new EventTarget(),{createElement:()=>new ElementDouble()}));
+  vi.stubGlobal('window',new EventTarget());
+  vi.spyOn(performance,'now').mockReturnValue(0);
+  vi.spyOn(StudentModel,'load').mockReturnValue(new Promise(()=>{}));
+  const landscape=createCampusArrivalLandscape(data),props=new THREE.Group(),mat=new THREE.MeshBasicMaterial();
+  for(const p of landscape.placements){
+    if(p.kind==='grass')continue;
+    const box=getNaturePlacementBounds(p),size=box.getSize(new THREE.Vector3());
+    const m=new THREE.Mesh(new THREE.BoxGeometry(size.x,size.y,size.z),mat);m.position.copy(box.getCenter(new THREE.Vector3()));props.add(m);
+  }
+  const player=new PlayerController(new ElementDouble() as unknown as HTMLElement,new ElementDouble() as unknown as HTMLCanvasElement);
+  try {
+    player.setCampus(data,props);
+    const input=player as unknown as {yaw:number;joystick:THREE.Vector2};input.yaw=0;
+    for(const target of route){
+      let reached=false;
+      for(let i=0;i<1500;i++){
+        const dx=target[0]-player.avatar.position.x,dz=target[1]-player.avatar.position.z,d=Math.hypot(dx,dz);
+        if(d<.25){reached=true;break;}
+        input.joystick.set(-dx/d,-dz/d);player.update(1/60);
+      }
+      expect(reached,`source-wall/new-envelope route target ${target}`).toBe(true);
+      if(target[0]===-35.74&&target[1]===-147.03){
+        input.joystick.set(0,0);input.yaw=0;player.updateCamera(true);
+        // Ordinary +Z view down the existing Meihua leg, not a selected beauty pose.
+        // The 6m chase camera must not get squeezed against the main block.
+        expect(player.camera.position.z).toBeLessThan(player.avatar.position.z-5.5);
+        expect(Math.abs(player.camera.position.x-player.avatar.position.x)).toBeLessThan(.01);
+        for(let z=-146;z<=-105;z+=1) expect(arrivalSiteIsClear(data,-35.74,z,.6,false)).toBe(true);
+      }
+    }
+    expect(player.avatar.position.z).toBeGreaterThan(-106);
+  } finally {
+    player.dispose();landscape.dispose();props.children.forEach(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose();});mat.dispose();vi.restoreAllMocks();vi.unstubAllGlobals();
+  }
 });

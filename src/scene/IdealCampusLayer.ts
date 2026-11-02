@@ -78,6 +78,12 @@ export function createIdealCampusLayer(campusId: CampusId): { visual: THREE.Grou
   visual.name = IDEAL_FACILITIES[campusId].id; colliders.name = `${visual.name}-solids`;
   const woodSurface = surface('wood'), stoneSurface = surface('stone');
   const textures = [...Object.values(woodSurface), ...Object.values(stoneSurface)];
+  // Isolate this disposable layer from r186's scene-wide shared depth material.
+  // Three copies each caster's map into custom depth materials too; ownership,
+  // not a permanently null map, prevents a retired layer's uniforms being reused
+  // by later base-campus casters. Defaults match Three's directional depth pass.
+  const depthMaterial = new THREE.MeshDepthMaterial();
+  depthMaterial.name = `ideal-${campusId}-owned-depth`;
   const materials: Record<Finish, THREE.MeshStandardMaterial> = {
     stone: new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .84, ...stoneSurface, bumpScale: .009 }),
     wood: new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .68, ...woodSurface, bumpScale: .006 }),
@@ -213,6 +219,7 @@ export function createIdealCampusLayer(campusId: CampusId): { visual: THREE.Grou
     pieces.forEach(g => g.dispose());
     const mesh = new THREE.Mesh(geometry, materials[finish]); mesh.name = finish;
     mesh.castShadow = finish !== 'paving' && finish !== 'joint'; mesh.receiveShadow = true; visual.add(mesh);
+    if (mesh.castShadow) mesh.customDepthMaterial = depthMaterial;
   }
   const colliderMaterial = new THREE.MeshBasicMaterial();
   // Keep each closed prism independent: the controller unions per-mesh inside
@@ -226,7 +233,7 @@ export function createIdealCampusLayer(campusId: CampusId): { visual: THREE.Grou
     if (disposed) return; disposed = true;
     visual.removeFromParent(); colliders.removeFromParent();
     visual.traverse(o => { if (o instanceof THREE.Mesh) o.geometry.dispose(); });
-    solids.forEach(g => g.dispose()); colliderMaterial.dispose(); Object.values(materials).forEach(m => m.dispose()); textures.forEach(t => t.dispose());
+    solids.forEach(g => g.dispose()); colliderMaterial.dispose(); Object.values(materials).forEach(m => m.dispose()); depthMaterial.dispose(); textures.forEach(t => t.dispose());
     visual.clear(); colliders.clear();
   } };
 }

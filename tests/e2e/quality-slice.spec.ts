@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { campuses } from '../../src/campus-data/campuses';
 import { PHOTO_POINTS } from '../../src/games/photography';
 import { position, walkRoute, walkTo } from './campus-walk';
-import { ascend, descend, planePose, planeState, screenRightDisplacement, authoredTouchMagnitude, waitForSimulatedAdvance, waitForSettledCamera, waitForFlightSuccess, STATION_ROUTE_STAGING, stationApproachRoute } from './complete-release-helpers';
+import { ascend, descend, planePose, planeState, screenRightDisplacement, authoredTouchMagnitude, waitForSimulatedAdvance, waitForSettledCamera, waitForFlightSuccess, STATION_ROUTE_STAGING, stationApproachRoute, gardenApproachRoute, walkGardenApproach } from './complete-release-helpers';
+import { touchWalkTo as continuousTouchWalkTo } from './ideal-activity-helpers';
 import { VIEWING_PLATFORM } from '../../src/scene/OriginalViewingPlatform';
 
 // Read-only telemetry supplements actual input and screenshots; it never controls the game.
@@ -15,8 +16,8 @@ async function ready(page: Page, touch=false) {
   await expect(canvas).toHaveAttribute('data-model-yx-mechanical', 'ready', { timeout: 30000 });
   await expect(canvas).toHaveAttribute('data-model-yx-garden-setting', 'ready', { timeout: 30000 });
   await expect(canvas).toHaveAttribute('data-arrival-nature-status','ready',{timeout:30000});
-  await expect(canvas).toHaveAttribute('data-near-hall-tree-replacement','5/6');
-  await expect(canvas).toHaveAttribute('data-near-hall-tree-replacement-ids','0,1,2,4,5');
+  await expect(canvas).toHaveAttribute('data-near-hall-tree-replacement','4/6');
+  await expect(canvas).toHaveAttribute('data-near-hall-tree-replacement-ids','0,1,2,4');
   const start=page.getByRole('button',{name:'开始手记',exact:true});if(touch)await start.tap();else await start.click();
   return canvas;
 }
@@ -198,7 +199,7 @@ test('scenic diary: genuine walk, framing, three captures, Hks round-trip and lo
   const restored=await position(canvas);expect(Math.hypot(restored[0]-saved[0],restored[2]-saved[2])).toBeLessThan(.1);
   expect(await canvas.getAttribute('data-camera-yaw')).toBe(yaw);expect(await stampIds(page)).toEqual(['hall']);
   // Walk the continuous connection using keys, not a position/state injection.
-  await walkTo(page,canvas,campuses.yingxi,PHOTO_POINTS[1]!.position);
+  await walkGardenApproach(page,canvas);
   const there=await position(canvas);expect(Math.hypot(there[0]-PHOTO_POINTS[1]!.position[0],there[2]-PHOTO_POINTS[1]!.position[1])).toBeLessThan(PHOTO_POINTS[1]!.radius);
   // At the new station, a view toward the *old* clock subject must not award
   // a garden stamp. The real garden subject is a different authored landmark.
@@ -349,7 +350,13 @@ test.describe('landscape touch diary',()=>{
     await page.screenshot({path:info.outputPath('photo-touch-first-ready.png')});
     await page.getByTestId('photo-record').tap();
     const guide=page.getByTestId('photo-guide');await expect(guide).toContainText('1 / 3');expect(await stampIds(page)).toEqual(['hall']);
-    await touchWalkTo(page,canvas,PHOTO_POINTS[1]!.position,info);
+    const [gardenStartX,,gardenStartZ]=await position(canvas);
+    for(const point of gardenApproachRoute([gardenStartX,gardenStartZ])){
+      // Reuse the proven coarse same-line cruise, then release and precisely
+      // reach the authored corner before turning. No new movement policy.
+      await continuousTouchWalkTo(page,canvas,point,info,.9);
+      await touchWalkTo(page,canvas,point,info,.25,true);
+    }
     const atGarden=await position(canvas);expect(Math.hypot(atGarden[0]-PHOTO_POINTS[1]!.position[0],atGarden[2]-PHOTO_POINTS[1]!.position[1])).toBeLessThan(PHOTO_POINTS[1]!.radius);
     await aimAtSubject(page,canvas,1,true,info);await expect(page.getByTestId('photo-hint')).toContainText('构图就绪',{timeout:30000});
     await page.screenshot({path:info.outputPath('photo-touch-second-ready.png')});await page.getByTestId('photo-record').tap();
@@ -492,6 +499,12 @@ test('landmark markers remain map-only across campus rebuilds',async({page},info
   await expect(canvas).toHaveAttribute('data-view','player');await expect(canvas).toHaveAttribute('data-visible-markers','0');await expect(labels).toBeHidden();
   await page.getByRole('button',{name:'打开校园地图'}).click();await expect(canvas).toHaveAttribute('data-view','map');
   await expect(canvas).toHaveAttribute('data-visible-markers',String(campuses.yingxi.landmarks.length));
+  // Visible flags are synchronous; wait for the existing actual projected map
+  // frame before requiring CSS2D labels (the failed run's first frame took6s).
+  await expect.poll(async()=>{
+    const markers=JSON.parse(await canvas.getAttribute('data-map-markers')||'[]') as {id:string}[];
+    return markers.some(marker=>marker.id==='yx-garden');
+  },{timeout:15000}).toBe(true);
   await expect(labels).toBeVisible();await expect(labels.locator('.landmark-label').filter({hasText:'清泽园'})).toHaveCount(1);
   await page.screenshot({path:info.outputPath('map-yingxi-markers.png')});
   // Projection is read-only targeting assistance, not evidence of picking:
@@ -557,7 +570,7 @@ for (const gardenMode of ['ready','fallback'] as const) {
     await page.goto('/');await page.getByRole('button',{name:'开始手记',exact:true}).click();const canvas=page.getByTestId('campus-canvas');
     await expect(canvas).toHaveAttribute('data-model-yx-garden-setting',gardenMode,{timeout:30000});
     await expect(canvas).toHaveAttribute('data-model-yx-mechanical','ready',{timeout:30000});
-    await canvas.focus();await walkTo(page,canvas,campuses.yingxi,PHOTO_POINTS[1]!.position,1);
+    await canvas.focus();await walkGardenApproach(page,canvas);
     const approach=await position(canvas);
     expect(Math.hypot(approach[0]-PHOTO_POINTS[1]!.position[0],approach[2]-PHOTO_POINTS[1]!.position[1])).toBeLessThan(1.5);
     await rotateTo(page,canvas,0,-.15);await expect(page.getByTestId('photo-guide')).toContainText('清泽园 · 花间',{timeout:15000});

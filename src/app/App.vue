@@ -170,7 +170,9 @@ function syncMinimap() {
   const x = Number(canvas.dataset.playerX), z = Number(canvas.dataset.playerZ);
   if (canvas.dataset.playerX !== undefined && canvas.dataset.playerZ !== undefined && Number.isFinite(x) && Number.isFinite(z) && (playerPosition.value?.[0] !== x || playerPosition.value?.[1] !== z)) playerPosition.value = [x, z];
 }
-const currentObjective = computed(() => target.value ?? campus.value.landmarks.find(item => item.id === (campusId.value === 'huyu' ? 'hy-north-gate' : 'yx-mechanical')) ?? null);
+// Optional arrival guidance is session-only; it never creates or completes a quest.
+const arrivalGuidanceId = ref<string | null>(null);
+const currentObjective = computed(() => target.value ?? campus.value.landmarks.find(item => item.id === (arrivalGuidanceId.value ?? (campusId.value === 'huyu' ? 'hy-north-gate' : 'yx-mechanical'))) ?? null);
 const objectiveDistance = computed(() => currentObjective.value && playerPosition.value ? Math.hypot(currentObjective.value.arrival[0] - playerPosition.value[0], currentObjective.value.arrival[1] - playerPosition.value[1]) : null);
 const objectiveNearby = computed(() => objectiveDistance.value !== null && objectiveDistance.value < 5);
 const objectiveDirection = computed(() => {
@@ -184,6 +186,13 @@ function openObjectiveStory(trigger: EventTarget | null) {
   if (!currentObjective.value || mode.value !== 'exploring') return;
   selectedId.value = currentObjective.value.id;
   showPanel('detail', trigger); // Read in place: do not fly the camera to a map view.
+}
+function continueIntoCampus() {
+  if (campusId.value !== 'huyu' || quest.value.status === 'active' || mode.value !== 'exploring' || panelOpen.value || mapOpen.value || !objectiveNearby.value || currentObjective.value?.id !== 'hy-north-gate') return;
+  if (!scene?.navigateTo('hy-meihua')) { notice.value = '暂时无法设置指引，请稍后重试。'; return; }
+  arrivalGuidanceId.value = 'hy-meihua';
+  notice.value = '已显示去梅花教室的原路线。沿铺装向校内走，在前场转向西侧；这是可选指引，不会开始或改写任务。';
+  focusScene();
 }
 function toggleOverview() {
   if (!scene || sceneError.value || planeActive.value) return;
@@ -317,10 +326,11 @@ function updateQuest(state: QuestState) {
   persist();
 }
 function syncScene() {
-  scene?.setState({ selectedId: selectedId.value, targetId: target.value?.id ?? null });
+  scene?.setState({ selectedId: selectedId.value, targetId: target.value?.id ?? arrivalGuidanceId.value });
 }
-watch([selectedId, target], syncScene);
+watch([selectedId, target, arrivalGuidanceId], syncScene);
 function clearJourneyView() {
+  arrivalGuidanceId.value = null;
   arrivedId.value = null;
   answer.value = null;
   travelling.value = false;
@@ -465,6 +475,7 @@ function onSceneEvent(event: SceneEvent) {
   } else if (event.type === 'travel') {
     if (travelling.value && Number.isFinite(event.progress)) travelProgress.value = Math.max(0, Math.min(1, event.progress));
   } else if (event.type === 'arrive') {
+    if (arrivalGuidanceId.value === event.id && quest.value.status !== 'active') { notice.value = '已到梅花教室附近，可以停下来阅读校园故事或继续自由漫游。'; }
     if (travelling.value && target.value?.id === event.id) {
       travelling.value = false;
       travelProgress.value = 1;
@@ -551,14 +562,14 @@ onBeforeUnmount(() => {
       <div class="scene-shade" aria-hidden="true"></div>
       <CampusMinimap :campus="campus" :position="playerPosition" :map-open="mapOpen" :disabled="!!sceneError || planeActive" @toggle="toggleOverview" />
       <section v-if="showCompactObjective && currentObjective" class="current-objective" data-testid="current-objective" :data-target-id="currentObjective.id" :data-distance="objectiveDistance?.toFixed(2)" :data-arrived="String(objectiveNearby)">
-        <small>{{ campus.name }} · 下一处驻足</small><span v-if="campusId === 'huyu' && quest.status !== 'active'">从北门内侧，沿铺装认识校园</span>
-        <strong>{{ currentObjective.name }}</strong>
-        <span>{{ objectiveNearby ? '已到附近 · 可以看看这里的故事' : `${objectiveDirection} · 约 ${Math.round(objectiveDistance ?? 0)} 米直线距离，沿路绕行` }}</span>
+        <div class="objective-heading"><strong>{{ currentObjective.name }}</strong><span>{{ objectiveNearby ? '已到附近' : `${objectiveDirection} · 约 ${Math.round(objectiveDistance ?? 0)} 米（直线）` }}</span></div>
+        <small v-if="campusId === 'huyu' && quest.status !== 'active'">{{ arrivalGuidanceId ? '沿铺装入校 · 前场向西，去梅花教室' : '从北门内侧，沿铺装认识校园' }}</small>
         <template v-if="campusId === 'yingxi'">
-          <div data-testid="journey-panel" class="compact-actions"><button type="button" @click="startNotebook">开始手记</button><button type="button" @click="freeRoam">先去漫游</button></div>
-          <details><summary @keydown.space.stop>这一页的故事与玩法</summary><p>{{ CAMPUS_STORIES['yx-mechanical']!.text }}</p><p>机械馆、清泽园取景，再沿台阶登高、下台放飞；Hks 是可选支线。开始前不会创建新手记。</p><button type="button" @click="openNotebook">展开手记详情</button></details>
+          <div data-testid="journey-panel" class="compact-actions"><button type="button" @click="startNotebook">开始手记</button><button type="button" @click="freeRoam">先去漫游</button>
+            <details><summary @keydown.space.stop>故事与玩法</summary><div class="objective-details"><p>{{ CAMPUS_STORIES['yx-mechanical']!.text }}</p><p>机械馆、清泽园取景，再沿台阶登高、下台放飞；Hks 是可选支线。开始前不会创建新手记。</p><button type="button" @click="openNotebook">展开手记详情</button></div></details>
+          </div>
         </template>
-        <template v-else><button type="button" data-testid="objective-story" @click="openObjectiveStory($event.currentTarget)">看看这里的故事</button><button type="button" data-testid="objective-route" @click="showPanel('quest', $event.currentTarget)">展开漫游路线</button></template>
+        <div v-else class="compact-actions"><button v-if="quest.status !== 'active' && currentObjective.id === 'hy-north-gate' && objectiveNearby" type="button" data-testid="continue-campus-arrival" @click="continueIntoCampus">去梅花教室</button><button type="button" data-testid="objective-story" :aria-label="CAMPUS_STORIES[currentObjective.id] ? '阅读校园故事' : '查看地标资料'" @click="openObjectiveStory($event.currentTarget)">{{ CAMPUS_STORIES[currentObjective.id] ? '故事' : '资料' }}</button><button type="button" data-testid="objective-route" aria-label="展开漫游路线" @click="showPanel('quest', $event.currentTarget)">路线</button></div>
       </section>
 
       <PhotoJournal v-if="campusId === 'yingxi' && !hksOpen && !planeActive && (!idealPromptVisible || photoCompleteOpen) && (!showNotebook || photoCompleteOpen)" :point="photoPoint" :stamps="journey?.photos ?? []" :photos="photoImages" :status="photoStatus" :disabled="!!sceneError" :view-available="photoViewAvailable" :model-status="photoModelStatus" :panel-open="panelOpen" :feedback="photoFeedback" :complete-open="photoCompleteOpen" @record="recordPhoto" @close="closePhotoComplete()" @open="openPhotoComplete" @replay="replayPhotos" @select="selectPhotoPoint" />
@@ -696,12 +707,13 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.current-objective { position:absolute; left:20px; top:18px; z-index:8; width:260px; box-sizing:border-box; display:flex; flex-direction:column; gap:5px; padding:12px 14px; border:1px solid #cbd5c4; border-radius:12px; background:#faf8efed; color:#294534; font-size:12px; }
-.current-objective strong { font-size:17px; }.current-objective small { color:#637666; }
-.current-objective button { min-height:36px; padding:5px 9px; background:#fffdf4; color:#294534; border:1px solid #adbdac; border-radius:6px; cursor:pointer; }
-.current-objective details { line-height:1.5; }.current-objective summary { cursor:pointer; }.compact-actions { display:flex; gap:8px; }
-.current-objective :focus-visible,.quality-control select:focus-visible { outline:3px solid #bc7547; outline-offset:2px; }
-@media(max-height:550px) { .current-objective { top:10px;left:12px;width:235px;padding:8px 10px;gap:3px;max-height:calc(100% - 140px);overflow:auto; }.current-objective strong { font-size:15px; }.current-objective details p { margin:5px 0; } }
+.current-objective { position:absolute; left:186px; top:18px; z-index:8; width:min(310px,calc(100% - 204px)); box-sizing:border-box; display:flex; flex-direction:column; gap:5px; padding:9px 12px; border:1px solid #cbd5c4; border-radius:10px; background:#faf8efed; color:#294534; font-size:12px; }
+.objective-heading { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; }.current-objective strong { font-size:16px; }.current-objective small { color:#637666; }
+.current-objective button,.current-objective summary { min-height:36px; box-sizing:border-box; padding:5px 9px; background:#fffdf4; color:#294534; border:1px solid #adbdac; border-radius:6px; cursor:pointer; font:inherit; }
+.current-objective summary { display:flex; align-items:center; }.compact-actions { display:flex; flex-wrap:wrap; gap:6px; }.current-objective details { line-height:1.5; }
+.objective-details { position:absolute; top:calc(100% + 6px); left:0; right:0; padding:10px 12px; border:1px solid #cbd5c4; border-radius:8px; background:#faf8effa; max-height:min(260px,40vh); overflow:auto; }.objective-details p { margin:0 0 8px; }
+.current-objective :focus-visible,.quality-control select:focus-visible { outline:3px solid #bc7547; outline-offset:3px; }
+@media(max-height:550px),(max-width:700px) { .current-objective { top:8px;left:118px;width:min(300px,calc(100% - 130px));padding:7px 10px;gap:3px; }.current-objective strong { font-size:15px; }.current-objective button,.current-objective summary { min-height:44px; } }
 
 .quality-control { display:grid; grid-template-columns:auto auto; align-items:center; gap:2px 6px; font-size:12px; color:#344a3e; }
 .quality-control select { min-height:36px; max-width:105px; border:1px solid #b7c5b9; border-radius:6px; background:#fffdf5; color:inherit; }

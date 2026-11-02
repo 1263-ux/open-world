@@ -9,13 +9,15 @@ import { getNaturePlacementBounds, NATURE_MODEL_BOUNDS, type NaturePlacement } f
 export const ARRIVAL_DESIGN_STATUS = 'designApproximation' as const;
 type Rect = readonly [number, number, number, number];
 export const ARRIVAL_ROUTES: Record<CampusId, readonly Point2[]> = {
-  huyu: [[18.26, -177.03], [14, -195], [18.26, -177.03], [18.26, -147.03], [36, -147.03]],
+  // After the gate stop, these are the existing gate-to-Meihua route nodes.
+  // Meihua is an optional explicit next destination, never a rewritten first quest.
+  huyu: [[18.26, -177.03], [12.26, -195.03], [-35.74, -147.03], [-35.74, -105.03]],
   yingxi: [[-20, 175.5], [-48, 175.5], [-38.56, 172.76], [33.44, 172.76], [35, 188.4], [35, 192.8]],
 };
 // Paired broad shoulders establish continuity without inventing a mapped road.
 export const ARRIVAL_GROUND: Record<CampusId, readonly Rect[]> = {
   huyu: [[-10,-203,-8,-164],[36,-203,38,-164],[-10,-204,38,-202],[-10,-165,38,-163],
-    [12.8,-164,15.8,-145],[20.7,-164,23.7,-145],[12.8,-149,47,-145]],
+    [12.8,-164,15.8,-145],[20.7,-164,23.7,-145],[-38,-150,23.7,-148.5],[-38,-145,-37.2,-136],[-34.2,-145,-33.4,-136]],
   yingxi: [[-51.5,171,-28.8,172.5],[-51.5,178.7,-28.8,180.2],[-38.5,169.5,34,171.5],
     [-38.5,174.1,34,176.1],[31.4,176.1,33.3,188.4],[36.7,176.1,38.6,188.4]],
 };
