@@ -6,10 +6,11 @@ import { waitForSettledCamera } from './complete-release-helpers';
 
 // Reconstructed recovery candidate. Input is real; evaluate only observes telemetry.
 export const REFERENCE_VIEWPORT = { width: 1280, height: 720 };
-interface Shot { id: string; purpose: string; campus: CampusId; foot: Point2; look: Point2; via?: Point2[] }
+interface Shot { id: string; purpose: string; campus: CampusId; foot: Point2; look: Point2; pitch?: number; via?: Point2[] }
 export const REFERENCE_SHOTS: Shot[] = [
   { id: 'huyu-entrance-east-facade', purpose: '虎峪入口东楼立面对比（b396）；不是校门全景或树冠评估', campus: 'huyu', foot: [18.26, -177.03], look: [42, -189] },
-  { id: 'huyu-meihua-court', purpose: '梅花庭院花床与冠体层次；须实际图核可见性', campus: 'huyu', foot: [-65.74, -45.03], look: [-80.74, -45.94] },
+  // Actual admitted east bed (-60,-12), viewed from clear eastern ground; not the old glass-wall shot.
+  { id: 'huyu-meihua-court', purpose: '梅花东花床石缘、内凹土面与低植栽对比', campus: 'huyu', foot: [-53, -19], look: [-62, -12], pitch: .15 },
   { id: 'yingxi-canopy-near-mid', purpose: '迎西近中景闭合树冠；须实际图核可见性', campus: 'yingxi', foot: [45, 162], look: [54.04, 169.31] },
   { id: 'yingxi-backlit-facade', purpose: '迎西195741288西立面逆光层次', campus: 'yingxi', foot: [100, 178], look: [120, 178], via: [[54, 172], [100, 172]] },
 ];
@@ -65,7 +66,7 @@ export async function captureReference(page: Page, canvas: Locator, shot: Shot, 
     await walkTo(page, canvas, campuses[shot.campus], target, .9); await precision(page, canvas, target);
     await expect.poll(async () => (await read(canvas)).xyz[1]).toBeLessThan(.125);
     const yaw = baseline?.yaw ?? Math.atan2(shot.look[0] - target[0], shot.look[1] - target[1]);
-    await look(page, canvas, yaw, baseline?.pitch ?? -.15);
+    await look(page, canvas, yaw, baseline?.pitch ?? shot.pitch ?? -.15);
     const pose = await read(canvas), conditions = { label, shot, pose, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), candidateCommit: process.env.GITHUB_SHA ?? 'uncommitted-local' };
     console.log('[REFERENCE_CONDITIONS]', JSON.stringify(conditions));
     await info.attach(`${label}-${shot.id}-conditions`, { body: JSON.stringify(conditions, null, 2), contentType: 'application/json' });
