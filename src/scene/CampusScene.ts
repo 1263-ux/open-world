@@ -1,10 +1,11 @@
+import { createIdealCampusLayer, IDEAL_FACILITIES } from './IdealCampusLayer';
 import { createOriginalViewingPlatform, VIEWING_PLATFORM, PAPERPLANE_STATION, PAPERPLANE_COURSE } from './OriginalViewingPlatform';
 import { PaperplaneActivity } from './PaperplaneActivity';
 import type { PaperplaneConfig } from '../games/paperplane';
 import * as THREE from 'three';
 import { landmarkModels, loadLandmarkModel } from './LandmarkModels';
 import { applyLandmarkShadowStyle } from './LandmarkStyle';
-import { PlayerController } from './PlayerController';
+import { PlayerController, type PlayerCollisionSnapshot } from './PlayerController';
 import { createQingzeFallback, QINGZE_DECORATION_BOUNDS } from './QingzeGarden';
 import { createFoliageGeometry, createSurfaceMaterial } from './SurfaceStyle';
 import { createHuyuCourtyards } from './HuyuCourtyards';
@@ -12,15 +13,40 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
-import type { CampusData, CampusRoad, CampusSceneHandle, Landmark, PhotoInspection, PhotoPoint, Point2, SceneEvent, SceneState } from '../shared/contracts';
+import type { CampusMode, CampusModeSwitchStatus, CampusModeSwitchResult, CampusData, CampusRoad, CampusSceneHandle, Landmark, PhotoInspection, PhotoPoint, Point2, SceneEvent, SceneState } from '../shared/contracts';
 
 const noopHandle = (): CampusSceneHandle => ({
+  getCampusMode: () => 'base', getModeSwitchStatus: () => ({allowed:false,reason:'三维场景不可用。'}), requestCampusMode: () => ({applied:false,mode:'base',reason:'三维场景不可用。'}),
   setCampus() {}, setState() {}, navigateTo: () => false, resetJourney() {},
   focusLandmark() {}, overview() {}, resetView() {}, pause() {}, resume() {}, dispose() {},
   canBeginPaperplane: () => false, beginPaperplane: () => false,
   setPaperplaneInput() {}, launchPaperplane() {}, retryPaperplane() {}, pausePaperplane() {}, resumePaperplane() {}, endPaperplane() {},
   inspectPhoto: () => ({ settling: true, inRange: false, framed: false, obstructed: false, distance: Infinity }), capturePhoto: () => null,
 });
+
+type ModeLayer = Pick<ReturnType<typeof createIdealCampusLayer>, 'visual' | 'dispose'>;
+/** Synchronous transaction: the next RAF sees one coherent visual/collision world. */
+export function commitCampusModeLayer(
+  world: THREE.Group,
+  player: Pick<PlayerController, 'getCollisionSnapshot' | 'commitCollision' | 'restoreCollisionSnapshot'>,
+  target: PlayerCollisionSnapshot, previous: ModeLayer | null, prepared: ModeLayer | null,
+): { applied: boolean; cleanupWarning: boolean } {
+  const oldSnapshot = player.getCollisionSnapshot();
+  try {
+    if (prepared) world.add(prepared.visual);
+    if (!player.commitCollision(target)) throw new Error('Unsafe collision target');
+    previous?.visual.removeFromParent();
+  } catch {
+    player.restoreCollisionSnapshot(oldSnapshot);
+    prepared?.visual.removeFromParent();
+    if (previous && previous.visual.parent !== world) world.add(previous.visual);
+    let cleanupWarning = false;
+    try { prepared?.dispose(); } catch { cleanupWarning = true; }
+    return { applied: false, cleanupWarning };
+  }
+  try { previous?.dispose(); return { applied: true, cleanupWarning: false }; }
+  catch { return { applied: true, cleanupWarning: true }; }
+}
 
 /** Optional vertical gate preserves legacy ground-level photography. */
 export function isPhotoHeightEligible(footY: number, range?: [number, number]): boolean {
@@ -198,7 +224,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   controls.maxPolarAngle = Math.PI / 2 - 0.08;
   controls.minZoom = 0.3;
   controls.maxZoom = 5;
-  let renderRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+  const referenceQuality = new URLSearchParams(window.location.search).get('render-quality') === 'reference';
+  let renderRatio = referenceQuality ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
   let slowFrames = 0, fastFrames = 0;
   renderer.setPixelRatio(renderRatio);
   renderer.shadowMap.enabled = true;
@@ -247,6 +274,11 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
 
   let data = initialData;
   let campusGeneration = 0;
+  let collisionGeneration = 0;
+  let campusMode: CampusMode = 'base';
+  let idealLayer: ReturnType<typeof createIdealCampusLayer> | null = null;
+  let baseCollisionProps: THREE.Group | null = null;
+  let baseCollisionSnapshot: PlayerCollisionSnapshot | null = null;
   let courtyard: ReturnType<typeof createHuyuCourtyards> | null = null;
   let platform: ReturnType<typeof createOriginalViewingPlatform> | null = null;
   let state: SceneState = { selectedId: null, targetId: null };
@@ -288,7 +320,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
   function resize(): void {
     if (disposed) return;
-    renderRatio = Math.min(renderRatio, window.devicePixelRatio || 1, 1.5);
+    renderRatio = referenceQuality ? 1 : Math.min(renderRatio, window.devicePixelRatio || 1, 1.5);
     renderer.setPixelRatio(renderRatio);
     renderer.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight), false);
     labels.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight));
@@ -334,6 +366,10 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
 
   function buildCampus(): void {
     endPaperplane(); planeConfig = null; planeStation = null;
+    idealLayer?.dispose(); idealLayer = null;
+    if (baseCollisionProps) disposeObject(baseCollisionProps);
+    baseCollisionProps = null; baseCollisionSnapshot = null; campusMode = 'base';
+    canvas.dataset.campusMode = campusMode;
     platform?.dispose(); platform = null;
     delete canvas.dataset.viewingPlatform; delete canvas.dataset.paperplaneStation;
     delete canvas.dataset.campusReady;
@@ -438,6 +474,13 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const usedFacadeMats = new Set<THREE.Material>();
     let roofUsed = false;
 
+    // Original visual-family studies, not surveyed facade/use/entrance claims.
+    // Footprints, estimated heights, source IDs and collision data stay unchanged.
+    const facadeStudies = new Set([
+      'overture:b39690f0-0259-420f-8c33-e8f982bc8273',
+      'overture:a04a7502-f32b-4fa2-acee-1f08811fee44',
+      '195741288',
+    ]);
     for (const feature of data.features) {
       const polygon = cleanPolygon(feature.polygon || []);
       if (polygon.length < 3) continue;
@@ -500,6 +543,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
           const parapet = perimeter(polygon, height + 0.12, new THREE.LineBasicMaterial({ color: 0x777e77 }));
           if (parapet) { world.add(parapet); roofLines.set(feature.id, parapet); }
         }
+        const studyFacade = facadeStudies.has(feature.id);
         const firstWindow = windowTransforms.length;
         let area = 0;
         for (let i = 0; i < polygon.length; i++) {
@@ -515,13 +559,33 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
           const count = Math.min(100, Math.floor(len / 4.5));
           const sign = area >= 0 ? 1 : -1;
           const nx = sign * dz / len, nz = -sign * dx / len;
+          if (studyFacade) {
+            // Shallow plinth and restrained floor courses share the existing trim batch.
+            for (const y of [.38, ...Array.from({length: Math.max(0, floors - 1)}, (_, floor) => (floor + 1) * floorHeight)]) {
+              const band = new THREE.BoxGeometry(len, y === .38 ? .34 : .09, .12);
+              band.rotateY(Math.atan2(-dz, dx));
+              band.translate((a[0] + b[0]) / 2, y, (a[1] + b[1]) / 2);
+              trimParts.push(band);
+            }
+          }
           for (let floor = 0; floor < floors; floor++) for (let j = 0; j < count; j++) {
-            const t = (j + 0.5) / count;
+            const pairOffset = studyFacade && count > 1 ? (j % 2 === 0 ? .1 : -.1) : 0;
+            const t = (j + 0.5 + pairOffset) / count;
             dummy.position.set(a[0] + dx * t + nx * 0.04, (floor + 0.5) * floorHeight, a[1] + dz * t + nz * 0.04);
             dummy.rotation.set(0, Math.atan2(-dz, dx), 0);
-            dummy.scale.set(Math.min(1.8, len / count * 0.5), Math.min(1.6, floorHeight * 0.55), 0.12);
+            const windowWidth = Math.min(studyFacade ? 2 : 1.8, len / count * .5);
+            const windowHeight = Math.min(studyFacade ? 1.9 : 1.6, floorHeight * (studyFacade ? .62 : .55));
+            // Pane front .09m, mullion front .10m: preserve original envelope
+            // with a real .01m depth gap, not coplanar faces or polygonOffset.
+            dummy.scale.set(windowWidth, windowHeight, studyFacade ? .10 : .12);
             dummy.updateMatrix();
             windowTransforms.push(dummy.matrix.clone());
+            if (studyFacade && j % 2 === 0) {
+              const mullion = new THREE.BoxGeometry(.055, windowHeight, .02);
+              mullion.rotateY(Math.atan2(-dz, dx));
+              mullion.translate(dummy.position.x + nx * .05, dummy.position.y, dummy.position.z + nz * .05);
+              trimParts.push(mullion);
+            }
           }
         }
         modelWindowRanges.set(feature.id, [firstWindow, windowTransforms.length]);
@@ -791,7 +855,16 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       canvas.dataset.viewingPlatform = JSON.stringify({status:'graybox',deckTop:VIEWING_PLATFORM.deckTop,photo:VIEWING_PLATFORM.photo.position});
       canvas.dataset.paperplaneStation = 'loading';
     }
+    // Retain private CPU proxy geometry, never borrowed model/platform resources.
+    baseCollisionProps = collisionProps.clone(true);
+    const proxyMaterial = new THREE.MeshBasicMaterial();
+    baseCollisionProps.traverse(object => {
+      if (object instanceof THREE.Mesh) { object.geometry = object.geometry.clone(); object.material = proxyMaterial; }
+    });
     player.setCampus(data, collisionProps);
+    baseCollisionSnapshot = player.getCollisionSnapshot();
+    canvas.dataset.collisionGeneration = String(++collisionGeneration);
+    canvas.dataset.worldGeneration = String(campusGeneration);
     platform?.colliders.removeFromParent(); // Handle owns these resources.
     disposeObject(collisionProps);
     world.add(pawn, player.shadow);
@@ -992,7 +1065,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     else if (dt > 0 && dt < .025) { fastFrames++; slowFrames = 0; }
     else { slowFrames = 0; fastFrames = 0; }
     const maxRatio = Math.min(window.devicePixelRatio || 1, 1.5);
-    const nextRatio = slowFrames >= 3 ? Math.max(.5, renderRatio * .75)
+    const nextRatio = referenceQuality ? 1 : slowFrames >= 3 ? Math.max(.5, renderRatio * .75)
       : fastFrames >= 180 ? Math.min(maxRatio, renderRatio / .75) : renderRatio;
     if (nextRatio !== renderRatio) {
       renderRatio = nextRatio; renderer.setPixelRatio(renderRatio);
@@ -1002,6 +1075,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
       slowFrames = fastFrames = 0;
     }
     canvas.dataset.renderRatio = renderRatio.toFixed(2);
+    canvas.dataset.renderQuality = referenceQuality ? 'reference' : 'adaptive';
+    canvas.dataset.shadowType = String(renderer.shadowMap.type);
     if (tween) {
       tween.elapsed += dt;
       const t = Math.min(1, tween.elapsed / tween.duration), eased = t * t * (3 - 2 * t);
@@ -1066,6 +1141,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     canvas.dataset.frame = String(++frameCount);
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
     canvas.dataset.triangles = String(renderer.info.render.triangles);
+    canvas.dataset.geometries = String(renderer.info.memory.geometries);
+    canvas.dataset.textures = String(renderer.info.memory.textures);
     raf = requestAnimationFrame(tick);
   }
   function canBeginPaperplane(): boolean {
@@ -1180,9 +1257,66 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   canvas.addEventListener('pointerup', pointerUp);
   canvas.addEventListener('pointercancel', pointerCancel);
 
+  function getModeSwitchStatus(): CampusModeSwitchStatus {
+    if (disposed) return { allowed: false, reason: '三维场景不可用，无法切换设施。' };
+    if (paused || plane || mapMode || travel || tween) return { allowed: false, reason: '请先退出当前活动或地图，回到自由步行后切换。' };
+    if (!player.onSharedGround) return { allowed: false, reason: '请先走下台阶并在共有地面站稳，再切换校园模式。' };
+    const [minX, minZ, maxX, maxZ] = IDEAL_FACILITIES[data.id].bounds;
+    const { x, z } = player.avatar.position;
+    if (x >= minX - 1 && x <= maxX + 1 && z >= minZ - 1 && z <= maxZ + 1)
+      return { allowed: false, reason: '请先走出原创设施，回到入口旁共有地面后切换；不会自动移动角色。' };
+    return { allowed: true, reason: '' };
+  }
+  function requestCampusMode(nextMode: CampusMode): CampusModeSwitchResult {
+    if (nextMode !== 'base' && nextMode !== 'ideal') return { applied: false, mode: campusMode, reason: '未知校园模式。' };
+    if (nextMode === campusMode) return { applied: true, mode: campusMode, reason: '' };
+    const status = getModeSwitchStatus();
+    if (!status.allowed) return { applied: false, mode: campusMode, reason: status.reason };
+    if (!baseCollisionProps || !baseCollisionSnapshot) return { applied: false, mode: campusMode, reason: '场景尚未准备好，请稍后再试。' };
+    let prepared: ReturnType<typeof createIdealCampusLayer> | null = null;
+    try {
+      let target = baseCollisionSnapshot;
+      if (nextMode === 'ideal') {
+        prepared = createIdealCampusLayer(data.id);
+        const combined = new THREE.Group();
+        combined.add(baseCollisionProps.clone(true), prepared.colliders.clone(true));
+        target = player.prepareCollision(data, combined);
+        combined.clear(); // Borrowed geometry, not recursively disposed.
+      }
+      if (!player.canCommitCollision(target)) {
+        prepared?.dispose();
+        return { applied: false, mode: campusMode, reason: '当前位置与目标设施重叠或没有稳定地面，请走到入口旁的空地再试。' };
+      }
+      const previousMeshes = new Set<THREE.Object3D>();
+      idealLayer?.visual.traverse(object => { if (object instanceof THREE.Mesh) previousMeshes.add(object); });
+      const nextPickables = pickables.filter(object => !previousMeshes.has(object));
+      prepared?.visual.traverse(object => { if (object instanceof THREE.Mesh) nextPickables.push(object); });
+      const transaction = commitCampusModeLayer(world, player, target, idealLayer, prepared);
+      if (!transaction.applied) return { applied: false, mode: campusMode, reason: '设施切换失败，已保留原校园模式和人物位置。' + (transaction.cleanupWarning ? ' 候选资源释放出现问题，建议刷新页面。' : '') };
+      pickables = nextPickables; idealLayer = prepared; campusMode = nextMode;
+      renderer.shadowMap.needsUpdate = true;
+      canvas.dataset.campusMode = campusMode;
+      canvas.dataset.collisionGeneration = String(++collisionGeneration);
+      previousTime = 0;
+      const direction = data.id === 'huyu'
+        ? '新增书庭位于梅花教室东北侧，东侧入口接现有地面路。'
+        : '新增柱廊在观景台和地面折叠站以东，可从南北两端进入。';
+      const description = campusMode === 'ideal'
+        ? `${IDEAL_FACILITIES[data.id].label}仅是局部原创空间，并非校园实景。${direction}`
+        : '已回到基础校园，旅程与人物位置保留。';
+      return { applied: true, mode: campusMode, reason: description + (transaction.cleanupWarning ? ' 旧资源释放出现问题，建议刷新页面。' : '') };
+    } catch {
+      try { prepared?.dispose(); } catch { /* Retain the old mode despite failed candidate cleanup. */ }
+      return { applied: false, mode: campusMode, reason: '设施准备失败，已保留原校园模式，请稍后重试。' };
+    }
+  }
+
   function dispose(): void {
     if (disposed) return;
     endPaperplane();
+    idealLayer?.dispose(); idealLayer = null;
+    if (baseCollisionProps) disposeObject(baseCollisionProps);
+    baseCollisionProps = null; baseCollisionSnapshot = null;
     disposed = true;
     delete canvas.dataset.campusReady;
     delete canvas.dataset.huyuTreeTexture; delete canvas.dataset.huyuTreeCount;
@@ -1229,6 +1363,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
 
   return {
+    getCampusMode: () => campusMode, getModeSwitchStatus, requestCampusMode,
     setCampus(next) {
       if (disposed) return;
       try { data = next; state = { selectedId: null, targetId: null }; buildCampus(); questView(true); showPlayer(); labels.render(scene, player.camera); }

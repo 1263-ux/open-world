@@ -12,7 +12,7 @@ import { campuses } from '../campus-data/campuses';
 import { emptyQuest, startQuest, visitQuest } from '../games/quest';
 import { loadProgress, saveProgress } from '../games/storage';
 import { createCampusScene } from '../scene/CampusScene';
-import type { CampusData, CampusId, CampusSceneHandle, Landmark, SceneEvent, PaperplaneSnapshot, PaperplaneInput, PhotoInspection } from '../shared/contracts';
+import type { CampusMode, CampusData, CampusId, CampusSceneHandle, Landmark, SceneEvent, PaperplaneSnapshot, PaperplaneInput, PhotoInspection } from '../shared/contracts';
 
 type QuestState = ReturnType<typeof emptyQuest>;
 type Panel = 'quest' | 'directory' | 'detail';
@@ -26,6 +26,32 @@ function initialCampus(): CampusId {
     if (saved === 'huyu' || saved === 'yingxi') return saved;
   } catch { /* Storage is optional. */ }
   return 'yingxi';
+}
+const CAMPUS_MODE_KEY = 'campus-atlas:campus-mode:v1';
+function initialCampusMode(): CampusMode {
+  try { return window.localStorage.getItem(CAMPUS_MODE_KEY) === 'ideal' ? 'ideal' : 'base'; }
+  catch { return 'base'; }
+}
+const preferredCampusMode = ref<CampusMode>(initialCampusMode());
+const campusMode = ref<CampusMode>('base');
+const campusModeFeedback = ref('');
+function restoreCampusMode() {
+  if (!scene) return;
+  const result = scene.requestCampusMode(preferredCampusMode.value);
+  campusMode.value = result.mode;
+  if (!result.applied) campusModeFeedback.value = result.reason;
+}
+function toggleCampusMode() {
+  if (!scene || sceneError.value) { campusModeFeedback.value = '三维场景不可用，无法切换设施。'; return; }
+  if (mode.value !== 'exploring' || panelOpen.value || notebookConfirming.value) {
+    campusModeFeedback.value = '请先退出当前活动或面板，回到自由步行后切换。'; return;
+  }
+  const result = scene.requestCampusMode(campusMode.value === 'base' ? 'ideal' : 'base');
+  campusMode.value = result.mode; campusModeFeedback.value = result.reason;
+  if (result.applied) {
+    preferredCampusMode.value = result.mode;
+    try { window.localStorage.setItem(CAMPUS_MODE_KEY, result.mode); } catch { /* Keep the in-memory preference; journey storage is untouched. */ }
+  }
 }
 const campusId = ref<CampusId>(initialCampus());
 const campus = computed(() => campusList.find(item => item.id === campusId.value) ?? campusList[0]!);
@@ -263,6 +289,7 @@ function switchCampus(id: CampusId) {
   notice.value = '已切换校区，两个章节的印记分别保留。返回后可继续前往下一站。';
   try {
     scene?.setCampus(campus.value);
+    restoreCampusMode();
     syncScene();
   } catch {
     sceneError.value = '场景未能载入，可使用无障碍列表模式继续。';
@@ -401,6 +428,7 @@ onMounted(() => {
   if (!sceneElement.value) return;
   try {
     scene = createCampusScene(sceneElement.value, campus.value, onSceneEvent);
+    restoreCampusMode();
     if (quest.value.status === 'active') {
       selectedId.value = target.value?.id ?? null;
       notice.value = '已恢复旅程进度。请重新前往当前站点。';
@@ -424,6 +452,7 @@ onBeforeUnmount(() => {
       <div class="brand"><span class="brand-mark" aria-hidden="true">太</span><span>太理 <i>·</i> 时光漫游</span></div>
       <nav class="campus-switch" aria-label="选择校区">
         <button v-for="item in campusList" :key="item.id" type="button" :data-testid="`campus-${item.id}`" :disabled="planeActive" :aria-pressed="campusId === item.id" @click="switchCampus(item.id)">{{ item.name }}</button>
+        <button type="button" data-testid="campus-mode-toggle" :aria-pressed="campusMode === 'ideal'" @click="toggleCampusMode">{{ campusMode === 'ideal' ? '理想校园 · 原创' : '基础校园' }}</button>
       </nav>
       <div class="header-progress" :aria-label="`地标探索已记录 ${quest.visited.length} 站，共 ${orderedLandmarks.length} 站`">
         <span>地标探索</span><span class="header-count">{{ String(quest.visited.length).padStart(2, '0') }} <em>/</em> {{ String(orderedLandmarks.length).padStart(2, '0') }}</span>
@@ -433,6 +462,9 @@ onBeforeUnmount(() => {
 
     <main class="scene-area" aria-label="校园漫游场景">
       <div ref="sceneElement" class="scene-canvas" aria-label="校园三维场景"></div>
+      <div v-if="campusModeFeedback" class="campus-mode-feedback" data-testid="campus-mode-feedback" role="status">
+        <span>{{ campusModeFeedback }}</span><button type="button" aria-label="关闭模式提示" @click="campusModeFeedback = ''">×</button>
+      </div>
       <div class="scene-shade" aria-hidden="true"></div>
       <CampusMinimap :campus="campus" :position="playerPosition" :map-open="mapOpen" :disabled="!!sceneError || planeActive" @toggle="toggleOverview" />
       <div class="chapter-title" :class="{ 'photo-chapter': campusId === 'yingxi' }">
@@ -550,3 +582,8 @@ onBeforeUnmount(() => {
   </div>
   <HksOverlay v-if="hksOpen" @close="closeHks" />
 </template>
+
+<style scoped>
+.campus-mode-feedback { position: absolute; z-index: 12; top: 12px; left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 32px)); padding: 10px 14px; display: flex; align-items: center; gap: 12px; color: #263e35; background: #fffdf3; border: 1px solid #b5bda8; border-radius: 10px; box-shadow: 0 3px 16px #243a3522; font-size: 13px; }
+.campus-mode-feedback button { margin-left: auto; flex-shrink: 0; min-width: 32px; min-height: 32px; color: inherit; background: transparent; border: 0; font-size: 22px; }
+</style>

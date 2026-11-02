@@ -88,38 +88,74 @@ export function createSurfaceMaterial(kind: SurfaceKind, color: THREE.ColorRepre
   return new THREE.MeshStandardMaterial({ color, roughness: 1, ...(map ? { map } : {}) });
 }
 
-/** Original fine leaf clusters, baked once and instanced per tree. The sparse
- * opaque cards avoid alpha overdraw while keeping a broken, leafy silhouette.
- * All trees share this geometry; random variation is deterministic. */
+/** Four overlapping, irregular crown volumes, baked once for the existing
+ * single-material instances. Broad connected foliage reads at walking distance;
+ * a few attached edge leaves soften the outline without transparent overdraw.
+ * Local origin/units and the previous roughly 2 x 1.5 x 2 envelope are retained.
+ * This is an original campus-tree abstraction, not a measured botanical model. */
 export function createFoliageGeometry(): THREE.BufferGeometry {
-  const random = randomGenerator(3771);
   const parts: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < 200; i++) {
-    const angle = random() * Math.PI * 2;
-    const radius = Math.sqrt(random()) * .95;
-    const width = .16 + random() * .06, height = .07 + random() * .035;
-    // Six-point tapered leaf silhouette; opaque geometry avoids alpha overdraw.
-    const shape = new THREE.Shape();
-    shape.moveTo(-width / 2, 0); shape.lineTo(-width * .24, height / 2);
-    shape.lineTo(width * .24, height / 2); shape.lineTo(width / 2, 0);
-    shape.lineTo(width * .24, -height / 2); shape.lineTo(-width * .24, -height / 2);
-    shape.closePath();
-    const leaf = new THREE.ShapeGeometry(shape);
-    leaf.rotateX(random() * Math.PI);
-    leaf.rotateY(random() * Math.PI * 2);
-    leaf.rotateZ(random() * Math.PI);
-    leaf.translate(Math.cos(angle) * radius, (random() - .5) * 1.35, Math.sin(angle) * radius);
-    const shade = .8 + random() * .2;
-    const values = new Float32Array(leaf.getAttribute('position').count * 3);
-    for (let j = 0; j < values.length; j += 3) {
-      values[j] = shade; values[j + 1] = Math.min(1, shade * 1.02); values[j + 2] = shade * .95;
+  const lobes = [
+    { center: [0, .04, 0], scale: [.72, .65, .69] },
+    { center: [-.39, -.10, .18], scale: [.51, .60, .65] },
+    { center: [.40, -.04, .10], scale: [.55, .56, .57] },
+    { center: [.03, -.02, -.38], scale: [.62, .55, .59] },
+  ];
+  const colorize = (geometry: THREE.BufferGeometry): void => {
+    const position = geometry.getAttribute('position');
+    const values = new Float32Array(position.count * 3);
+    for (let i = 0; i < position.count; i++) {
+      const x = position.getX(i), y = position.getY(i), z = position.getZ(i);
+      // Quiet, spatially coherent tones: shaded lower growth, warmer upper crown.
+      // Vertex colors multiply the existing material; no global-light changes.
+      const upper = THREE.MathUtils.clamp((y + .7) / 1.4, 0, 1);
+      const shade = .76 + upper * .18 + .025 * Math.sin(x * 5 + z * 3);
+      values[i * 3] = shade * (.96 + upper * .04);
+      values[i * 3 + 1] = shade;
+      values[i * 3 + 2] = shade * (.91 - upper * .02);
     }
-    leaf.setAttribute('color', new THREE.BufferAttribute(values, 3));
-    parts.push(leaf);
+    geometry.setAttribute('color', new THREE.BufferAttribute(values, 3));
+  };
+  lobes.forEach(({ center, scale }, index) => {
+    // Detail 2 = 180 triangles, rather than a smooth toy-like sphere. The
+    // continuous displacement keeps coincident vertices joined and avoids cracks.
+    const crown = new THREE.IcosahedronGeometry(1, 2);
+    const position = crown.getAttribute('position');
+    for (let i = 0; i < position.count; i++) {
+      const x = position.getX(i), y = position.getY(i), z = position.getZ(i);
+      const ripple = 1 + .065 * Math.sin(x * 7 + index * 1.7) * Math.cos(z * 6 - y * 4)
+        + .035 * Math.sin(y * 9 + z * 5 + index);
+      position.setXYZ(i, center[0] + x * scale[0] * ripple,
+        center[1] + y * scale[1] * ripple, center[2] + z * scale[2] * ripple);
+    }
+    crown.computeVertexNormals();
+    colorize(crown);
+    parts.push(crown);
+  });
+  // Eight small opaque tips remain attached to the volumes, not a leaf cloud.
+  const random = randomGenerator(3771);
+  for (let i = 0; i < 8; i++) {
+    const angle = i * Math.PI / 4 + .12;
+    const shape = new THREE.Shape();
+    shape.moveTo(-.09, 0); shape.lineTo(-.04, .035);
+    shape.lineTo(.04, .035); shape.lineTo(.09, 0);
+    shape.lineTo(.04, -.035); shape.lineTo(-.04, -.035);
+    shape.closePath();
+    const indexedTip = new THREE.ShapeGeometry(shape);
+    const tip = indexedTip.toNonIndexed();
+    indexedTip.dispose();
+    tip.rotateX(.4 + random() * .8);
+    tip.rotateY(-angle);
+    tip.rotateZ((random() - .5) * .5);
+    tip.translate(Math.cos(angle) * .80, -.10 + random() * .22, Math.sin(angle) * .70);
+    colorize(tip);
+    parts.push(tip);
   }
   const merged = mergeGeometries(parts);
   for (const part of parts) part.dispose();
   if (!merged) throw new Error('Unable to merge original foliage geometry');
-  merged.name = 'campus-original-fine-leaves';
+  merged.name = 'campus-original-layered-crown';
+  merged.computeBoundingBox();
+  merged.computeBoundingSphere();
   return merged;
 }

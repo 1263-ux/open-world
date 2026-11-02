@@ -15,6 +15,7 @@ export function createHuyuCourtyards(
   let disposed = false;
   world.name = 'huyu-pocket-gardens';
   world.userData.treeTextureStatus = 'not-needed';
+  world.userData.designProvenance = 'Interpretive courtyard planting; not surveyed campus features';
   const beds: [number, number][] = [
     [0, -182], [29, -182], [-91, -12], [-60, -12], [57, -53], [79, -53],
   ];
@@ -45,6 +46,28 @@ export function createHuyuCourtyards(
   // the existing low planters. Clearance still keeps them off routes/buildings.
   for (const [x, z] of beds) {
     if (!isClear(x, z, 2.1)) continue;
+    // Meihua's two existing beds: photo-inspired low, clipped planting, not
+    // surveyed garden geometry. Keep the original footprint, admission radius
+    // and traversable height. No new volume outside the admitted bed envelope.
+    if (z === -12) {
+      // A continuous stone rim exposes recessed soil rather than a solid slab
+      // with soil floating above it. End caps meet the long edges, not overlap.
+      for (const side of [-1, 1]) {
+        addBox(world, stone, x, .11, z + side * .635, 3.5, .18, .18);
+        addBox(world, stone, x + side * 1.66, .11, z, .18, .18, 1.09);
+      }
+      addBox(world, soil, x, .16, z, 3.14, .04, 1.09);
+      // Overlapping crowns read as one low hedge; blossoms remain a restrained
+      // foreground accent. Reuse all existing materials and merged batches.
+      for (let i = 0; i < 9; i++) {
+        const bloom = i >= 6;
+        const plant = new THREE.Mesh(mound, bloom ? flower : foliage);
+        plant.position.set(x + (bloom ? (i - 7) * .98 : -1.225 + i * .49), bloom ? .29 : .33, z + (bloom ? -.44 : 0));
+        plant.scale.set(bloom ? .10 : .32, bloom ? .08 : .15, bloom ? .10 : .43);
+        plant.castShadow = true; batch(plant);
+      }
+      continue;
+    }
     addBox(world, stone, x, .11, z, 3.5, .18, 1.45);
     addBox(world, soil, x, .22, z, 3.2, .04, 1.2);
     for (let i = 0; i < 9; i++) {

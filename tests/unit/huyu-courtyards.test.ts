@@ -76,3 +76,42 @@ describe('Huyu courtyard resource ownership and admission (mocked loader)',()=>{
     expect(trees[1]!.visible).toBe(false);expect(trees[2]!.visible).toBe(true);expect((trees[1]!.material as THREE.MeshStandardMaterial).map).toBeNull();
   });
 });
+
+describe('Meihua low-bed refinement (geometry only, not runtime visual acceptance)', () => {
+  it('keeps both beds inside their original envelope without adding colliders or material batches', () => {
+    for (const x of [-91, -60]) {
+      const garden = createHuyuCourtyards((sx, z, radius) => sx === x && z === -12 && radius === 2.1);
+      expect(garden.colliders.children).toHaveLength(0);
+      expect(garden.visual.children).toHaveLength(4); // existing stone, soil, foliage, flowers
+      expect(garden.visual.userData.designProvenance).toContain('not surveyed');
+      const bounds = new THREE.Box3().setFromObject(garden.visual);
+      expect(bounds.min.x).toBeCloseTo(x - 1.75, 4);
+      expect(bounds.max.x).toBeCloseTo(x + 1.75, 4);
+      expect(bounds.min.z).toBeCloseTo(-12 - .725, 4);
+      expect(bounds.max.z).toBeCloseTo(-12 + .725, 4);
+      expect(bounds.max.y).toBeLessThanOrEqual(.50);
+      let triangles = 0;
+      for (const child of garden.visual.children) {
+        const mesh = child as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+        expect(mesh.material.map).toBeNull();
+        triangles += (mesh.geometry.index?.count ?? mesh.geometry.getAttribute('position').count) / 3;
+        mesh.geometry.computeBoundingBox();
+        if (mesh.material.color.getHex() === 0x786e5b) {
+          expect(mesh.geometry.boundingBox!.max.y).toBeCloseTo(.18);
+        }
+        if (mesh.material.color.getHex() === 0xd9d2c0) {
+          expect(mesh.geometry.index!.count / 3).toBe(48); // four closed rim segments
+          expect(mesh.geometry.boundingBox!.max.y).toBeCloseTo(.20);
+        }
+      }
+      expect(triangles).toBe(780); // old 744; +36 for continuous four-sided rim
+      garden.dispose();
+    }
+  });
+  it('does not leak any bed geometry when clearance rejects all sites', () => {
+    const garden = createHuyuCourtyards(() => false);
+    expect(garden.visual.children).toHaveLength(0);
+    expect(garden.colliders.children).toHaveLength(0);
+    garden.dispose();
+  });
+});

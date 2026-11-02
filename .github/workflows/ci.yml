@@ -36,6 +36,9 @@ jobs:
       - run: npm run test:e2e -- tests/e2e/explore.spec.ts --output=test-results/http
       - name: Screen-relative keyboard and touch directions
         run: npm run test:e2e -- tests/e2e/control-direction.spec.ts --output=test-results/control-direction
+      - name: Base and ideal campus switching, shared-ground safety and persistence
+        if: ${{ !cancelled() }}
+        run: npm run test:e2e -- tests/e2e/campus-mode.spec.ts --output=test-results/campus-mode
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -117,6 +120,53 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Hks real menu, play, replay and landscape input
         run: npm run test:e2e -- tests/e2e/hks.spec.ts --output=test-results/hks
+      - uses: actions/checkout@v4
+        if: ${{ !cancelled() }}
+        with:
+          ref: e7c2d939b44dc7323f251d832ab6ce2ba5ac1a09
+          path: reference-baseline
+          persist-credentials: false
+      - name: Fixed-quality old/new visual reference on separate static builds
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C reference-baseline rev-parse HEAD)" = e7c2d939b44dc7323f251d832ab6ce2ba5ac1a09
+          cmp package-lock.json reference-baseline/package-lock.json
+          cmp games/hks/package-lock.json reference-baseline/games/hks/package-lock.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'; import crypto from 'node:crypto';
+          const m=JSON.parse(fs.readFileSync('tests/e2e/reference-baseline-manifest.json','utf8'));
+          const hash=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+          if(m.baselineCommit!=='e7c2d939b44dc7323f251d832ab6ce2ba5ac1a09'||m.path!=='src/scene/CampusScene.ts'||hash('reference-baseline/'+m.path)!==m.originalSha256||hash('tests/e2e/reference-baseline.patch')!==m.patchSha256)throw Error('Baseline input identity mismatch');
+          NODE
+          git -C reference-baseline apply "$GITHUB_WORKSPACE/tests/e2e/reference-baseline.patch"
+          test "$(git -C reference-baseline diff --name-only)" = src/scene/CampusScene.ts
+          git -C reference-baseline apply --reverse --check "$GITHUB_WORKSPACE/tests/e2e/reference-baseline.patch"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'; import crypto from 'node:crypto';
+          const m=JSON.parse(fs.readFileSync('tests/e2e/reference-baseline-manifest.json','utf8'));
+          const actual=crypto.createHash('sha256').update(fs.readFileSync('reference-baseline/'+m.path)).digest('hex');
+          if(actual!==m.patchedSha256)throw Error('Patched baseline identity mismatch');
+          console.log('[REFERENCE_INPUT]',JSON.stringify({...m,candidateCommit:process.env.GITHUB_SHA}));
+          NODE
+          ln -s "$GITHUB_WORKSPACE/node_modules" reference-baseline/node_modules
+          ln -s "$GITHUB_WORKSPACE/games/hks/node_modules" reference-baseline/games/hks/node_modules
+          npm --prefix reference-baseline run build
+          npm run build
+          python3 -m http.server 4174 --bind 127.0.0.1 --directory reference-baseline/dist > /tmp/campus-reference-before.log 2>&1 &
+          BEFORE_PID=$!
+          python3 -m http.server 4175 --bind 127.0.0.1 --directory dist > /tmp/campus-reference-after.log 2>&1 &
+          AFTER_PID=$!
+          trap 'kill "$BEFORE_PID" "$AFTER_PID" 2>/dev/null || true' EXIT
+          for port in 4174 4175; do
+            for attempt in $(seq 1 30); do
+              if curl --fail --silent "http://127.0.0.1:$port/" > /dev/null; then break; fi
+              sleep 1
+            done
+            curl --fail --silent "http://127.0.0.1:$port/" > /dev/null
+          done
+          BASELINE_REFERENCE_URL=http://127.0.0.1:4174 CANDIDATE_REFERENCE_URL=http://127.0.0.1:4175 npx playwright test --config tests/e2e/visual-reference.config.ts --output=test-results/visual-reference
       - name: Natural Hks play trial
         if: contains(github.event.head_commit.message, '[playtrial]')
         run: PLAYWRIGHT_HTML_OUTPUT_DIR=survival-playwright-report RUN_HKS_SURVIVAL=1 HKS_TRIAL_CODE_IDENTITY="$GITHUB_SHA" npm run test:e2e -- tests/e2e/hks-survival.spec.ts --workers=1 --retries=0 --output=test-results/survival
@@ -126,6 +176,7 @@ jobs:
           name: campus-hks-browser-report
           path: |
             playwright-report/
+            visual-reference-report/
             test-results/
             survival-playwright-report/
           retention-days: 7

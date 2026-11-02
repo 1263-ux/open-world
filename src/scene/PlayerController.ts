@@ -4,6 +4,11 @@ import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 import type { CampusData, Point2 } from '../shared/contracts';
 import { StudentModel } from './StudentModel';
 
+export interface PlayerCollisionSnapshot {
+  readonly octree: Octree;
+  readonly solidVolumes: { bounds: THREE.Box3; triangles: THREE.Triangle[] }[];
+}
+
 /** Third-person movement against the same source footprints used by the campus renderer. */
 export class PlayerController {
   readonly camera = new THREE.PerspectiveCamera(52, 1, 0.1, 2500);
@@ -169,9 +174,10 @@ export class PlayerController {
     this.avatar.visible = opacity > .001;
     this.canvas.dataset.playerOpacity = opacity.toFixed(3);
   }
-  setCampus(data: CampusData, props?: THREE.Group) {
+  prepareCollision(data: CampusData, props?: THREE.Group): PlayerCollisionSnapshot {
     const group = new THREE.Group();
     const mat = new THREE.MeshBasicMaterial();
+    try {
     const buildingVolumes = [
       ...data.features.filter(f => f.kind === 'building').map(f => ({ polygon: f.polygon, height: f.height })),
       ...(data.modelObstacles ?? []).map(f => ({ polygon: f.polygon, height: f.id.startsWith('gate-') ? 6 : 4.5 })),
@@ -206,10 +212,10 @@ export class PlayerController {
       group.add(copies);
     }
     group.updateMatrixWorld(true);
-    this.octree = new Octree().fromGraphNode(group);
+    const octree = new Octree().fromGraphNode(group);
     // Preserve individual closed proxy identities only for launch containment.
     // Global parity would XOR overlapping solids instead of testing their union.
-    this.solidVolumes = [];
+    const solidVolumes: PlayerCollisionSnapshot['solidVolumes'] = [];
     group.traverse(object => {
       if (!(object instanceof THREE.Mesh)) return;
       const positions = object.geometry.getAttribute('position'), index = object.geometry.index;
@@ -217,10 +223,39 @@ export class PlayerController {
       const triangles: THREE.Triangle[] = [];
       const vertex = (i: number) => new THREE.Vector3().fromBufferAttribute(positions,index ? index.getX(i) : i).applyMatrix4(object.matrixWorld);
       for (let i=0; i<(index?.count ?? positions.count); i+=3) triangles.push(new THREE.Triangle(vertex(i),vertex(i+1),vertex(i+2)));
-      this.solidVolumes.push({bounds:new THREE.Box3().setFromObject(object),triangles});
+      solidVolumes.push({bounds:new THREE.Box3().setFromObject(object),triangles});
     });
-    group.traverse(o => { if (o instanceof THREE.Mesh) o.geometry.dispose(); });
-    mat.dispose();
+    return { octree, solidVolumes };
+    } finally {
+      const owned = new Set<THREE.BufferGeometry>();
+      group.traverse(o => { if (o instanceof THREE.Mesh) owned.add(o.geometry); });
+      for (const geometry of owned) geometry.dispose();
+      mat.dispose();
+    }
+  }
+  getCollisionSnapshot(): PlayerCollisionSnapshot { return { octree: this.octree, solidVolumes: this.solidVolumes }; }
+  get onSharedGround(): boolean { return this.grounded && Math.abs(this.velocityY) < .001 && Math.abs(this.avatar.position.y - .12) < .01; }
+  canCommitCollision(next: PlayerCollisionSnapshot): boolean {
+    if (!this.onSharedGround) return false;
+    const hit = next.octree.capsuleIntersect(this.collider.clone());
+    return !(hit && hit.depth > .001) && !this.pointBlocked([this.avatar.position.x, this.avatar.position.y + .9, this.avatar.position.z], next);
+  }
+  commitCollision(next: PlayerCollisionSnapshot): boolean {
+    if (!this.canCommitCollision(next)) return false;
+    this.octree = next.octree; this.solidVolumes = next.solidVolumes;
+    // Do not call onBlur: it advances old input and could move the saved pose.
+    this.keys.clear(); this.pointer = []; this.joystick.set(0, 0);
+    this.runHeld = false; this.jumpQueued = false; this.stick.style.transform = '';
+    this.lastAdvance = performance.now(); this.cameraAtTarget = false;
+    return true;
+  }
+  restoreCollisionSnapshot(previous: PlayerCollisionSnapshot): void {
+    this.octree = previous.octree; this.solidVolumes = previous.solidVolumes;
+    this.cameraAtTarget = false;
+  }
+  setCampus(data: CampusData, props?: THREE.Group) {
+    const snapshot = this.prepareCollision(data, props);
+    this.octree = snapshot.octree; this.solidVolumes = snapshot.solidVolumes;
     // This is a designed gameplay viewpoint, not a surveyed entrance or a
     // replacement for the source's original route start.
     this.setPosition(data.id === 'yingxi' ? [-20, 175.5] : data.start);
@@ -247,13 +282,13 @@ export class PlayerController {
     return hit && hit.distance <= length + 1e-8 ? { fraction: Math.max(0, Math.min(1, hit.distance / length)) } : null;
   }
   /** Interior launch rejection; parity of deduplicated two-sided triangle hits. */
-  pointBlocked(point: [number, number, number]): boolean {
+  pointBlocked(point: [number, number, number], snapshot: PlayerCollisionSnapshot = this.getCollisionSnapshot()): boolean {
     if (!point.every(Number.isFinite) || point[1] <= .12) return true;
     const origin = new THREE.Vector3(...point);
-    if (this.octree.sphereIntersect(new THREE.Sphere(origin, .03))) return true;
+    if (snapshot.octree.sphereIntersect(new THREE.Sphere(origin, .03))) return true;
     const ray = new THREE.Ray(origin, new THREE.Vector3(.917, .271, .293).normalize());
     const hit = new THREE.Vector3();
-    return this.solidVolumes.some(volume => {
+    return snapshot.solidVolumes.some(volume => {
       if (!volume.bounds.containsPoint(origin)) return false;
       const distances: number[] = [];
       for (const triangle of volume.triangles) {

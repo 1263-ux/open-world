@@ -1,0 +1,8 @@
+{
+  "baselineCommit": "e7c2d939b44dc7323f251d832ab6ce2ba5ac1a09",
+  "path": "src/scene/CampusScene.ts",
+  "originalSha256": "543f1ecad03622fcdf3be708af26d8716689959d80c7825013c24707d4d008a0",
+  "patchedSha256": "48a6d5bd73b1e583256512c3d6f2dcaa3915ce018e92576561d35a343d48da9b",
+  "patchSha256": "09f82a570096ba00d250e908f7d0005c8ed8d81bbfad6afedd64625b39d50315",
+  "scope": "Reconstructed reference-only query patch: DPR 1, no adaptive ratio changes, read-only quality/shadow telemetry. No geometry, movement, collision or progress changes."
+}
