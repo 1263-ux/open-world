@@ -39,6 +39,7 @@ export async function touchWalkTo(page: Page, canvas: Locator, target: [number,n
   const center={x:box.x+83,y:box.y+box.height-115};
   const touch=await page.context().newCDPSession(page);
   const observations:Array<{waypoint:[number,number];before:[number,number,number];after:[number,number,number];holdMs:number;pulseMs:number;magnitude:number;continuous:boolean;stick:{x:number;y:number}}>=[];
+  const cruiseSamples:Array<{wallMs:number;frame:number;xyz:[number,number,number];waypoint:[number,number]}>=[];
   const started=Date.now(),startFrame=initial.frame;
   console.log(`[TOUCH_ROUTE_START] ${JSON.stringify({target,start:[startX,startZ],authoredSegment,wall:started,frame:startFrame})}`);
   let stagnant=0, previous:[number,number]=[startX,startZ];
@@ -60,11 +61,18 @@ export async function touchWalkTo(page: Page, canvas: Locator, target: [number,n
           // 16m exceeds a 1.5s observation interval plus 1.5s stale read
           // and 1.5s release delivery (15.3m at walk speed). This is a
           // tested latency envelope, not a guarantee for arbitrary stalls.
-          let brakingZone = false;
-          for (let observation=0;observation<80;observation++) {
+          let brakingZone = false, observedFrame=sample.frame, renderedObservations=0;
+          while (renderedObservations<80) {
             await page.waitForTimeout(100);
             const current=await touchPose(canvas);
-            if (Date.now()-pulseStart>30000) throw Error('Continuous touch cruise exceeded 30s watchdog');
+            const wallMs=Date.now()-pulseStart;
+            cruiseSamples.push({wallMs,frame:current.frame,xyz:current.xyz,waypoint});
+            if (wallMs>30000) throw Error('Continuous touch cruise exceeded 30s watchdog');
+            // Fast readonly polls may repeat a slow rendered frame. They do not
+            // consume independent movement observations; wall time always does.
+            if (current.frame===observedFrame) continue;
+            if (current.frame<observedFrame) throw Error('Continuous touch frame regressed');
+            observedFrame=current.frame;renderedObservations++;
             const remaining=Math.hypot(waypoint[0]-current.xyz[0],waypoint[1]-current.xyz[2]);
             const forward=(waypoint[0]-current.xyz[0])*dx+(waypoint[1]-current.xyz[2])*dz;
             if (forward<=0 || remaining>distance+.1) throw Error('Continuous touch cruise exceeded its straight segment');
@@ -87,8 +95,8 @@ export async function touchWalkTo(page: Page, canvas: Locator, target: [number,n
   } finally {
     // Preserve progress even when the test deadline has already closed the page.
     const endFrame=await canvas.getAttribute('data-frame').catch(()=>null);
-    console.log(`[TOUCH_ROUTE_END] ${JSON.stringify({target,start:[startX,startZ],authoredSegment,wall:Date.now(),durationMs:Date.now()-started,startFrame,endFrame,attempts:observations.length,last:observations.slice(-12)})}`);
-    await info.attach('ideal-touch-route-inputs',{body:JSON.stringify({start:[startX,startZ],target,observations},null,2),contentType:'application/json'}).catch(error=>console.log(`[TOUCH_ROUTE_ATTACHMENT] ${String(error)}`));
+    console.log(`[TOUCH_ROUTE_END] ${JSON.stringify({target,start:[startX,startZ],authoredSegment,wall:Date.now(),durationMs:Date.now()-started,startFrame,endFrame,attempts:observations.length,last:observations.slice(-12),cruiseReads:cruiseSamples.length,cruiseFrames:new Set(cruiseSamples.map(s=>s.frame)).size,cruiseLast:cruiseSamples.slice(-12)})}`);
+    await info.attach('ideal-touch-route-inputs',{body:JSON.stringify({start:[startX,startZ],target,observations,cruiseSamples},null,2),contentType:'application/json'}).catch(error=>console.log(`[TOUCH_ROUTE_ATTACHMENT] ${String(error)}`));
     await touch.detach().catch(error=>console.log(`[TOUCH_ROUTE_CLEANUP] ${String(error)}`));
   }
 }
