@@ -138,13 +138,23 @@ test('scenic diary: genuine walk, framing, three captures, Hks round-trip and lo
   // versions, so a single hard-coded pose is not an invariant. No scene state
   // is injected; the visible status and screenshot are the evidence.
   const obstructionAttempts: unknown[] = []; let foundObstruction = false;
-  for (const z of [170.5, 169, 172, 174]) {
+  // Two actual slow-renderer traces found natural obstruction near z174 at
+  // pitch-.30 / -.35 only after34 /35 attempts. Prefer those observed views,
+  // but retain the complete original40-candidate fallback and all live gates.
+  // Reach174 from172 as in those traces: the unchanged .3m steering tolerance
+  // can otherwise approach from the opposite side of a thin occluding edge.
+  const obstructionGroups = [
+    { z: 174, pitches: [-.3, -.35], preferred: true },
+    ...[170.5, 169, 172, 174].map(z => ({ z, pitches: [-.15,-.2,-.25,-.3,-.35,-.4,-.45,-.5,-.55,-.6], preferred: false })),
+  ];
+  for (const { z, pitches, preferred } of obstructionGroups) {
     await rotateTo(page,canvas,-Math.PI/2,-.15); await canvas.focus();
+    if (preferred) await steerPhotoZ(page,canvas,172,info,'photo-obstruction-preferred-north-approach');
     await steerPhotoZ(page,canvas,z,info,`photo-obstruction-approach-${z}`);
     const p = await position(canvas);
     expect(Math.hypot(p[0]-PHOTO_POINTS[0]!.position[0],p[2]-PHOTO_POINTS[0]!.position[1])).toBeLessThan(PHOTO_POINTS[0]!.radius);
     const target = PHOTO_POINTS[0]!.target, desiredYaw = Math.atan2(target[0]-p[0],target[2]-p[2]);
-    for (const pitch of [-.15,-.2,-.25,-.3,-.35,-.4,-.45,-.5,-.55,-.6]) {
+    for (const pitch of pitches) {
       await rotateTo(page,canvas,desiredYaw,pitch);
       await waitForSettledCamera(page,canvas);
       const framed = await guide.getAttribute('data-photo-framed'), obstructed = await guide.getAttribute('data-photo-obstructed');
