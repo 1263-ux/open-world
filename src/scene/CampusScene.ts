@@ -1,4 +1,4 @@
-import { createIdealCampusLayer, IDEAL_FACILITIES } from './IdealCampusLayer';
+import { createIdealCampusLayer, IDEAL_FACILITIES, IDEAL_ACTIVITY_POINTS } from './IdealCampusLayer';
 import { createOriginalViewingPlatform, VIEWING_PLATFORM, PAPERPLANE_STATION, PAPERPLANE_COURSE } from './OriginalViewingPlatform';
 import { PaperplaneActivity } from './PaperplaneActivity';
 import type { PaperplaneConfig } from '../games/paperplane';
@@ -7,15 +7,16 @@ import { landmarkModels, loadLandmarkModel } from './LandmarkModels';
 import { applyLandmarkShadowStyle } from './LandmarkStyle';
 import { PlayerController, type PlayerCollisionSnapshot } from './PlayerController';
 import { createQingzeFallback, QINGZE_DECORATION_BOUNDS } from './QingzeGarden';
-import { createFoliageGeometry, createSurfaceMaterial } from './SurfaceStyle';
+import { createFoliageGeometry, createSurfaceMaterial, getFoliageVariation } from './SurfaceStyle';
 import { createHuyuCourtyards } from './HuyuCourtyards';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
-import type { CampusMode, CampusModeSwitchStatus, CampusModeSwitchResult, CampusData, CampusRoad, CampusSceneHandle, Landmark, PhotoInspection, PhotoPoint, Point2, SceneEvent, SceneState } from '../shared/contracts';
+import type { IdealActivityInspection, CampusMode, CampusModeSwitchStatus, CampusModeSwitchResult, CampusData, CampusRoad, CampusSceneHandle, Landmark, PhotoInspection, PhotoPoint, Point2, SceneEvent, SceneState } from '../shared/contracts';
 
 const noopHandle = (): CampusSceneHandle => ({
+  inspectIdealActivity: () => null,
   getCampusMode: () => 'base', getModeSwitchStatus: () => ({allowed:false,reason:'三维场景不可用。'}), requestCampusMode: () => ({applied:false,mode:'base',reason:'三维场景不可用。'}),
   setCampus() {}, setState() {}, navigateTo: () => false, resetJourney() {},
   focusLandmark() {}, overview() {}, resetView() {}, pause() {}, resume() {}, dispose() {},
@@ -46,6 +47,28 @@ export function commitCampusModeLayer(
   }
   try { previous?.dispose(); return { applied: true, cleanupWarning: false }; }
   catch { return { applied: true, cleanupWarning: true }; }
+}
+
+/** Pure eligibility gate; the scene supplies current physical support and real line of sight. */
+export function idealActivityEligibility(input: { free: boolean; grounded: boolean; withinFacility: boolean; distance: number; obstructed: boolean }): { available: boolean; reason: string } {
+  if (!input.free) return { available: false, reason: '请先退出当前活动或面板。' };
+  if (!input.grounded) return { available: false, reason: '请在地面站稳后使用台面。' };
+  if (!Number.isFinite(input.distance) || input.distance < 0 || input.distance > 2.4 || !input.withinFacility) return { available: false, reason: '走入廊下，靠近阅读或展示台。' };
+  if (input.obstructed) return { available: false, reason: '台面被景物遮挡，请从通道侧靠近。' };
+  return { available: true, reason: '' };
+}
+
+/** Opaque scenery blocks a table interaction; no collision/pose writes. */
+export function hasIdealActivityLineOfSight(from: THREE.Vector3, target: THREE.Vector3, objects: THREE.Object3D[], raycaster = new THREE.Raycaster()): boolean {
+  const ray = target.clone().sub(from);
+  if (!Number.isFinite(ray.length()) || ray.lengthSq() < .000001) return false;
+  raycaster.set(from, ray.clone().normalize()); raycaster.far = ray.length();
+  try {
+    return !raycaster.intersectObjects(objects, true).some(hit => {
+      for (let object: THREE.Object3D | null = hit.object; object; object = object.parent) if (!object.visible || object.userData.photoIgnore) return false;
+      return true;
+    });
+  } finally { raycaster.far = Infinity; }
 }
 
 /** Optional vertical gate preserves legacy ground-level photography. */
@@ -190,16 +213,28 @@ function addCorridor(world: THREE.Group, colliders: THREE.Group): void {
   const leaves = new THREE.MeshStandardMaterial({ color: 0x839f7f, roughness: 1, vertexColors: true, side: THREE.DoubleSide });
   const treeSites: Point2[] = [[-48, 151], [-24, 151], [0, 151], [-43, 170], [-19, 170], [5, 170]];
   const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(.22, .3, 3.4, 8), bark, treeSites.length);
-  const canopies = new THREE.InstancedMesh(createFoliageGeometry(), leaves, treeSites.length);
   const treeTransform = new THREE.Object3D();
   treeSites.forEach(([x, z], i) => {
     treeTransform.position.set(x, 1.7, z); treeTransform.scale.set(1, 1, 1); treeTransform.updateMatrix(); trunks.setMatrixAt(i, treeTransform.matrix);
-    treeTransform.position.set(x, 4.2 + (i % 3) * .18, z); treeTransform.scale.set(2.1, 2.4, 2.1); treeTransform.updateMatrix(); canopies.setMatrixAt(i, treeTransform.matrix);
     const proxy = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, 3.4, 8), new THREE.MeshBasicMaterial());
     proxy.position.set(x, 1.7, z); colliders.add(proxy);
   });
-  trunks.instanceMatrix.needsUpdate = canopies.instanceMatrix.needsUpdate = true;
-  trunks.castShadow = canopies.castShadow = true; world.add(trunks, canopies);
+  trunks.instanceMatrix.needsUpdate = true;
+  trunks.castShadow = true; world.add(trunks);
+  for (const variant of [0, 1] as const) {
+    const indices = treeSites.flatMap(([x, z], i) => getFoliageVariation(x, z).variant === variant ? [i] : []);
+    if (!indices.length) continue;
+    const canopies = new THREE.InstancedMesh(createFoliageGeometry(variant), leaves, indices.length);
+    indices.forEach((i, local) => {
+      const [x, z] = treeSites[i], variation = getFoliageVariation(x, z);
+      treeTransform.position.set(x, 4.2 + (i % 3) * .18, z); treeTransform.rotation.set(0, variation.yaw, 0);
+      treeTransform.scale.set(2.1, 2.4, 2.1); treeTransform.updateMatrix(); canopies.setMatrixAt(local, treeTransform.matrix);
+      canopies.setColorAt(local, new THREE.Color().setScalar(variation.colorScale));
+    });
+    canopies.instanceMatrix.needsUpdate = true;
+    if (canopies.instanceColor) canopies.instanceColor.needsUpdate = true;
+    canopies.computeBoundingSphere(); canopies.castShadow = true; world.add(canopies);
+  }
 }
 
 export function createCampusScene(container: HTMLElement, initialData: CampusData, onEvent: (event: SceneEvent) => void): CampusSceneHandle {
@@ -724,20 +759,32 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         const indices = chunks.get(key) ?? []; indices.push(i); chunks.set(key, indices);
       });
       const trunkGeometry = new THREE.CylinderGeometry(0.3, 0.45, 3.8, 6);
-      const crownGeometry = createFoliageGeometry();
+      const crownGeometries = new Map<number, THREE.BufferGeometry>();
       const trunkMaterial = material(0x79765e), crownMaterial = new THREE.MeshStandardMaterial({ color: 0x839f7f, roughness: 1, vertexColors: true, side: THREE.DoubleSide });
       for (const indices of chunks.values()) {
         const trunks = new THREE.InstancedMesh(trunkGeometry, trunkMaterial, indices.length);
-        const crowns = new THREE.InstancedMesh(crownGeometry, crownMaterial, indices.length);
         indices.forEach((i, local) => {
           const [x, z] = treePositions[i];
           dummy.position.set(x, 1.9, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); trunks.setMatrixAt(local, dummy.matrix);
-          dummy.position.set(x, 4.6 + (i % 3) * 0.22, z); dummy.scale.set(2.1 + (i % 3) * 0.15, 2.4, 2.0 + (i % 2) * 0.25); dummy.updateMatrix(); crowns.setMatrixAt(local, dummy.matrix);
         });
-        trunks.instanceMatrix.needsUpdate = crowns.instanceMatrix.needsUpdate = true;
-        trunks.computeBoundingSphere(); crowns.computeBoundingSphere();
-        trunks.castShadow = crowns.castShadow = true;
-        world.add(trunks, crowns);
+        trunks.instanceMatrix.needsUpdate = true; trunks.computeBoundingSphere(); trunks.castShadow = true; world.add(trunks);
+        for (const variant of [0, 1] as const) {
+          const group = indices.filter(i => getFoliageVariation(...treePositions[i]).variant === variant);
+          if (!group.length) continue;
+          let geometry = crownGeometries.get(variant);
+          if (!geometry) { geometry = createFoliageGeometry(variant); crownGeometries.set(variant, geometry); }
+          const crowns = new THREE.InstancedMesh(geometry, crownMaterial, group.length);
+          group.forEach((i, local) => {
+            const [x, z] = treePositions[i], variation = getFoliageVariation(x, z);
+            // Preserve each existing tree's scale and height; only its bounded silhouette and subtle tint vary.
+            dummy.position.set(x, 4.6 + (i % 3) * .22, z); dummy.rotation.set(0, variation.yaw, 0);
+            dummy.scale.set(2.1 + (i % 3) * .15, 2.4, 2.0 + (i % 2) * .25); dummy.updateMatrix(); crowns.setMatrixAt(local, dummy.matrix);
+            crowns.setColorAt(local, new THREE.Color().setScalar(variation.colorScale));
+          });
+          crowns.instanceMatrix.needsUpdate = true;
+          if (crowns.instanceColor) crowns.instanceColor.needsUpdate = true;
+          crowns.computeBoundingSphere(); crowns.castShadow = true; world.add(crowns);
+        }
       }
       for (const [x, z] of treePositions) {
         const trunkCollider = new THREE.Mesh(new THREE.CylinderGeometry(.4, .4, 3.8, 6), new THREE.MeshBasicMaterial());
@@ -1258,6 +1305,29 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   canvas.addEventListener('pointerup', pointerUp);
   canvas.addEventListener('pointercancel', pointerCancel);
 
+  function inspectIdealActivity(): IdealActivityInspection | null {
+    if (disposed || campusMode !== 'ideal' || !idealLayer || paused || plane || mapMode || travel || tween) return null;
+    const point = IDEAL_ACTIVITY_POINTS[data.id];
+    const [tx, ty, tz] = point.target;
+    const foot = player.avatar.position;
+    const distance = Math.hypot(foot.x - tx, foot.z - tz);
+    const [minX, minZ, maxX, maxZ] = IDEAL_FACILITIES[data.id].bounds;
+    const withinFacility = foot.x >= minX && foot.x <= maxX && foot.z >= minZ && foot.z <= maxZ;
+    let obstructed = false;
+    if (distance <= 2.4 && withinFacility && player.onSharedGround) {
+      // Ray from the player's eye to a point above the physical table, not through it.
+      const from = new THREE.Vector3(foot.x, foot.y + 1.5, foot.z);
+      const objects = world.children.filter(object => object !== pawn && object !== player.shadow);
+      obstructed = !hasIdealActivityLineOfSight(from, new THREE.Vector3(tx, ty, tz), objects, raycaster);
+    }
+    const status = idealActivityEligibility({ free: true, grounded: player.onSharedGround, withinFacility, distance, obstructed });
+    const dx = tx - foot.x, dz = tz - foot.z;
+    const direction = Math.abs(dx) > Math.abs(dz) * 2 ? (dx > 0 ? '东侧' : '西侧')
+      : Math.abs(dz) > Math.abs(dx) * 2 ? (dz > 0 ? '南侧' : '北侧')
+      : `${dx > 0 ? '东' : '西'}${dz > 0 ? '南' : '北'}侧`;
+    return { id: point.id, kind: point.kind, label: point.label, distance, direction, ...status };
+  }
+
   function getModeSwitchStatus(): CampusModeSwitchStatus {
     if (disposed) return { allowed: false, reason: '三维场景不可用，无法切换设施。' };
     if (paused || plane || mapMode || travel || tween) return { allowed: false, reason: '请先退出当前活动或地图，回到自由步行后切换。' };
@@ -1364,6 +1434,7 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   }
 
   return {
+    inspectIdealActivity,
     getCampusMode: () => campusMode, getModeSwitchStatus, requestCampusMode,
     setCampus(next) {
       if (disposed) return;

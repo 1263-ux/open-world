@@ -1,6 +1,7 @@
 export type CampusMode = 'base' | 'ideal';
 export interface CampusModeSwitchStatus { allowed: boolean; reason: string }
 export interface CampusModeSwitchResult { applied: boolean; mode: CampusMode; reason: string }
+export interface IdealActivityInspection { id: string; kind: 'reading' | 'photos'; label: string; available: boolean; reason: string; distance: number; direction: string }
 export type CampusId = 'huyu' | 'yingxi';
 export type Point2 = [number, number];
 export interface SpatialFeature {
@@ -30,6 +31,7 @@ export interface SceneState {selectedId:string|null;targetId:string|null;}
 export interface PhotoPoint { heightRange?: [number, number]; position: Point2; target: [number, number, number]; frameExtent: [number, number, number][]; focusExtent: [number, number, number][]; radius: number; landmarkId?: string; }
 export interface PhotoInspection { settling: boolean; inRange: boolean; framed: boolean; obstructed: boolean; distance: number; }
 export interface CampusSceneHandle {
+  inspectIdealActivity(): IdealActivityInspection | null;
   getCampusMode(): CampusMode;
   getModeSwitchStatus(): CampusModeSwitchStatus;
   requestCampusMode(mode: CampusMode): CampusModeSwitchResult;

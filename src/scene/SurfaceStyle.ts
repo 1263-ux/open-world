@@ -88,73 +88,91 @@ export function createSurfaceMaterial(kind: SurfaceKind, color: THREE.ColorRepre
   return new THREE.MeshStandardMaterial({ color, roughness: 1, ...(map ? { map } : {}) });
 }
 
-/** Four overlapping, irregular crown volumes, baked once for the existing
- * single-material instances. Broad connected foliage reads at walking distance;
- * a few attached edge leaves soften the outline without transparent overdraw.
- * Local origin/units and the previous roughly 2 x 1.5 x 2 envelope are retained.
- * This is an original campus-tree abstraction, not a measured botanical model. */
-export function createFoliageGeometry(): THREE.BufferGeometry {
+/** Two original, branch-directed crown silhouettes, baked once per instance
+ * batch. Four overlapping closed volumes avoid leaf-card noise/overdraw. Lower
+ * growth tapers toward the trunk rather than completing a spherical underside.
+ * No botanical species or measured reconstruction is implied. Local metres,
+ * origin and the previous crown envelope are retained; callers own instancing. */
+export type FoliageVariant = 0 | 1;
+
+/** Stable world-position variation; adding/reordering trees cannot reshuffle it.
+ * Yaw stays zero: even a half-turn would widen the current asymmetric local
+ * envelope. Existing per-tree scales remain the caller's upper bound. */
+export function getFoliageVariation(x: number, z: number): {
+  variant: FoliageVariant; yaw: number; colorScale: number;
+} {
+  if (!Number.isFinite(x) || !Number.isFinite(z)) throw new Error('Foliage position must be finite');
+  let hash = Math.imul(Math.round(x * 100), 0x45d9f3b) ^ Math.imul(Math.round(z * 100), 0x27d4eb2d);
+  hash = Math.imul(hash ^ (hash >>> 16), 0x45d9f3b);
+  hash = (hash ^ (hash >>> 16)) >>> 0;
+  return { variant: (hash & 1) as FoliageVariant, yaw: 0,
+    colorScale: .97 + ((hash >>> 8) & 255) / 255 * .06 };
+}
+
+export function createFoliageGeometry(variant: FoliageVariant = 0): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  const lobes = [
-    { center: [0, .04, 0], scale: [.72, .65, .69] },
-    { center: [-.39, -.10, .18], scale: [.51, .60, .65] },
-    { center: [.40, -.04, .10], scale: [.55, .56, .57] },
-    { center: [.03, -.02, -.38], scale: [.62, .55, .59] },
+  const lobes = variant === 0 ? [
+    { center: [-.10, .02, .00], scale: [.60, .65, .56] },
+    { center: [-.43, .04, .08], scale: [.48, .43, .62] },
+    { center: [.44, .17, .30], scale: [.49, .40, .54] },
+    { center: [.01, .04, -.40], scale: [.58, .46, .56] },
+  ] : [
+    { center: [.12, -.01, -.04], scale: [.53, .68, .60] },
+    { center: [-.43, .12, -.13], scale: [.43, .42, .53] },
+    { center: [.45, .06, .24], scale: [.43, .45, .64] },
+    { center: [-.08, .23, -.44], scale: [.52, .42, .47] },
   ];
-  const colorize = (geometry: THREE.BufferGeometry): void => {
-    const position = geometry.getAttribute('position');
-    const values = new Float32Array(position.count * 3);
-    for (let i = 0; i < position.count; i++) {
-      const x = position.getX(i), y = position.getY(i), z = position.getZ(i);
-      // Quiet, spatially coherent tones: shaded lower growth, warmer upper crown.
-      // Vertex colors multiply the existing material; no global-light changes.
-      const upper = THREE.MathUtils.clamp((y + .7) / 1.4, 0, 1);
-      const shade = .76 + upper * .18 + .025 * Math.sin(x * 5 + z * 3);
-      values[i * 3] = shade * (.96 + upper * .04);
-      values[i * 3 + 1] = shade;
-      values[i * 3 + 2] = shade * (.91 - upper * .02);
-    }
-    geometry.setAttribute('color', new THREE.BufferAttribute(values, 3));
-  };
   lobes.forEach(({ center, scale }, index) => {
-    // Detail 2 = 180 triangles, rather than a smooth toy-like sphere. The
-    // continuous displacement keeps coincident vertices joined and avoids cracks.
+    // Detail 2 is 180 triangles. Displacement depends only on direction, so
+    // coincident vertices remain coincident and each volume stays watertight.
     const crown = new THREE.IcosahedronGeometry(1, 2);
     const position = crown.getAttribute('position');
+    const colors = new Float32Array(position.count * 3);
     for (let i = 0; i < position.count; i++) {
       const x = position.getX(i), y = position.getY(i), z = position.getZ(i);
-      const ripple = 1 + .065 * Math.sin(x * 7 + index * 1.7) * Math.cos(z * 6 - y * 4)
-        + .035 * Math.sin(y * 9 + z * 5 + index);
-      position.setXYZ(i, center[0] + x * scale[0] * ripple,
-        center[1] + y * scale[1] * ripple, center[2] + z * scale[2] * ripple);
+      const phase = index * 1.7 + variant * 2.1;
+      const ripple = 1 + .075 * Math.sin(x * 7 + phase) * Math.cos(z * 6 - y * 4)
+        + .035 * Math.sin(y * 9 + z * 5 + phase);
+      const taper = 1 - .38 * Math.pow(Math.max(0, -y), 1.4);
+      // A broad upper branch and a different lateral lean per lobe make the
+      // silhouette read as growth, not an array of complete round balls.
+      const lean = Math.max(0, y) * .09 * (index % 2 ? -1 : 1);
+      const px = center[0] + (x * taper + lean) * scale[0] * ripple;
+      const py = center[1] + y * scale[1] * ripple;
+      const pz = center[2] + (z * taper + lean * (variant ? 1 : -.5)) * scale[2] * ripple;
+      position.setXYZ(i, px * .99, py, pz * .985);
+      const upper = THREE.MathUtils.clamp((py + .7) / 1.4, 0, 1);
+      const shade = .78 + upper * .16 + .025 * Math.sin(px * 5 + pz * 3);
+      colors[i * 3] = shade * (.96 + upper * .04);
+      colors[i * 3 + 1] = shade;
+      colors[i * 3 + 2] = shade * (.91 - upper * .02);
     }
     crown.computeVertexNormals();
-    colorize(crown);
+    // The geometry is non-indexed for batching. Average coincident normals
+    // within each closed lobe so the crown reads as soft foliage, not cut rock.
+    // Lobes remain separate; their asymmetric silhouette is not smoothed away.
+    const normals = crown.getAttribute('normal');
+    const sums = new Map<string, THREE.Vector3>();
+    const keys: string[] = [];
+    for (let i = 0; i < position.count; i++) {
+      const key = [position.getX(i), position.getY(i), position.getZ(i)].map(v => v.toFixed(6)).join(',');
+      keys.push(key);
+      const sum = sums.get(key) ?? new THREE.Vector3();
+      sum.x += normals.getX(i); sum.y += normals.getY(i); sum.z += normals.getZ(i);
+      sums.set(key, sum);
+    }
+    for (const sum of sums.values()) sum.normalize();
+    for (let i = 0; i < position.count; i++) {
+      const normal = sums.get(keys[i])!;
+      normals.setXYZ(i, normal.x, normal.y, normal.z);
+    }
+    crown.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     parts.push(crown);
   });
-  // Eight small opaque tips remain attached to the volumes, not a leaf cloud.
-  const random = randomGenerator(3771);
-  for (let i = 0; i < 8; i++) {
-    const angle = i * Math.PI / 4 + .12;
-    const shape = new THREE.Shape();
-    shape.moveTo(-.09, 0); shape.lineTo(-.04, .035);
-    shape.lineTo(.04, .035); shape.lineTo(.09, 0);
-    shape.lineTo(.04, -.035); shape.lineTo(-.04, -.035);
-    shape.closePath();
-    const indexedTip = new THREE.ShapeGeometry(shape);
-    const tip = indexedTip.toNonIndexed();
-    indexedTip.dispose();
-    tip.rotateX(.4 + random() * .8);
-    tip.rotateY(-angle);
-    tip.rotateZ((random() - .5) * .5);
-    tip.translate(Math.cos(angle) * .80, -.10 + random() * .22, Math.sin(angle) * .70);
-    colorize(tip);
-    parts.push(tip);
-  }
   const merged = mergeGeometries(parts);
   for (const part of parts) part.dispose();
   if (!merged) throw new Error('Unable to merge original foliage geometry');
-  merged.name = 'campus-original-layered-crown';
+  merged.name = `campus-original-branch-crown-${variant}`;
   merged.computeBoundingBox();
   merged.computeBoundingSphere();
   return merged;

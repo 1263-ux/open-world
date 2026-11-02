@@ -96,7 +96,7 @@ export async function waitForSettledCamera(page:Page,canvas:Locator,settleTimeou
   await page.waitForTimeout(300);
   await expect(canvas).toHaveAttribute('data-camera-settled','true');
 }
-export async function aimAtSubject(page: Page, canvas: Locator, pointIndex: number, touch=false, info?: TestInfo) {
+export async function aimAtSubject(page: Page, canvas: Locator, pointIndex: number, touch=false, info?: TestInfo, settleTimeout=20000) {
   const guide=page.getByTestId('photo-guide'),target=PHOTO_POINTS[pointIndex]!.target;
   await expect(guide).toHaveAttribute('data-photo-in-range','true',{timeout:15000});
   const attempts:Array<{pitchTarget:number;yaw:number;pitch:number;framed:string|null;obstructed:string|null}> = [];
@@ -107,7 +107,7 @@ export async function aimAtSubject(page: Page, canvas: Locator, pointIndex: numb
       const desiredYaw=Math.atan2(target[0]-x,target[2]-z);
       const turn=Math.atan2(Math.sin(desiredYaw-yaw),Math.cos(desiredYaw-yaw));
       await dragLook(page,canvas,-turn/.005,(pitchTarget-pitch)/.004,touch);
-      await waitForSettledCamera(page,canvas);
+      await waitForSettledCamera(page,canvas,settleTimeout);
       const framed=await guide.getAttribute('data-photo-framed'),obstructed=await guide.getAttribute('data-photo-obstructed');
       attempts.push({pitchTarget,yaw:Number(await canvas.getAttribute('data-camera-yaw')),pitch:Number(await canvas.getAttribute('data-camera-pitch')),framed,obstructed});
       if(framed==='true' && obstructed==='false') return;

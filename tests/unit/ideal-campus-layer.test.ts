@@ -1,8 +1,9 @@
+import { Buffer } from 'node:buffer';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { Capsule } from 'three/addons/math/Capsule.js';
 import { Octree } from 'three/addons/math/Octree.js';
-import { createIdealCampusLayer, IDEAL_FACILITIES } from '../../src/scene/IdealCampusLayer';
+import { createIdealCampusLayer, IDEAL_FACILITIES, IDEAL_ACTIVITY_POINTS } from '../../src/scene/IdealCampusLayer';
 import type { CampusId } from '../../src/shared/contracts';
 
 function capsule(x: number, z: number) { return new Capsule(new THREE.Vector3(x, .47, z), new THREE.Vector3(x, 1.52, z), .35); }
@@ -15,7 +16,7 @@ for (const id of ['huyu', 'yingxi'] as CampusId[]) describe(`${id} original grou
     expect(box.min.y).toBeCloseTo(.12); expect(box.max.y).toBeCloseTo(3.6);
     expect(layer.visual.children.length).toBeLessThanOrEqual(8);
     let triangles = 0; layer.visual.traverse(o => { if (o instanceof THREE.Mesh) triangles += o.geometry.getAttribute('position').count / 3; });
-    expect(triangles).toBeLessThan(15000);
+    expect(triangles).toBeLessThanOrEqual(8000);
     expect(layer.colliders.children.length).toBeGreaterThan(1);
     expect(layer.colliders.children.length).toBeLessThan(150);
     layer.dispose();
@@ -56,6 +57,53 @@ for (const id of ['huyu', 'yingxi'] as CampusId[]) describe(`${id} original grou
     layer.visual.traverse(o => { if (o instanceof THREE.Mesh) triangles(o).forEach(t => visible.add(t)); });
     layer.colliders.traverse(o => { if (o instanceof THREE.Mesh) for (const t of triangles(o)) expect(visible.has(t)).toBe(true); });
     layer.dispose();
+  });
+  it('keeps the reading/photo desk reachable and its eye-level target unoccluded', () => {
+    const layer = createIdealCampusLayer(id), tree = new Octree().fromGraphNode(layer.colliders);
+    const activity = IDEAL_ACTIVITY_POINTS[id], [x, z] = activity.approach;
+    expect(tree.capsuleIntersect(capsule(x, z))).toBe(false);
+    const route = id === 'huyu' ? [[-60, -98], [-62.9, -98], [x, z]] : [[73.5, 176], [73.5, 179], [x, z]];
+    for (let i = 1; i < route.length; i++) {
+      const a = route[i - 1]!, b = route[i]!;
+      for (let t = 0; t <= 1; t += .025) expect(tree.capsuleIntersect(capsule(a[0]! + (b[0]! - a[0]!) * t, a[1]! + (b[1]! - a[1]!) * t))).toBe(false);
+    }
+    const eye = new THREE.Vector3(x, 1.7, z), target = new THREE.Vector3(...activity.target);
+    layer.visual.updateMatrixWorld(true);
+    const ray = new THREE.Raycaster(eye, target.clone().sub(eye).normalize(), 0, eye.distanceTo(target));
+    expect(ray.intersectObject(layer.visual, true)).toHaveLength(0);
+    // The target floats over a genuine solid desk, not an invisible activation point.
+    const down = new THREE.Raycaster(target, new THREE.Vector3(0, -1, 0), 0, .4).intersectObject(layer.colliders, true);
+    expect(down.length).toBeGreaterThan(0); expect(down[0]!.point.y).toBeGreaterThanOrEqual(1.02 - 1e-5);
+    layer.dispose();
+  });
+  it('uses deterministic metre-scale, correctly tagged, privately owned original textures', () => {
+    const a = createIdealCampusLayer(id), b = createIdealCampusLayer(id);
+    const maps = (layer: typeof a) => {
+      const textures = new Set<THREE.Texture>();
+      layer.visual.traverse(o => { if (o instanceof THREE.Mesh) {
+        const m = o.material as THREE.MeshStandardMaterial;
+        if (m.map) { expect(m.map.colorSpace).toBe(THREE.SRGBColorSpace); textures.add(m.map); }
+        if (m.bumpMap) { expect(m.bumpMap.colorSpace).toBe(THREE.NoColorSpace); textures.add(m.bumpMap); }
+      } });
+      return [...textures].sort((x, y) => x.name.localeCompare(y.name));
+    };
+    const first = maps(a), second = maps(b); expect(first).toHaveLength(4);
+    let bytes = 0, disposed = 0;
+    first.forEach((texture, i) => {
+      expect(texture !== second[i]).toBe(true);
+      const data = (texture as THREE.DataTexture).image.data as Uint8Array;
+      const other = (second[i] as THREE.DataTexture).image.data as Uint8Array;
+      expect(Buffer.from(data).equals(Buffer.from(other))).toBe(true);
+      expect(texture.wrapS).toBe(THREE.RepeatWrapping); expect(texture.wrapT).toBe(THREE.RepeatWrapping);
+      expect(texture.generateMipmaps).toBe(true);
+      bytes += data.byteLength * 4 / 3;
+      texture.addEventListener('dispose', () => disposed++);
+    });
+    expect(bytes).toBeLessThanOrEqual(2 * 1024 * 1024);
+    const paving = a.visual.getObjectByName('paving') as THREE.Mesh;
+    const uv = paving.geometry.getAttribute('uv');
+    expect(Math.max(...Array.from({ length: uv.count }, (_, i) => uv.getY(i))) - Math.min(...Array.from({ length: uv.count }, (_, i) => uv.getY(i)))).toBeGreaterThan(8);
+    a.dispose(); a.dispose(); expect(disposed).toBe(4); b.dispose();
   });
   it('owns independent resources and disposes each once across repeated calls', () => {
     const a = createIdealCampusLayer(id), b = createIdealCampusLayer(id);

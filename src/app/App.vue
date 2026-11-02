@@ -12,7 +12,7 @@ import { campuses } from '../campus-data/campuses';
 import { emptyQuest, startQuest, visitQuest } from '../games/quest';
 import { loadProgress, saveProgress } from '../games/storage';
 import { createCampusScene } from '../scene/CampusScene';
-import type { CampusMode, CampusData, CampusId, CampusSceneHandle, Landmark, SceneEvent, PaperplaneSnapshot, PaperplaneInput, PhotoInspection } from '../shared/contracts';
+import type { IdealActivityInspection, CampusMode, CampusData, CampusId, CampusSceneHandle, Landmark, SceneEvent, PaperplaneSnapshot, PaperplaneInput, PhotoInspection } from '../shared/contracts';
 
 type QuestState = ReturnType<typeof emptyQuest>;
 type Panel = 'quest' | 'directory' | 'detail';
@@ -48,6 +48,7 @@ function toggleCampusMode() {
   }
   const result = scene.requestCampusMode(campusMode.value === 'base' ? 'ideal' : 'base');
   campusMode.value = result.mode; campusModeFeedback.value = result.reason;
+  updateIdealActivity();
   if (result.applied) {
     preferredCampusMode.value = result.mode;
     try { window.localStorage.setItem(CAMPUS_MODE_KEY, result.mode); } catch { /* Keep the in-memory preference; journey storage is untouched. */ }
@@ -74,8 +75,38 @@ const displayed = computed(() => panel.value === 'detail' ? selected.value : tar
 const displayedFeature = computed(() => campus.value.features.find(item => item.id === displayed.value?.featureId || displayed.value?.featureIds?.includes(item.id)) ?? null);
 const visitedNames = computed(() => quest.value.visited.map(id => campus.value.landmarks.find(item => item.id === id)?.name).filter(Boolean));
 
-type ActivityMode = 'exploring'|'photo'|'planeReady'|'flying'|'planeResult'|'hks'|'paused';
+type ActivityMode = 'reading'|'exploring'|'photo'|'planeReady'|'flying'|'planeResult'|'hks'|'paused';
 const mode = ref<ActivityMode>('exploring');
+const idealActivity = ref<IdealActivityInspection | null>(null);
+const readingOpen = computed(() => mode.value === 'reading');
+const readingDialog = ref<HTMLElement | null>(null);
+const readingCloseButton = ref<HTMLButtonElement | null>(null);
+let readingReturnFocus: HTMLElement | null = null;
+function updateIdealActivity() {
+  idealActivity.value = mode.value === 'exploring' && !panelOpen.value && !notebookConfirming.value && !sceneError.value ? scene?.inspectIdealActivity() ?? null : null;
+}
+function openIdealActivity() {
+  updateIdealActivity(); // Reject stale prompts after walking away or opening another activity.
+  if (!idealActivity.value?.available) return;
+  if (idealActivity.value.kind === 'photos') { openPhotoComplete(); return; }
+  readingReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  mode.value = 'reading'; idealActivity.value = null;
+  syncScenePause();
+  nextTick(() => readingCloseButton.value?.focus());
+}
+function closeReading() {
+  if (!readingOpen.value) return;
+  mode.value = 'exploring'; syncScenePause(); updateIdealActivity();
+  nextTick(() => { if (readingReturnFocus?.isConnected) readingReturnFocus.focus(); else focusScene(); });
+}
+function trapReadingFocus(event: KeyboardEvent) {
+  if (event.key !== 'Tab' || !readingDialog.value) return;
+  const items = Array.from(readingDialog.value.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]'));
+  const index = items.indexOf(document.activeElement as HTMLElement);
+  if (!items.length) { event.preventDefault(); return; }
+  if (event.shiftKey && index <= 0) { event.preventDefault(); items[items.length - 1]?.focus(); }
+  else if (!event.shiftKey && (index < 0 || index === items.length - 1)) { event.preventDefault(); items[0]?.focus(); }
+}
 const planeSnapshot = ref<PaperplaneSnapshot | null>(null);
 const planeActive = computed(() => planeSnapshot.value !== null);
 const hksOpen = computed(() => mode.value === 'hks');
@@ -143,12 +174,12 @@ const photoModelStatus = computed(() => photoModelStatuses.value[photoPoint.valu
 const photoCompleteOpen = computed(() => mode.value === 'photo');
 let photoReturnFocus: HTMLElement | null = null;
 function syncScenePause() {
-  if (hksOpen.value || photoCompleteOpen.value || notebookConfirming.value) scene?.pause(); else scene?.resume();
+  if (hksOpen.value || photoCompleteOpen.value || readingOpen.value || notebookConfirming.value) scene?.pause(); else scene?.resume();
 }
 function openPhotoComplete() {
   photoReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   if (mode.value !== 'exploring') return;
-  mode.value = 'photo';
+  mode.value = 'photo'; idealActivity.value = null;
   syncScenePause();
 }
 function closePhotoComplete(restore = true) {
@@ -276,6 +307,8 @@ function closePanel() {
 function switchCampus(id: CampusId) {
   if (mode.value !== 'exploring') return;
   if (id === campusId.value) return;
+  idealActivity.value = null;
+  campusModeFeedback.value = '';
   modelErrors.value = {};
   photoModelStatuses.value = {};
   scene?.resetJourney();
@@ -415,6 +448,7 @@ function heightLabel(status: string) {
   return status === 'osm-tag' ? 'OSM 标注（非实测保证）' : status === 'level-estimate' ? '按层数估算' : status === 'ml-estimate' ? '2020 年模型预测（非实测）' : '展示用估算，待核实';
 }
 function onKeydown(event: KeyboardEvent) {
+  if (readingOpen.value) { if (event.key === 'Escape') { event.preventDefault(); closeReading(); } return; }
   if (hksOpen.value) return;
   if (planeActive.value) { if (event.key === 'Escape') { event.preventDefault(); endFlight(); } return; }
   if (event.key === 'Escape' && photoCompleteOpen.value) { event.preventDefault(); closePhotoComplete(); return; }
@@ -424,7 +458,7 @@ function onKeydown(event: KeyboardEvent) {
 }
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
-  photoTimer = window.setInterval(() => { updatePhotoStatus(); syncMinimap(); planeNearby.value = !!scene?.canBeginPaperplane(); }, 250);
+  photoTimer = window.setInterval(() => { updatePhotoStatus(); syncMinimap(); updateIdealActivity(); planeNearby.value = !!scene?.canBeginPaperplane(); }, 250);
   if (!sceneElement.value) return;
   try {
     scene = createCampusScene(sceneElement.value, campus.value, onSceneEvent);
@@ -447,7 +481,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-shell" :inert="hksOpen || photoCompleteOpen" :aria-hidden="hksOpen || photoCompleteOpen ? 'true' : undefined">
+  <div class="app-shell" :inert="hksOpen || photoCompleteOpen || readingOpen" :aria-hidden="hksOpen || photoCompleteOpen || readingOpen ? 'true' : undefined">
     <header class="masthead">
       <div class="brand"><span class="brand-mark" aria-hidden="true">太</span><span>太理 <i>·</i> 时光漫游</span></div>
       <nav class="campus-switch" aria-label="选择校区">
@@ -465,6 +499,12 @@ onBeforeUnmount(() => {
       <div v-if="campusModeFeedback" class="campus-mode-feedback" data-testid="campus-mode-feedback" role="status">
         <span>{{ campusModeFeedback }}</span><button type="button" aria-label="关闭模式提示" @click="campusModeFeedback = ''">×</button>
       </div>
+      <section v-if="idealActivity && mode === 'exploring' && !panelOpen && !notebookConfirming" class="ideal-activity-card" :class="{ 'below-mode-feedback': !!campusModeFeedback }" data-testid="ideal-activity-card" aria-label="原创公共空间">
+        <small>{{ campusId === 'huyu' ? '梅影书庭 · 开放阅读台' : '清泽柱廊 · 照片手记台' }}</small>
+        <button v-if="idealActivity.available" type="button" data-testid="ideal-activity-open" @click="openIdealActivity">{{ idealActivity.label }} <span aria-hidden="true">↗</span></button>
+        <p v-else>{{ idealActivity.distance > 2.4 ? `${idealActivity.direction} · 台面约 ${Math.ceil(idealActivity.distance)} 米` : idealActivity.reason }}</p>
+        <small v-if="!idealActivity.available">{{ campusId === 'huyu' ? '从书庭东侧入口走入，阅读台在西廊下。' : '从柱廊南北两端走入，展示台在东侧。' }}</small>
+      </section>
       <div class="scene-shade" aria-hidden="true"></div>
       <CampusMinimap :campus="campus" :position="playerPosition" :map-open="mapOpen" :disabled="!!sceneError || planeActive" @toggle="toggleOverview" />
       <div class="chapter-title" :class="{ 'photo-chapter': campusId === 'yingxi' }">
@@ -575,15 +615,43 @@ onBeforeUnmount(() => {
     <div class="control-caption" aria-hidden="true"><b>W A S D</b> 行走 <span>·</span> 拖动视角 <span>·</span> Shift 跑步 <span>·</span> Space 跳跃</div>
     <div class="sr-only" aria-live="polite">{{ notice }}</div>
   </div>
-  <div v-if="!orientationDismissed && !photoCompleteOpen && !hksOpen" class="orientation-prompt" role="status" data-testid="orientation-prompt">
+  <div v-if="!orientationDismissed && !photoCompleteOpen && !hksOpen && !readingOpen" class="orientation-prompt" role="status" data-testid="orientation-prompt">
     <svg class="orientation-icon" viewBox="0 0 64 64" aria-hidden="true"><rect x="22" y="13" width="20" height="34" rx="3" transform="rotate(-18 32 30)"/><path d="M47 17a22 22 0 0 1 6 20M53 37l4-6M53 37l-7-2M17 47a22 22 0 0 1-6-20M11 27l-4 6M11 27l7 2"/></svg><strong>建议横屏漫游</strong><small>{{ orientationMessage }}</small>
     <button type="button" data-testid="orientation-fullscreen" :disabled="orientationBusy" @click="tryLandscape">尝试全屏横屏</button>
     <button type="button" data-testid="orientation-dismiss" @click="dismissOrientation">继续竖屏浏览</button>
+  </div>
+  <div v-if="readingOpen" class="reading-backdrop">
+    <section ref="readingDialog" class="reading-sheet" data-testid="ideal-reading-dialog" role="dialog" aria-modal="true" aria-labelledby="reading-title" @keydown="trapReadingFocus" @keydown.esc.stop.prevent="closeReading">
+      <button ref="readingCloseButton" type="button" class="reading-close" aria-label="关闭校园介绍" @click="closeReading">×</button>
+      <small>梅影书庭 · 原创阅读空间</small><h2 id="reading-title">在廊下，读一读{{ campus.name }}</h2>
+      <p>{{ campus.description }}</p>
+      <p class="reading-note">书庭是基于校园布局的原创设计，不是现实建筑复原。以下介绍沿用地点资料；阅读不会移动人物或改变旅程进度。</p>
+      <article v-for="item in campus.landmarks" :key="item.id">
+        <h3>{{ item.name }}</h3><p>{{ item.facts }}</p>
+        <a v-if="safeUrl(item.source)" :href="safeUrl(item.source)!" target="_blank" rel="noopener noreferrer">查看资料来源 ↗</a>
+        <span v-else>{{ item.source }}</span>
+      </article>
+      <button type="button" class="reading-return" @click="closeReading">合上介绍，继续漫游</button>
+    </section>
   </div>
   <HksOverlay v-if="hksOpen" @close="closeHks" />
 </template>
 
 <style scoped>
+.ideal-activity-card { position:absolute; right:18px; top:18px; z-index:8; width:210px; padding:12px 14px; color:#294737; background:#f8f5e9ed; border-left:3px solid #9c7549; box-shadow:0 4px 18px #243a351a; }
+.ideal-activity-card.below-mode-feedback { top:104px; }
+.ideal-activity-card small { display:block; font-size:11px; line-height:1.6; }
+.ideal-activity-card p { font-size:13px; margin:8px 0; }
+.ideal-activity-card button { width:100%; min-height:44px; margin-top:8px; background:#294737; color:#fffdf1; border:0; padding:8px; cursor:pointer; }
+.reading-backdrop { position:fixed; inset:0; z-index:100; display:grid; place-items:center; background:#17271f9e; padding:16px; }
+.reading-sheet { position:relative; max-width:660px; width:100%; max-height:calc(100dvh - 32px); overflow:auto; background:#f5f1e5; color:#294737; padding:32px; box-sizing:border-box; }
+.reading-sheet h2 { font-size:26px; margin:12px 40px 20px 0; }.reading-sheet p { line-height:1.8; font-size:14px; }.reading-sheet article { padding:16px 0; border-top:1px solid #cbd0bd; }.reading-sheet h3 { margin:0; }.reading-sheet a { color:#385f4c; font-size:13px; }.reading-note { color:#697565; }
+.reading-close { position:absolute; right:12px; top:12px; width:44px; height:44px; background:none; color:inherit; border:0; font-size:26px; cursor:pointer; }.reading-return { padding:12px 18px; min-height:44px; background:#294737; color:#fffdf1; border:0; cursor:pointer; }
+.ideal-activity-card button:focus-visible,.reading-sheet :is(button,a):focus-visible { outline:3px solid #bc7547; outline-offset:3px; }
+@media(max-width:620px) { .ideal-activity-card,.ideal-activity-card.below-mode-feedback { top:auto; bottom:172px; right:12px; width:190px; padding:8px 10px; }.reading-sheet { padding:24px 18px; }.reading-sheet h2 { font-size:22px; } }
+
+@media(max-height:550px) and (orientation:landscape) { .ideal-activity-card,.ideal-activity-card.below-mode-feedback { top:auto; bottom:68px; right:154px; width:min(210px,calc(100% - 310px)); padding:8px 10px; } }
+
 .campus-mode-feedback { position: absolute; z-index: 12; top: 12px; left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 32px)); padding: 10px 14px; display: flex; align-items: center; gap: 12px; color: #263e35; background: #fffdf3; border: 1px solid #b5bda8; border-radius: 10px; box-shadow: 0 3px 16px #243a3522; font-size: 13px; }
 .campus-mode-feedback button { margin-left: auto; flex-shrink: 0; min-width: 32px; min-height: 32px; color: inherit; background: transparent; border: 0; font-size: 22px; }
 </style>
