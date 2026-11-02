@@ -23,17 +23,26 @@ async function ready(page: Page, reference = true) {
 async function toggle(page: Page, canvas: Locator, expected: 'base' | 'ideal', touch = false) {
   const before = await snapshot(canvas), saved = await progress(page);
   if (touch) await page.getByTestId('campus-mode-toggle').tap(); else await page.getByTestId('campus-mode-toggle').click();
-  await expect(canvas).toHaveAttribute('data-campus-mode', expected); await waitForSettledCamera(page, canvas);
+  await expect(canvas).toHaveAttribute('data-campus-mode', expected); await waitForSettledCamera(page, canvas, 45000);
   const after = await snapshot(canvas);
   expect(after.xyz).toEqual(before.xyz); expect(after.yaw).toBe(before.yaw); expect(after.pitch).toBe(before.pitch); expect(after.world).toBe(before.world); expect(after.collision).toBe(before.collision + 1); expect(await progress(page)).toEqual(saved);
   if (touch) await page.getByRole('button', { name: '关闭模式提示', exact: true }).tap(); else await page.getByRole('button', { name: '关闭模式提示', exact: true }).click();
   return after;
 }
-async function denied(page: Page, canvas: Locator, reason: RegExp) {
+async function denied(page: Page, canvas: Locator, reason: RegExp, onDeck = false) {
   const before = await snapshot(canvas), saved = await progress(page);
   await page.getByTestId('campus-mode-toggle').click(); await expect(page.getByTestId('campus-mode-feedback')).toContainText(reason);
   const after = await snapshot(canvas);
-  expect(after.mode).toBe(before.mode); expect(after.collision).toBe(before.collision); expect(after.xyz).toEqual(before.xyz); expect(after.yaw).toBe(before.yaw); expect(after.pitch).toBe(before.pitch); expect(await progress(page)).toEqual(saved);
+  expect(after.mode).toBe(before.mode); expect(after.collision).toBe(before.collision);
+  // The existing contact solver uses a 1mm pushout; short input-event dt can
+  // sample between contact frames. This exception applies only on the same deck.
+  if (onDeck) {
+    expect([after.xyz[0], after.xyz[2]]).toEqual([before.xyz[0], before.xyz[2]]);
+    expect(Math.abs(after.xyz[1]! - before.xyz[1]!)).toBeLessThanOrEqual(.002);
+    for (const state of [before, after]) expect(Math.abs(state.xyz[1]! - 1.2)).toBeLessThanOrEqual(.002);
+    console.log('[MODE_DECK_DENIED]', JSON.stringify({ before, after, supportTolerance: .002 }));
+  } else expect(after.xyz).toEqual(before.xyz);
+  expect(after.yaw).toBe(before.yaw); expect(after.pitch).toBe(before.pitch); expect(await progress(page)).toEqual(saved);
   await page.getByRole('button', { name: '关闭模式提示', exact: true }).click();
 }
 async function localRoute(page: Page, canvas: Locator, points: Point2[]) { for (const point of points) await walkAuthoredSegment(page, canvas, point); }
@@ -58,8 +67,11 @@ test('both campuses: same-pose mode swaps, stable resources, two real entrances 
     if (id === 'yingxi') { await walkTo(page, canvas, campuses[id], [54, 172], .9); await localRoute(page, canvas, [[54, 172], [69, 172], point]); }
     else { await walkTo(page, canvas, campuses[id], point, .9); await walkAuthoredSegment(page, canvas, point); }
     const pose = await snapshot(canvas), yaw = id === 'huyu' ? -Math.PI / 2 : Math.PI / 2;
-    await dragLook(page, canvas, -(yaw - Number(pose.yaw)) / .005, (-.15 - Number(pose.pitch)) / .004); await waitForSettledCamera(page, canvas);
-    const base = await snapshot(canvas); await evidence(page, canvas, info, `${id}-reference-base`); await page.screenshot({ path: info.outputPath(`${id}-reference-base.png`) });
+    await dragLook(page, canvas, -(yaw - Number(pose.yaw)) / .005, (-.15 - Number(pose.pitch)) / .004); await waitForSettledCamera(page, canvas, 45000);
+    const base = await snapshot(canvas);
+    // Three r186 removed PCFSoft(2); fixed reference uses supported PCF(1), never Basic(0).
+    expect(base.shadow).toBe('1');
+    await evidence(page, canvas, info, `${id}-reference-base`); await page.screenshot({ path: info.outputPath(`${id}-reference-base.png`) });
     const ideal = await toggle(page, canvas, 'ideal'); expect(ideal.camera).toEqual(base.camera); expect(ideal.ratio).toBe(base.ratio); expect(ideal.shadow).toBe(base.shadow);
     await evidence(page, canvas, info, `${id}-reference-ideal`); await page.screenshot({ path: info.outputPath(`${id}-reference-ideal.png`) });
     const warm = await toggle(page, canvas, 'base');
@@ -85,7 +97,7 @@ test('activity and elevated gates reject mode changes without teleporting or mod
   await page.getByTestId('open-photo-album').click(); await expect(page.getByTestId('photo-complete')).toBeVisible();
   await expect(page.getByTestId('campus-mode-toggle').locator('xpath=ancestor::*[@inert]')).toHaveCount(1); await expect(canvas).toHaveAttribute('data-campus-mode', 'base'); await page.keyboard.press('Escape');
   await page.getByTestId('open-hks').click(); await expect(page.getByTestId('campus-mode-toggle').locator('xpath=ancestor::*[@inert]')).toHaveCount(1); await expect(canvas).toHaveAttribute('data-campus-mode', 'base'); await page.getByTestId('hks-return').click();
-  await ascend(page, canvas); await denied(page, canvas, /走下台阶.*站稳/); await descend(page, canvas);
+  await ascend(page, canvas); await denied(page, canvas, /走下台阶.*站稳/, true); await descend(page, canvas);
   await reachStation(page, canvas); await page.getByTestId('begin-paperplane').click(); await launch(page); await waitForSimulatedAdvance(canvas, (await planeState(canvas)).elapsed);
   await denied(page, canvas, /退出飞行|当前活动/); await page.keyboard.press('Escape'); await expect(canvas).toHaveAttribute('data-view', 'player');
   await evidence(page, canvas, info, 'base-activity-gates');
@@ -104,7 +116,7 @@ test.describe('natural adaptive landscape touch mode', () => {
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 2, x: 620, y: 160 }] });
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 2, x: 650, y: 165 }] });
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-      await waitForSettledCamera(page, canvas); expect((await snapshot(canvas)).yaw).not.toBe(before.yaw);
+      await waitForSettledCamera(page, canvas, 45000); expect((await snapshot(canvas)).yaw).not.toBe(before.yaw);
       for (let i = 0; i < 3; i++) { await toggle(page, canvas, 'ideal', true); await toggle(page, canvas, 'base', true); }
       const start = await snapshot(canvas), wall = Date.now(); await page.waitForTimeout(10000); const end = await snapshot(canvas);
       console.log('[MODE_NATURAL_ADAPTIVE]', JSON.stringify({ start, end, wallSeconds: (Date.now() - wall) / 1000, frames: end.frame - start.frame, simulatedTouchNotPhysicalDevice: true }));

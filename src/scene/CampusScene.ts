@@ -231,7 +231,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
   renderer.shadowMap.enabled = true;
   // Campus geometry/light are static; do not redraw a 2048px shadow map each frame.
   renderer.shadowMap.autoUpdate = false;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // r186 removed PCFSoft: reference runs select its supported PCF replacement explicitly.
+  renderer.shadowMap.type = referenceQuality ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;

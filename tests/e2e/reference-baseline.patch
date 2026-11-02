@@ -1,6 +1,6 @@
 --- a/src/scene/CampusScene.ts
 +++ b/src/scene/CampusScene.ts
-@@ -198,7 +198,8 @@
+@@ -198,13 +198,14 @@
    controls.maxPolarAngle = Math.PI / 2 - 0.08;
    controls.minZoom = 0.3;
    controls.maxZoom = 5;
@@ -10,6 +10,13 @@
    let slowFrames = 0, fastFrames = 0;
    renderer.setPixelRatio(renderRatio);
    renderer.shadowMap.enabled = true;
+   // Campus geometry/light are static; do not redraw a 2048px shadow map each frame.
+   renderer.shadowMap.autoUpdate = false;
+-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
++  renderer.shadowMap.type = referenceQuality ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+   renderer.toneMappingExposure = 1.05;
+   renderer.outputColorSpace = THREE.SRGBColorSpace;
 @@ -288,7 +289,7 @@
    }
    function resize(): void {

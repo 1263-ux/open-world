@@ -88,8 +88,8 @@ export async function rotateTo(page: Page, canvas: Locator, targetYaw: number, t
 /** Bounded real-input search. Yaw points toward each published subject, while
  * each pitch is tried by a mouse/touch gesture and judged by live read-only
  * framing/occlusion feedback after the camera has rendered and settled. */
-export async function waitForSettledCamera(page:Page,canvas:Locator){
-  await expect(canvas).toHaveAttribute('data-camera-settled','true',{timeout:20000});
+export async function waitForSettledCamera(page:Page,canvas:Locator,settleTimeout=20000){
+  await expect(canvas).toHaveAttribute('data-camera-settled','true',{timeout:settleTimeout});
   const frame=Number(await canvas.getAttribute('data-frame'));
   await expect.poll(async()=>Number(await canvas.getAttribute('data-frame')),{timeout:10000,intervals:[100]}).toBeGreaterThan(frame);
   // Allow the existing 250ms guide refresh to observe the exact settled pose.

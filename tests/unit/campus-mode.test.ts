@@ -5,6 +5,7 @@ import { campuses } from '../../src/campus-data/campuses';
 import { PlayerController } from '../../src/scene/PlayerController';
 import { commitCampusModeLayer, disposeObject } from '../../src/scene/CampusScene';
 import { createIdealCampusLayer, IDEAL_FACILITIES } from '../../src/scene/IdealCampusLayer';
+import { createOriginalViewingPlatform, VIEWING_PLATFORM } from '../../src/scene/OriginalViewingPlatform';
 import { StudentModel } from '../../src/scene/StudentModel';
 import { ElementDouble } from './controller-harness';
 
@@ -97,6 +98,33 @@ describe('campus mode collision and visual transaction', () => {
   it('keeps the successful new world if old resource cleanup throws', () => {
     const world = new Group(), previous = layer(), prepared = layer(); world.add(previous.visual); const next = prepare(box()); previous.dispose.mockImplementation(() => { throw new Error('old cleanup'); });
     expect(commitCampusModeLayer(world, player, next, previous, prepared)).toEqual({ applied: true, cleanupWarning: true }); sameSnapshot(next); expect(world.children).toEqual([prepared.visual]); expect(prepared.dispose).not.toHaveBeenCalled();
+  });
+  it('bounds no-input deck support sampling while synchronous mode rejection stays exact', () => {
+    const platform = createOriginalViewingPlatform(); player.setCampus(campuses.yingxi, platform.colliders); platform.dispose();
+    player.setPosition([VIEWING_PLATFORM.approach[0], VIEWING_PLATFORM.approach[2]]);
+    (player as unknown as { yaw: number }).yaw = 0; key('KeyW'); frames(100);
+    (player as unknown as { onKeyUp(e: KeyboardEvent): void }).onKeyUp({ code: 'KeyW' } as KeyboardEvent);
+    const xz = [player.avatar.position.x, player.avatar.position.z];
+    const target = player.getCollisionSnapshot(), heights: number[] = [];
+    for (const dt of [.001, .005, .008, 1 / 60, .1, .5, 1]) for (let i = 0; i < 120; i++) {
+      player.update(dt); heights.push(player.avatar.position.y);
+      expect([player.avatar.position.x, player.avatar.position.z]).toEqual(xz);
+      const before = pose(); expect(player.commitCollision(target)).toBe(false); expect(pose()).toEqual(before);
+    }
+    expect(Math.min(...heights)).toBeGreaterThanOrEqual(1.2);
+    expect(Math.max(...heights)).toBeLessThanOrEqual(1.202);
+    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(.001 + 1e-9);
+    expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(.0009);
+  });
+  it('settles a real 180-degree look in bounded rendered updates, not arbitrary wall time', () => {
+    const input = player as unknown as { canvas: HTMLElement; onPointerDown(e: PointerEvent): void; onPointerMove(e: PointerEvent): void; onPointerUp(e: PointerEvent): void };
+    Object.assign(input.canvas, { getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }) });
+    const event = (x: number) => ({ pointerId: 1, pointerType: 'mouse', button: 0, clientX: x, clientY: 300, preventDefault() {} } as PointerEvent);
+    input.onPointerDown(event(640)); input.onPointerMove(event(640 - Math.PI / .005)); input.onPointerUp(event(640 - Math.PI / .005));
+    expect(player.cameraSettled).toBe(false);
+    let updates = 0; while (!player.cameraSettled && updates < 34) { player.updateCamera(false); updates++; }
+    expect(updates).toBeGreaterThan(20); expect(updates).toBeLessThanOrEqual(34); expect(player.cameraSettled).toBe(true);
+    const settled = player.camera.position.clone(); player.updateCamera(true); expect(player.camera.position.equals(settled)).toBe(true);
   });
   it('removes the ideal layer and restores base collision atomically', () => {
     const world = new Group(), ideal = layer(), base = player.getCollisionSnapshot(); world.add(ideal.visual); player.commitCollision(prepare(box())); const before = pose();

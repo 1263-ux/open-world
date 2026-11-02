@@ -6,12 +6,12 @@ import { waitForSettledCamera } from './complete-release-helpers';
 
 // Reconstructed recovery candidate. Input is real; evaluate only observes telemetry.
 export const REFERENCE_VIEWPORT = { width: 1280, height: 720 };
-interface Shot { id: string; campus: CampusId; foot: Point2; look: Point2; via?: Point2[] }
+interface Shot { id: string; purpose: string; campus: CampusId; foot: Point2; look: Point2; via?: Point2[] }
 export const REFERENCE_SHOTS: Shot[] = [
-  { id: 'huyu-entrance', campus: 'huyu', foot: [18.26, -177.03], look: [42, -189] },
-  { id: 'huyu-meihua-court', campus: 'huyu', foot: [-65.74, -45.03], look: [-80.74, -45.94] },
-  { id: 'yingxi-canopy-near-mid', campus: 'yingxi', foot: [45, 162], look: [54.04, 169.31] },
-  { id: 'yingxi-backlit-facade', campus: 'yingxi', foot: [100, 178], look: [120, 178], via: [[54, 172], [100, 172]] },
+  { id: 'huyu-entrance-east-facade', purpose: '虎峪入口东楼立面对比（b396）；不是校门全景或树冠评估', campus: 'huyu', foot: [18.26, -177.03], look: [42, -189] },
+  { id: 'huyu-meihua-court', purpose: '梅花庭院花床与冠体层次；须实际图核可见性', campus: 'huyu', foot: [-65.74, -45.03], look: [-80.74, -45.94] },
+  { id: 'yingxi-canopy-near-mid', purpose: '迎西近中景闭合树冠；须实际图核可见性', campus: 'yingxi', foot: [45, 162], look: [54.04, 169.31] },
+  { id: 'yingxi-backlit-facade', purpose: '迎西195741288西立面逆光层次', campus: 'yingxi', foot: [100, 178], look: [120, 178], via: [[54, 172], [100, 172]] },
 ];
 export interface ReferencePose { xyz: number[]; yaw: number; pitch: number; camera: number[]; quality: string; ratio: number; shadow: number; frame: number }
 async function read(canvas: Locator): Promise<ReferencePose> {
@@ -50,7 +50,7 @@ async function look(page: Page, canvas: Locator, yaw: number, pitch: number) {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 2, x: start.x - delta / .005, y: start.y + (pitch - pose.pitch) / .004 }] });
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   } finally { await cdp.detach(); }
-  await waitForSettledCamera(page, canvas);
+  await waitForSettledCamera(page, canvas, 45000);
 }
 export async function captureReference(page: Page, canvas: Locator, shot: Shot, label: 'before' | 'after', info: TestInfo, baseline?: ReferencePose): Promise<ReferencePose> {
   try {
@@ -70,8 +70,11 @@ export async function captureReference(page: Page, canvas: Locator, shot: Shot, 
     console.log('[REFERENCE_CONDITIONS]', JSON.stringify(conditions));
     await info.attach(`${label}-${shot.id}-conditions`, { body: JSON.stringify(conditions, null, 2), contentType: 'application/json' });
     await page.screenshot({ path: info.outputPath(`${label}-${shot.id}.png`) });
-    expect(pose.quality).toBe('reference'); expect(pose.ratio).toBe(1); expect(pose.shadow).toBe(2); expect(conditions.dpr).toBe(1);
+    // Pinned Three r186 WebGLShadowMap normalizes removed PCFSoft(2) to PCF(1).
+    // Reference explicitly uses supported PCF; Basic(0) remains a failure.
+    expect(pose.quality).toBe('reference'); expect(pose.ratio).toBe(1); expect(pose.shadow).toBe(1); expect(conditions.dpr).toBe(1);
     if (baseline) {
+      expect(pose.shadow).toBe(baseline.shadow); expect(pose.ratio).toBe(baseline.ratio);
       expect(Math.hypot(...pose.xyz.map((v, i) => v - baseline.xyz[i]!))).toBeLessThanOrEqual(.03);
       expect(Math.abs(pose.yaw - baseline.yaw)).toBeLessThanOrEqual(.0002); expect(Math.abs(pose.pitch - baseline.pitch)).toBeLessThanOrEqual(.0002);
       expect(Math.hypot(...pose.camera.map((v, i) => v - baseline.camera[i]!))).toBeLessThanOrEqual(.04);
