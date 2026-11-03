@@ -146,6 +146,10 @@ describe('family contrast and shared resources', () => {
   });
 
   it('shares exactly two immutable numeric material descriptions across families', () => {
+    expect(CAMPUS_FACADE_PALETTE).toEqual({
+      stone: { color: 0xb6aa94, roughness: .95 },
+      trim: { color: 0xc5bba8, roughness: .91 },
+    });
     expect(Object.keys(CAMPUS_FACADE_PALETTE)).toEqual(['stone', 'trim']);
     expect(Object.isFrozen(CAMPUS_FACADE_PALETTE)).toBe(true);
     for (const entry of Object.values(CAMPUS_FACADE_PALETTE)) {

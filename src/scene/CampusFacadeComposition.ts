@@ -7,8 +7,8 @@
 export type CampusFacadeFamily = 'paired-vertical' | 'horizontal-ribbon' | 'plinth-top';
 
 export const CAMPUS_FACADE_PALETTE = Object.freeze({
-  stone: Object.freeze({ color: 0x777a70, roughness: .95 }),
-  trim: Object.freeze({ color: 0xd8d0bf, roughness: .91 }),
+  stone: Object.freeze({ color: 0xb6aa94, roughness: .95 }),
+  trim: Object.freeze({ color: 0xc5bba8, roughness: .91 }),
 });
 
 export const CAMPUS_FACADE_LIMITS = Object.freeze({

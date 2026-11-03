@@ -21,6 +21,21 @@ export function referenceYawError(actual: number, expected: number): number {
   if (!Number.isFinite(actual) || !Number.isFinite(expected)) return Number.POSITIVE_INFINITY;
   const delta = actual - expected; return Math.abs(Math.atan2(Math.sin(delta), Math.cos(delta)));
 }
+// Test-side input calibration only. Slow CDP delivery can hold a nominal 30ms
+// gesture for much longer; never compensate by changing player speed or state.
+export function referencePulseMagnitude(distance: number, denominator: number): number {
+  if (!Number.isFinite(distance) || distance <= 0 || !Number.isFinite(denominator) || denominator < 6) throw Error('Invalid reference pulse input');
+  return Math.min(1, distance / denominator);
+}
+export function referencePulseDenominator(previous: number, magnitude: number, travelled: number): number {
+  if (!Number.isFinite(previous) || previous < 6 || !Number.isFinite(magnitude) || magnitude <= 0 || magnitude > 1 || !Number.isFinite(travelled) || travelled <= 0) throw Error('Reference pulse has no finite post-release displacement');
+  const observed = travelled / magnitude * 1.25;
+  if (!Number.isFinite(observed)) throw Error('Invalid reference pulse response');
+  return Math.max(previous, observed);
+}
+export function assertReferenceFrameAfterRelease(frame: number, releasedFrame: number): void {
+  if (!Number.isFinite(frame) || !Number.isFinite(releasedFrame) || frame <= releasedFrame) throw Error('No new rendered frame after reference touch release');
+}
 export interface ReferencePose { xyz: number[]; yaw: number; pitch: number; camera: number[]; quality: string; ratio: number; shadow: number; shadowSize: number; shadowActual: number[]; frame: number }
 async function read(canvas: Locator): Promise<ReferencePose> {
   return canvas.evaluate(e => { const d = (e as HTMLElement).dataset; return {
@@ -33,11 +48,12 @@ async function precision(page: Page, canvas: Locator, target: Point2) {
   const center = { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
   const cdp = await page.context().newCDPSession(page);
   try {
+    let denominator = 6, pose = await read(canvas);
     for (let attempt = 0; attempt < 30; attempt++) {
-      const pose = await read(canvas), dx = target[0] - pose.xyz[0]!, dz = target[1] - pose.xyz[2]!, distance = Math.hypot(dx, dz);
-      console.log('[REFERENCE_ALIGNMENT]', JSON.stringify({ attempt, target, distance, pose }));
+      const dx = target[0] - pose.xyz[0]!, dz = target[1] - pose.xyz[2]!, distance = Math.hypot(dx, dz);
+      console.log('[REFERENCE_ALIGNMENT]', JSON.stringify({ attempt, target, distance, denominator, pose }));
       if (distance <= .025) return;
-      const magnitude = Math.min(1, distance / 6);
+      const magnitude = referencePulseMagnitude(distance, denominator);
       // Controller forward=(sin yaw,cos yaw), right=(-cos yaw,sin yaw).
       const right = (-dx * Math.cos(pose.yaw) + dz * Math.sin(pose.yaw)) / distance;
       const forward = (dx * Math.sin(pose.yaw) + dz * Math.cos(pose.yaw)) / distance;
@@ -45,9 +61,18 @@ async function precision(page: Page, canvas: Locator, target: Point2) {
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 1, x: center.x + right * magnitude * 50, y: center.y - forward * magnitude * 50 }] });
       await page.waitForTimeout(30);
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-      await expect.poll(async () => (await read(canvas)).frame, { timeout: 10000 }).toBeGreaterThan(pose.frame);
+      // A frame newer than the pre-touch pose may still have rendered while
+      // the stick was held. Sample release first, then require a distinct RAF.
+      const released = await read(canvas);
+      let after = released;
+      await expect.poll(async () => { after = await read(canvas); return after.frame; }, { timeout: 10000 }).toBeGreaterThan(released.frame);
+      assertReferenceFrameAfterRelease(after.frame, released.frame);
+      const travelled = Math.hypot(after.xyz[0]! - pose.xyz[0]!, after.xyz[2]! - pose.xyz[2]!);
+      denominator = referencePulseDenominator(denominator, magnitude, travelled);
+      console.log('[REFERENCE_PULSE]', JSON.stringify({ attempt, magnitude, travelled, denominator, releasedFrame: released.frame, afterFrame: after.frame }));
+      pose = after;
     }
-    const pose = await read(canvas); expect(Math.hypot(target[0] - pose.xyz[0]!, target[1] - pose.xyz[2]!)).toBeLessThanOrEqual(.025);
+    pose = await read(canvas); expect(Math.hypot(target[0] - pose.xyz[0]!, target[1] - pose.xyz[2]!)).toBeLessThanOrEqual(.025);
   } finally { await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }).catch(() => {}); await cdp.detach().catch(() => {}); }
 }
 async function look(page: Page, canvas: Locator, yaw: number, pitch: number) {

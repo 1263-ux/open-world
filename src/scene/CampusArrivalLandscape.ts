@@ -45,23 +45,19 @@ function surface(id:string,layer:0|1|2,polygon:readonly Point2[],campus:CampusId
 }
 function huyuSurfaceRefinement():SurfacePatch[] {
   const spine:Point2[]=[[-9,-173.77],[-35.74,-147.03],[-35.74,-105.03]];
-  const inner=routeEdges(spine,1.2),edge=routeEdges(spine,1.65),outer=routeEdges(spine,3.8);
+  const inner=routeEdges(spine,1.2),edge=routeEdges(spine,1.38);
   const patches:SurfacePatch[]=[];
   const add=(id:string,layer:0|1|2,polygon:readonly Point2[])=>patches.push(surface(id,layer,polygon,'huyu'));
   for(const side of [0,1] as const) {
     add(`diagonal-edge-${side}`,1,[inner[0][side],inner[1][side],edge[1][side],edge[0][side]]);
-    add(`diagonal-open-ground-${side}`,2,[edge[0][side],edge[1][side],outer[1][side],outer[0][side]]);
   }
-  add('west-edge-before-stop',1,[inner[1][0],[-36.94,-145],[-37.39,-145],edge[1][0]]);
-  add('west-edge-after-stop',1,rectangle([-37.39,-139,-36.94,-105.03]));
+  add('west-edge-before-stop',1,[inner[1][0],[-36.94,-144.5],[-37.12,-144.5],edge[1][0]]);
+  add('west-edge-after-stop',1,rectangle([-37.12,-140.5,-36.94,-105.03]));
   add('east-edge',1,[inner[1][1],inner[2][1],edge[2][1],edge[1][1]]);
-  add('west-ground-before-stop',2,[edge[1][0],[-37.39,-145],[-39.54,-145],outer[1][0]]);
-  add('west-ground-after-stop',2,rectangle([-39.54,-139,-37.39,-105.03]));
-  add('east-open-ground',2,[edge[1][1],edge[2][1],outer[2][1],outer[1][1]]);
-  // A six-metre opening in the west edge invites a stop beside, not on, the
-  // through route. The ground field continues beyond it without new props.
-  add('west-corner-open-ground',2,[[-47,-149],[-43,-153],[-39.54,-153],[-39.54,-131],[-44,-131],[-47,-134]]);
-  add('west-corner-stop',0,[[-36.94,-145],[-43.5,-145],[-45.5,-143],[-45.5,-141],[-43.5,-139],[-36.94,-139]]);
+  // Keep the existing textured grass exposed, rather than covering it with
+  // broad tree-bed-coloured polygons. A small four-metre opening invites a
+  // stop beside the through route; 0.6m clipped corners soften its outer edge.
+  add('west-corner-stop',0,[[-36.94,-144.5],[-40.4,-144.5],[-41,-143.9],[-41,-141.1],[-40.4,-140.5],[-36.94,-140.5]]);
   return patches;
 }
 /** Bounded original surface composition, never additional mapped roads.
@@ -218,7 +214,10 @@ export function createCampusArrivalLandscape(data:CampusData, isClear?:(x:number
     // Lower than all prior patches/hardscape: overlap hides the junction without
     // z-fighting or introducing a physical step. Same existing material/draw batch.
   }
-  const materials=[0xbab7a5,0x7d8978,0x747958].map(color=>new THREE.MeshStandardMaterial({color,roughness:1}));
+  // Huyu's continuous walk uses lighter stone and a quiet narrow edge. Leave
+  // Yingxi's palette and both campuses' original tree-bed material unchanged.
+  const colors=data.id==='huyu'?[0xcec8b7,0xa9b09e,0x747958]:[0xbab7a5,0x7d8978,0x747958];
+  const materials=colors.map(color=>new THREE.MeshStandardMaterial({color,roughness:1}));
   positions.forEach((p,i)=>{if(!p.length)return;const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.computeVertexNormals();const mesh=new THREE.Mesh(g,materials[i]);mesh.receiveShadow=true;mesh.name=['arrival-mineral-shoulders','arrival-flush-edge','arrival-tree-beds'][i];visual.add(mesh);});
   const natureTriangles=placements.reduce((n,p)=>n+NATURE_MODEL_BOUNDS[p.kind].triangles,0);
   const metrics={natureTriangles,natureDrawBatches:new Set(placements.map(p=>p.kind)).size,groundTriangles:positions.reduce((n,p)=>n+p.length/9,0),groundDrawBatches:visual.children.length,placementCount:placements.length};

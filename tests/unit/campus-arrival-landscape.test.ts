@@ -165,7 +165,7 @@ function triangleIntersectionArea(subject:Point2[],clip:Point2[]):number {
 
 describe('bounded route surface refinement',()=>{
   const baseline={
-    huyu:{ground:1846,added:28,area:598.423567420853,nature:28,triangles:8360,hash:'a34e7621f36741c55bee8eb3a86e5bea9d4020f00c2eafbd5c5d3310c415731d'},
+    huyu:{ground:1846,added:14,area:43.893785436829,nature:28,triangles:8360,hash:'a34e7621f36741c55bee8eb3a86e5bea9d4020f00c2eafbd5c5d3310c415731d'},
     yingxi:{ground:1918,added:37,area:543.1435,nature:32,triangles:10024,hash:'278ede8d95b7e3d399172f2b9115f4a2ae7a2ab53d69353a905234d7e4e98cd1'},
   };
   for(const id of ['huyu','yingxi'] as const)it(`${id}: complete polygons clear source boundaries, keep nature exact, and reuse only three owned batches`,()=>{
@@ -187,6 +187,8 @@ describe('bounded route surface refinement',()=>{
       expect(a.placements).toEqual(b.placements);
       expect('colliders' in a).toBe(false);
       expect(a.visual.children).toHaveLength(3);
+      expect(a.visual.children.map(child=>((child as THREE.Mesh).material as THREE.MeshStandardMaterial).color.getHex()))
+        .toEqual(id==='huyu'?[0xcec8b7,0xa9b09e,0x747958]:[0xbab7a5,0x7d8978,0x747958]);
       const elevations=new Set(patches.map(p=>p.elevation));
       let refinementTriangles=0,refinementArea=0;
       a.visual.children.forEach((child,index)=>{
@@ -212,6 +214,13 @@ describe('bounded route surface refinement',()=>{
       expect(refinementArea).toBeCloseTo(expected.area,2);
       expect(JSON.stringify(data)).toBe(before);
       if(id==='yingxi') {
+        // Freeze the other campus's complete ground geometry and palette, not
+        // just its count, during this Huyu-only visual subtraction.
+        const snapshot=a.visual.children.map(child=>{
+          const mesh=child as THREE.Mesh;
+          return [mesh.name,Array.from(mesh.geometry.getAttribute('position').array),(mesh.material as THREE.MeshStandardMaterial).color.getHex()];
+        });
+        expect(createHash('sha256').update(JSON.stringify(snapshot)).digest('hex')).toBe('220993d5fe503a0091403e4da7df1264d02d75750f09d39df0a9f82256a5c980');
         expect(a.placements.some(p=>p.kind==='tree-spreading'&&p.position[0]===7&&p.position[2]===179)).toBe(true);
         expect(a.placements.some(p=>p.kind==='shrub'&&p.position[0]===0&&p.position[2]===178)).toBe(true);
         expect(patches.every(p=>p.elevation>.025&&p.elevation<.035)).toBe(true);
@@ -220,7 +229,15 @@ describe('bounded route surface refinement',()=>{
         expect(patches.every(p=>p.polygon.every(([x,z])=>x>=-50.8&&x<=40.5&&z<=188.4))).toBe(true);
       } else {
         expect(patches.every(p=>p.elevation<HUYU_ARRIVAL_WALK_CONNECTION.elevation)).toBe(true);
-        expect(patches.every(p=>p.polygon.every(([x,z])=>x>=-47&&z<=-105.03))).toBe(true);
+        expect(patches.every(p=>p.polygon.every(([x,z])=>x>=-41&&z<=-105.03))).toBe(true);
+        expect(patches.some(p=>p.layer===2)).toBe(false);
+        expect(polygonArea(patches.find(p=>p.id==='west-corner-stop')!.polygon)).toBeCloseTo(15.88,6);
+        const edge=patches.find(p=>p.id==='west-edge-after-stop')!.polygon;
+        expect(Math.max(...edge.map(p=>p[0]))-Math.min(...edge.map(p=>p[0]))).toBeCloseTo(.18,6);
+        for(const side of [0,1]) {
+          const p=patches.find(p=>p.id===`diagonal-edge-${side}`)!.polygon;
+          expect(Math.hypot(p[0][0]-p[3][0],p[0][1]-p[3][1])).toBeCloseTo(.18,6);
+        }
       }
     } finally {a.dispose();b.dispose();}
   });
@@ -263,11 +280,13 @@ describe('bounded route surface refinement',()=>{
           return ray.intersectObject(result.visual,true)[0]?.point.y;
         };
         if(id==='huyu') {
-          for(let x=-42;x<=-35.74;x+=.2)expect(height(x,-142)).toBeGreaterThanOrEqual(.024-1e-6);
+          for(let x=-40.3;x<=-35.74;x+=.2)expect(height(x,-142)).toBeGreaterThanOrEqual(.024-1e-6);
           expect(height(-35.74,-142)).toBeCloseTo(.03,6);
-          expect(height(-37.15,-130)).toBeCloseTo(.027,6);
-          expect(height(-38.5,-130)).toBeCloseTo(.022,6);
-          expect(height(-44,-147)).toBeCloseTo(.022,6);
+          expect(height(-37.03,-130)).toBeCloseTo(.027,6);
+          // No replacement plane over the old grass or outside the smaller stop.
+          expect(height(-38.5,-130)).toBeUndefined();
+          expect(height(-44,-147)).toBeUndefined();
+          expect(height(-42,-142)).toBeUndefined();
         } else {
           expect(height(8,168)).toBeCloseTo(.028,6);
           expect(height(39,177)).toBeCloseTo(.030,6);
