@@ -189,7 +189,7 @@ function openObjectiveStory(trigger: EventTarget | null) {
 }
 function continueIntoCampus() {
   if (campusId.value !== 'huyu' || quest.value.status === 'active' || mode.value !== 'exploring' || panelOpen.value || mapOpen.value || !objectiveNearby.value || currentObjective.value?.id !== 'hy-north-gate') return;
-  if (!scene?.navigateTo('hy-meihua')) { notice.value = '暂时无法设置指引，请稍后重试。'; return; }
+  if (!scene?.navigateTo('hy-meihua')) { notice.value = '未能找到安全接入路线，当前指引不变。请回到开阔地后重试。'; return; }
   arrivalGuidanceId.value = 'hy-meihua';
   notice.value = '已显示去梅花教室的原路线。沿铺装向校内走，在前场转向西侧；这是可选指引，不会开始或改写任务。';
   focusScene();
@@ -407,15 +407,15 @@ function selectLandmark(item: Landmark) {
 }
 function travel() {
   if (!target.value || travelling.value || sceneError.value) return;
-  arrivedId.value = null;
-  answer.value = null;
-  travelProgress.value = 0;
-  travelling.value = true;
   try {
     if (!scene?.navigateTo(target.value.id)) {
-      travelling.value = false;
-      notice.value = '暂时无法设置本站指引，请重试。';
+      notice.value = '未能找到安全接入路线，当前指引和进度不变。请回到开阔地后重试。';
     } else {
+      arrivedId.value = null;
+      answer.value = null;
+      travelProgress.value = 0;
+      travelling.value = true;
+      notice.value = '';
       panelOpen.value = false;
       focusScene();
     }
@@ -570,6 +570,7 @@ onBeforeUnmount(() => {
           </div>
         </template>
         <div v-else class="compact-actions"><button v-if="quest.status !== 'active' && currentObjective.id === 'hy-north-gate' && objectiveNearby" type="button" data-testid="continue-campus-arrival" @click="continueIntoCampus">去梅花教室</button><button type="button" data-testid="objective-story" :aria-label="CAMPUS_STORIES[currentObjective.id] ? '阅读校园故事' : '查看地标资料'" @click="openObjectiveStory($event.currentTarget)">{{ CAMPUS_STORIES[currentObjective.id] ? '故事' : '资料' }}</button><button type="button" data-testid="objective-route" aria-label="展开漫游路线" @click="showPanel('quest', $event.currentTarget)">路线</button></div>
+        <p v-if="notice.startsWith('未能找到安全接入路线')" class="order-note" data-testid="guidance-failure" role="status">{{ notice }}</p>
       </section>
 
       <PhotoJournal v-if="campusId === 'yingxi' && !hksOpen && !planeActive && (!idealPromptVisible || photoCompleteOpen) && (!showNotebook || photoCompleteOpen)" :point="photoPoint" :stamps="journey?.photos ?? []" :photos="photoImages" :status="photoStatus" :disabled="!!sceneError" :view-available="photoViewAvailable" :model-status="photoModelStatus" :panel-open="panelOpen" :feedback="photoFeedback" :complete-open="photoCompleteOpen" @record="recordPhoto" @close="closePhotoComplete()" @open="openPhotoComplete" @replay="replayPhotos" @select="selectPhotoPoint" />
@@ -603,6 +604,7 @@ onBeforeUnmount(() => {
           <button type="button" class="icon-button" data-testid="landmark-close" aria-label="关闭面板" @click="closePanel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
         </div>
         <div class="panel-scroll">
+          <p v-if="notice.startsWith('未能找到安全接入路线')" class="order-note" data-testid="guidance-failure" role="status">{{ notice }}</p>
           <template v-if="panel === 'directory'">
             <h2>校园地点</h2><p class="muted">从列表中选择地点，查看它的故事与数据来源。</p>
             <div class="directory-list">

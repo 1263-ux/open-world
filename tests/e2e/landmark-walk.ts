@@ -1,22 +1,14 @@
-/** Landmark guidance follows the same nearest authored suffix as Scene.navigateTo.
+/** Landmark guidance uses the same building-safe connector and authored suffix as Scene.navigateTo.
  * This remains real keyboard input, not auto-walk or a gameplay-state write.
  * The generic building-only A* remains for non-landmark viewpoints. */
 import type { Locator, Page } from '@playwright/test';
 import type { CampusData, Point2 } from '../../src/shared/contracts';
 import { position, waypointKeys } from './campus-walk';
-const valid = (p: Point2) => Number.isFinite(p[0]) && Number.isFinite(p[1]);
+import { planCampusGuidance } from '../../src/scene/CampusGuidance';
 export function landmarkRoute(campus: CampusData, start: Point2, id: string): Point2[] {
-  const landmark = campus.landmarks.find(item => item.id === id);
-  if (!landmark || !valid(start) || !valid(landmark.arrival)) throw Error(`Invalid landmark route ${id}`);
-  let nearest = Infinity, suffix: Point2[] = [landmark.arrival];
-  for (const [key, points] of Object.entries(campus.routes)) {
-    if (!key.endsWith(`>${id}`)) continue;
-    for (let i = 0; i < points.length; i++) {
-      if (!valid(points[i]!) || !points.slice(i).every(valid)) continue;
-      const distance = Math.hypot(start[0] - points[i]![0], start[1] - points[i]![1]);
-      if (distance < nearest) { nearest = distance; suffix = points.slice(i); }
-    }
-  }
+  const plan = planCampusGuidance(campus, start, id);
+  if (!plan) throw Error(`No safe authored landmark connection ${id}`);
+  const suffix = plan.points;
   // Preserve every original corner; never grid-snap or shortcut a route segment.
   return suffix.flatMap((point, index) => {
     const previous = index ? suffix[index - 1]! : start;

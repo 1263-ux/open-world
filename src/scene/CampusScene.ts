@@ -1,3 +1,4 @@
+import { planCampusGuidance } from './CampusGuidance';
 import { Octree } from 'three/examples/jsm/math/Octree.js';
 import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 import { ARRIVAL_ROUTES, createCampusArrivalLandscape } from './CampusArrivalLandscape';
@@ -1294,21 +1295,9 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     if (!landmark || !validPoint(landmark.arrival)) return false;
     const start: Point2 = [pawn.position.x, pawn.position.z];
     const distance = Math.hypot(start[0] - landmark.arrival[0], start[1] - landmark.arrival[1]);
-    // Join the nearest available waypoint on an authored route to this target.
-    // This is still guidance, never automated movement or proof of arrival.
-    let closest = Infinity;
-    let waypoints: Point2[] = [landmark.arrival];
-    for (const [key, points] of Object.entries(data.routes)) {
-      if (!key.endsWith(`>${id}`)) continue;
-      for (let i = 0; i < points.length; i++) {
-        if (!validPoint(points[i])) continue;
-        const separation = Math.hypot(start[0] - points[i][0], start[1] - points[i][1]);
-        if (separation < closest && points.slice(i).every(validPoint)) {
-          closest = separation;
-          waypoints = points.slice(i);
-        }
-      }
-    }
+    const plan = planCampusGuidance(data, start, id);
+    if (!plan) return false;
+    const waypoints = plan.points;
     travel = { id, initialDistance: Math.max(distance, 1), arrival: landmark.arrival, waypoints };
     drawRoute([start, ...waypoints]);
     showPlayer();

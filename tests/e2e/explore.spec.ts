@@ -321,10 +321,10 @@ test('model loading failures retain the campus; repeated switches isolate late l
 });
 
 test('building collision stops a player at the sourced main-building footprint', async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(120000);
   await page.goto('/'); await selectHuyu(page); const canvas=page.getByTestId('campus-canvas');
   await expect.poll(()=>canvas.getAttribute('data-player-z')).not.toBeNull();
-  const start=await position(canvas);
+  const wallStart=await position(canvas);
   // The approved Huyu first view faces north. Use a real drag to face this
   // existing collision test's +Z wall; never inject yaw or player position.
   const yaw=Number(await canvas.getAttribute('data-camera-yaw'));
@@ -336,8 +336,19 @@ test('building collision stops a player at the sourced main-building footprint',
   try {
     await expect.poll(async()=>(await position(canvas))[2],{timeout:50000,intervals:[500]}).toBeGreaterThan(-144);
     const atWall=await position(canvas); await page.waitForTimeout(3000); const still=await position(canvas);
-    expect(atWall[2]-start[2]).toBeGreaterThan(30);
+    expect(atWall[2]-wallStart[2]).toBeGreaterThan(30);
     expect(still[2], 'The capsule must not tunnel through the building footprint').toBeLessThan(-142.78);
     expect(Math.abs(still[2]-atWall[2])).toBeLessThan(1.5);
   } finally { await page.keyboard.up('w'); await page.keyboard.up('Shift'); }
+  // Normal campus journey UI, not the unrelated Hks exhibit. Starting the quest
+  // is legitimate progress setup; the rejected request itself must change nothing.
+  await start(page);
+  const rejectionSnapshot=()=>canvas.evaluate(e=>{const d=(e as HTMLElement).dataset;return {xyz:[d.playerX,d.playerY,d.playerZ],yaw:d.cameraYaw,pitch:d.cameraPitch,journey:localStorage.getItem('campus-atlas:journey:v1'),photos:localStorage.getItem('campus-atlas:photo-stamps:v1'),quests:localStorage.getItem('campus-atlas:quests')};});
+  const beforeRejected=await rejectionSnapshot();
+  await page.getByTestId('quest-travel').click();
+  await expect(page.getByTestId('guidance-failure')).toBeVisible();
+  await expect(page.getByTestId('guidance-failure')).toContainText('未能找到安全接入路线');
+  await expect(page.getByTestId('quest-travel')).toBeEnabled();
+  expect(await rejectionSnapshot()).toEqual(beforeRejected);
+  console.log('[GUIDANCE_WALL_REJECTION]',JSON.stringify({before:beforeRejected,after:await rejectionSnapshot(),scope:'no prior route; existing-route retention covered separately by Scene transaction unit'}));
 });
