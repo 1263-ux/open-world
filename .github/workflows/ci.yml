@@ -126,7 +126,7 @@ jobs:
       - uses: actions/checkout@v4
         if: ${{ !cancelled() }}
         with:
-          ref: c17b46220743fe0059bf5b3bfedacebe37a1212a
+          ref: 595cc645206c10eba94dbb1400c6689382912e51
           path: reference-baseline
           persist-credentials: false
       - name: Fixed-quality old/new visual reference on separate static builds
@@ -134,14 +134,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git -C reference-baseline rev-parse HEAD)" = c17b46220743fe0059bf5b3bfedacebe37a1212a
+          test "$(git -C reference-baseline rev-parse HEAD)" = 595cc645206c10eba94dbb1400c6689382912e51
           cmp package-lock.json reference-baseline/package-lock.json
           cmp games/hks/package-lock.json reference-baseline/games/hks/package-lock.json
           node --input-type=module <<'NODE'
           import fs from 'node:fs'; import crypto from 'node:crypto';
           const m=JSON.parse(fs.readFileSync('tests/e2e/reference-baseline-manifest.json','utf8'));
           const hash=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
-          if(m.baselineCommit!=='c17b46220743fe0059bf5b3bfedacebe37a1212a'||m.requiresPatch!==false)throw Error('Baseline input contract mismatch');
+          if(m.baselineCommit!=='595cc645206c10eba94dbb1400c6689382912e51'||m.requiresPatch!==false)throw Error('Baseline input contract mismatch');
           for(const entry of m.sourceFiles)if(hash('reference-baseline/'+entry.path)!==entry.sha256)throw Error('Baseline source identity mismatch: '+entry.path);
           console.log('[REFERENCE_INPUT]',JSON.stringify({...m,candidateCommit:process.env.GITHUB_SHA}));
           NODE

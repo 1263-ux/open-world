@@ -2,27 +2,30 @@ import { campuses } from '../../src/campus-data/campuses';
 import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import type { CampusId, Point2 } from '../../src/shared/contracts';
 import { walkTo } from './campus-walk';
-import { waitForSettledCamera } from './complete-release-helpers';
+import { walkAuthoredSegment, waitForSettledCamera } from './complete-release-helpers';
+import referenceBaseline from './reference-baseline-manifest.json' with { type: 'json' };
 
 // Reconstructed recovery candidate. Input is real; evaluate only observes telemetry.
 export const REFERENCE_VIEWPORT = { width: 1280, height: 720 };
-interface Shot { id: string; purpose: string; campus: CampusId; foot: Point2; look: Point2; pitch?: number; via?: Point2[] }
+interface Shot { id: string; purpose: string; campus: CampusId; foot: Point2; look: Point2; pitch?: number; authoredApproach?: { staging: Point2; via: Point2[] } }
 export const REFERENCE_SHOTS: Shot[] = [
   { id: 'huyu-gate-arrival', purpose: '虎峪原安全spawn内侧：北门形态与入口铺装/植栽景序，不冒充门外正面', campus: 'huyu', foot: [18.26, -177.03], look: [14, -200] },
   { id: 'huyu-campus-approach', purpose: '虎峪原路线西转角：沿梅花方向的连续通行与景序，不以主楼贴墙作为终点', campus: 'huyu', foot: [-35.74, -147.03], look: [-35.74, -105.03] },
-  { id: 'yingxi-hall-arrival', purpose: '迎西真实spawn：机械馆前景与新树形/首程入口', campus: 'yingxi', foot: [-20, 175.5], look: [-53.045, 175.65] },
   { id: 'yingxi-garden-approach', purpose: '迎西走廊中段朝清泽园：连续近中远景与可走入口', campus: 'yingxi', foot: [7, 172.76], look: [35, 192.8] },
+  // Reuse the existing campus-mode shared-ground view, not a default spawn view.
+  // Garden first avoids walking east to the wall view and then doubling back.
+  { id: 'yingxi-west-facade', purpose: '迎西既有模式验收共享地面东向：195741288西墙窗组，不冒充默认出生镜头', campus: 'yingxi', foot: [69, 173], look: [111.72, 173], authoredApproach: { staging: [54, 172], via: [[69, 172]] } },
 ];
 // Yaw is periodic; preserve strict angular tolerance without equating different directions.
 export function referenceYawError(actual: number, expected: number): number {
   if (!Number.isFinite(actual) || !Number.isFinite(expected)) return Number.POSITIVE_INFINITY;
   const delta = actual - expected; return Math.abs(Math.atan2(Math.sin(delta), Math.cos(delta)));
 }
-export interface ReferencePose { xyz: number[]; yaw: number; pitch: number; camera: number[]; quality: string; ratio: number; shadow: number; frame: number }
+export interface ReferencePose { xyz: number[]; yaw: number; pitch: number; camera: number[]; quality: string; ratio: number; shadow: number; shadowSize: number; shadowActual: number[]; frame: number }
 async function read(canvas: Locator): Promise<ReferencePose> {
   return canvas.evaluate(e => { const d = (e as HTMLElement).dataset; return {
     xyz: [Number(d.playerX), Number(d.playerY), Number(d.playerZ)], yaw: Number(d.cameraYaw), pitch: Number(d.cameraPitch),
-    camera: [Number(d.cameraX), Number(d.cameraY), Number(d.cameraZ)], quality: d.renderQuality ?? '', ratio: Number(d.renderRatio), shadow: Number(d.shadowType), frame: Number(d.frame),
+    camera: [Number(d.cameraX), Number(d.cameraY), Number(d.cameraZ)], quality: d.renderQuality ?? '', ratio: Number(d.renderRatio), shadow: Number(d.shadowType), shadowSize: Number(d.shadowSize), shadowActual: [Number(d.shadowActualSize), Number(d.shadowActualHeight)], frame: Number(d.frame),
   }; });
 }
 async function precision(page: Page, canvas: Locator, target: Point2) {
@@ -62,24 +65,36 @@ export async function captureReference(page: Page, canvas: Locator, shot: Shot, 
     if (await canvas.getAttribute('data-campus-ready') !== shot.campus) await page.getByTestId(`campus-${shot.campus}`).click();
     await expect(canvas).toHaveAttribute('data-campus-ready', shot.campus, { timeout: 30000 });
     await expect(canvas).toHaveAttribute('data-player-model', 'ready', { timeout: 30000 });
-    if (label === 'after') { await expect(canvas).toHaveAttribute('data-arrival-nature-status', 'ready', { timeout: 30000 }); await expect.poll(async()=>Number(await canvas.getAttribute('data-arrival-nature-instances'))).toBeGreaterThan(0); }
+    await expect(canvas).toHaveAttribute('data-arrival-nature-status', 'ready', { timeout: 30000 }); await expect.poll(async()=>Number(await canvas.getAttribute('data-arrival-nature-instances'))).toBeGreaterThan(0);
     await expect(canvas).toHaveAttribute('data-hero-model', 'ready', { timeout: 30000 });
     if (shot.campus === 'huyu') await expect(canvas).toHaveAttribute('data-huyu-tree-texture', 'ready', { timeout: 30000 });
     else await expect(canvas).toHaveAttribute('data-model-yx-garden-setting', 'ready', { timeout: 30000 });
-    for (const point of shot.via ?? []) await walkTo(page, canvas, campuses[shot.campus], point, .9);
     const target: Point2 = baseline ? [baseline.xyz[0]!, baseline.xyz[2]!] : shot.foot;
-    await walkTo(page, canvas, campuses[shot.campus], target, .9); await precision(page, canvas, target);
+    if (shot.authoredApproach) {
+      // Same staging and north-ground segments as the existing mode journey.
+      // Source-footprint A* must not invent a shortcut through platform props.
+      await walkTo(page, canvas, campuses[shot.campus], shot.authoredApproach.staging, .9);
+      for (const point of [shot.authoredApproach.staging, ...shot.authoredApproach.via, target]) await walkAuthoredSegment(page, canvas, point);
+    } else await walkTo(page, canvas, campuses[shot.campus], target, .9);
+    await precision(page, canvas, target);
     await expect.poll(async () => (await read(canvas)).xyz[1]).toBeLessThan(.125);
     const yaw = baseline?.yaw ?? Math.atan2(shot.look[0] - target[0], shot.look[1] - target[1]);
     await look(page, canvas, yaw, baseline?.pitch ?? shot.pitch ?? -.15);
-    const shadowMapSize = label === 'before' ? { value: 2048, evidence: 'pinned-source-constant' } : { value: Number(await canvas.getAttribute('data-shadow-size')), evidence: 'runtime-telemetry' };
-    const pose = await read(canvas), conditions = { shadowMapSize, label, shot, pose, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), candidateCommit: process.env.GITHUB_SHA ?? 'uncommitted-local' };
+    const facadeComposition = JSON.parse(await canvas.getAttribute('data-facade-composition') ?? 'null');
+    const pose = await read(canvas);
+    await page.screenshot({ path: info.outputPath(`${label}-${shot.id}.png`) });
+    const screenshotAfter = await read(canvas);
+    const shadowMapSize = { value: pose.shadowSize, actual: pose.shadowActual, evidence: 'runtime-telemetry' };
+    const conditions = { shadowMapSize, facadeComposition, label, shot, pose, screenshotAfter, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), baselineCommit: referenceBaseline.baselineCommit, candidateCommit: process.env.GITHUB_SHA ?? 'uncommitted-local' };
     console.log('[REFERENCE_CONDITIONS]', JSON.stringify(conditions));
     await info.attach(`${label}-${shot.id}-conditions`, { body: JSON.stringify(conditions, null, 2), contentType: 'application/json' });
-    await page.screenshot({ path: info.outputPath(`${label}-${shot.id}.png`) });
+    // A static comparison requires unchanged player/camera/quality across the
+    // image capture. Read both sides without adding waits or forcing render state.
+    const { frame: _beforeFrame, ...beforeImage } = pose, { frame: _afterFrame, ...afterImage } = screenshotAfter;
+    expect(afterImage).toEqual(beforeImage);
     // Pinned Three r186 WebGLShadowMap normalizes removed PCFSoft(2) to PCF(1).
     // Reference explicitly uses supported PCF; Basic(0) remains a failure.
-    expect(shadowMapSize.value).toBe(2048); expect(pose.quality).toBe('reference'); expect(pose.ratio).toBe(1); expect(pose.shadow).toBe(1); expect(conditions.dpr).toBe(1);
+    expect(shadowMapSize.value).toBe(2048); expect(shadowMapSize.actual).toEqual([2048, 2048]); expect(pose.quality).toBe('reference'); expect(pose.ratio).toBe(1); expect(pose.shadow).toBe(1); expect(conditions.dpr).toBe(1);
     if (baseline) {
       expect(pose.shadow).toBe(baseline.shadow); expect(pose.ratio).toBe(baseline.ratio);
       expect(Math.hypot(...pose.xyz.map((v, i) => v - baseline.xyz[i]!))).toBeLessThanOrEqual(.03);

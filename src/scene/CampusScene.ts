@@ -1,3 +1,4 @@
+import { CAMPUS_FACADE_PALETTE, composeCampusFacadeEdge, type CampusFacadeFamily } from './CampusFacadeComposition';
 import { planCampusGuidance } from './CampusGuidance';
 import { Octree } from 'three/examples/jsm/math/Octree.js';
 import { Capsule } from 'three/examples/jsm/math/Capsule.js';
@@ -31,6 +32,14 @@ export function parkTreeClearsAuthoredRoutes(point: Point2, routes: CampusData['
     const t = THREE.MathUtils.clamp(((point[0] - a[0]) * dx + (point[1] - a[1]) * dz) / (dx * dx + dz * dz || 1), 0, 1);
     return Math.hypot(point[0] - a[0] - t * dx, point[1] - a[1] - t * dz) >= PARK_TREE_ROUTE_CLEARANCE;
   }));
+}
+
+/** Explicit original treatments on route-facing walls, not surveyed architecture.
+ * Normals select faces after polygon cleanup, avoiding unstable raw edge indices. */
+export function campusFacadeFamily(featureId: string, nx: number, nz: number): CampusFacadeFamily | null {
+  if (featureId === '689323083' && (nx < -.7 || nz < -.7)) return 'plinth-top';
+  if (featureId === '195741288' && nx < -.7) return 'horizontal-ribbon';
+  return null;
 }
 
 const noopHandle = (): CampusSceneHandle => ({
@@ -695,6 +704,8 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
     const buildings = data.features.filter((f) => f.kind === 'building' && cleanPolygon(f.polygon).length >= 3);
     const windowTransforms: THREE.Matrix4[] = [];
     const trimParts: THREE.BufferGeometry[] = [];
+    const compositionParts: Record<keyof typeof CAMPUS_FACADE_PALETTE, THREE.BufferGeometry[]> = { stone: [], trim: [] };
+    const compositionMetrics = { edges: 0, windows: 0, strips: 0, draws: 0, triangles: 0 };
     const modelWindowRanges = new Map<string, [number, number]>();
     const roofLines = new Map<string, THREE.LineLoop>();
     const windowInstances: { mesh: THREE.InstancedMesh; frame: THREE.InstancedMesh; index: number }[] = [];
@@ -788,6 +799,28 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
           const count = Math.min(100, Math.floor(len / 4.5));
           const sign = area >= 0 ? 1 : -1;
           const nx = sign * dz / len, nz = -sign * dx / len;
+          const family = !models.some(model => model.featureIds.includes(feature.id)) ? campusFacadeFamily(feature.id, nx, nz) : null;
+          const composition = family ? composeCampusFacadeEdge({ family, length: len, height, floors }) : null;
+          if (composition) {
+            compositionMetrics.edges++;
+            compositionMetrics.windows += composition.windows.length;
+            compositionMetrics.strips += composition.strips.length;
+            for (const cell of composition.windows) {
+              const t = cell.centerAlong / len;
+              dummy.position.set(a[0] + dx * t + nx * cell.centerOut, cell.centerY, a[1] + dz * t + nz * cell.centerOut);
+              dummy.rotation.set(0, Math.atan2(-dz, dx), 0);
+              dummy.scale.set(cell.width, cell.height, cell.depth);
+              dummy.updateMatrix(); windowTransforms.push(dummy.matrix.clone());
+            }
+            for (const strip of composition.strips) {
+              const t = strip.centerAlong / len;
+              const part = new THREE.BoxGeometry(strip.width, strip.height, strip.depth);
+              part.rotateY(Math.atan2(-dz, dx));
+              part.translate(a[0] + dx * t + nx * strip.centerOut, strip.centerY, a[1] + dz * t + nz * strip.centerOut);
+              compositionParts[strip.tone].push(part);
+            }
+            continue; // Replace this edge's legacy windows; never stack two facades.
+          }
           if (studyFacade) {
             // Shallow plinth and restrained floor courses share the existing trim batch.
             for (const y of [.38, ...Array.from({length: Math.max(0, floors - 1)}, (_, floor) => (floor + 1) * floorHeight)]) {
@@ -820,6 +853,21 @@ export function createCampusScene(container: HTMLElement, initialData: CampusDat
         modelWindowRanges.set(feature.id, [firstWindow, windowTransforms.length]);
       }
     }
+    for (const tone of ['stone', 'trim'] as const) {
+      const parts = compositionParts[tone];
+      if (!parts.length) continue;
+      const geometry = mergeGeometries(parts, false);
+      parts.forEach(part => part.dispose());
+      if (!geometry) continue;
+      const trim = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial(CAMPUS_FACADE_PALETTE[tone]));
+      trim.castShadow = trim.receiveShadow = true;
+      trim.userData.photoIgnore = true; // Original opaque source body remains the photo occluder.
+      trim.userData.designApproximation = 'Original route-facing facade composition';
+      world.add(trim);
+      compositionMetrics.draws++;
+      compositionMetrics.triangles += geometry.index ? geometry.index.count / 3 : geometry.getAttribute('position').count / 3;
+    }
+    canvas.dataset.facadeComposition = JSON.stringify(compositionMetrics);
     if (trimParts.length) {
       const trimGeometry = mergeGeometries(trimParts, false);
       trimParts.forEach(part => part.dispose());
