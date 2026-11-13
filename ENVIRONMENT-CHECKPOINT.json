@@ -1,0 +1,57 @@
+{
+  "purpose": "Source-only isolated environment A/B checkpoint; no binary assets, no runtime acceptance",
+  "parent": "35033407150d77bdd9351086e7a2c07eb13e5550",
+  "tests": 55,
+  "review": "Actual CPU A/B/C inspected; art target not met; no WebGL playtest",
+  "asset_dependency": "Verified Library full v6 plus cumulative delta; no standalone runtime claim",
+  "files": [
+    {
+      "path": "new-realigned-slice/playable/environment-ab/README.md",
+      "bytes": 2476,
+      "sha256": "e33a2af0ab0aac6ed72dd67b1499d2e16ca5f8e4c234c87de40105ae3f96350a",
+      "git_blob_sha": "c40b695e3fde34080f438c2a96ce1c8f0cfa4c78"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/evidence-inputs.json",
+      "bytes": 275,
+      "sha256": "80cad99e71addf13f7ea4f1d9ed6d3773b33381018bab2f39050e6a74820b008",
+      "git_blob_sha": "faa4b9649edbb92fd6c1953e4d2074aaecef85e4"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/index.html",
+      "bytes": 735,
+      "sha256": "68d6a8a5dfae85677fcd66857cac860b1c5834b94ec9497946682d6c26c86e12",
+      "git_blob_sha": "df4b924554e491abc62d00dcf3f0fe73e1246290"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/main.js",
+      "bytes": 2586,
+      "sha256": "18b8ffafd9efc75bce1d8f04355d4fedfdca572a8b2d1300c4422c804af85365",
+      "git_blob_sha": "dbd6bb6cc9f2bb35825cb9b1629d2048d3ab2d38"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/render-environment.py",
+      "bytes": 3125,
+      "sha256": "70f8ddc3a12808bb5dea7b37294e1e00b7d5616357d943660205c18b277375a5",
+      "git_blob_sha": "c50cdae698b5be58a27b4315178ae6ea7fb41008"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/water-look.js",
+      "bytes": 1849,
+      "sha256": "603d00ff8a328a9b3d9599c77498820b16c4c59dcff11ee2e3d8062f9bd33374",
+      "git_blob_sha": "1979093e199ac19ce0bac44e4feb431749b05294"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/water-look.test.mjs",
+      "bytes": 1342,
+      "sha256": "00018ee78484c2f8464d5899bd60f27e30c4c2671132a585b96bb9b67dbfc972",
+      "git_blob_sha": "9925ca46741839be405e2015a76b7b43cb5c09e5"
+    },
+    {
+      "path": "docs/project/current.md",
+      "bytes": 20959,
+      "sha256": "3e9325d30bb5a456cbc2307aa4dc584071f94a312d778733b4d86bb25cb99f5e",
+      "git_blob_sha": "456c288a0f3e300231e612723407fcba624a58cc"
+    }
+  ]
+}
