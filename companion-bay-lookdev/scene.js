@@ -25,7 +25,7 @@ export function makeBay(scene,{showCourier=true}={}){
  let cloudLayer=0;for(const [x,z,r]of[[-.55,0,.65],[.1,-.3,.9],[.8,.1,.58]]){const o=mesh(new T.CircleGeometry(r,28),mat(0xc3d4d8),x,cloudLayer++*.003,z,cloudGroup);o.rotation.x=-Math.PI/2;}
  const drops=[];for(let i=0;i<5;i++){const d=mesh(new T.SphereGeometry(.09,10,8),mat(0xb9d8dd),RAIN.x+(i-2)*.25,1+i*.2,RAIN.z);d.scale.y=1.6;drops.push(d);}
  const ripple=mesh(new T.TorusGeometry(.65,.018,6,32),paper,RAIN.x,.02,RAIN.z);ripple.rotation.x=Math.PI/2;
- const {boat,fish,fishTail,bowl}=makeBoat(root,paper);const courier=makeCourier(root);courier.group.visible=showCourier;
+ const {boat,fish,fishTail,bowl,bowlAssembly}=makeBoat(root,paper);const courier=makeCourier(root);courier.group.visible=showCourier;
  function update(t,player,companion,fold){
  boat.position.set(player.x,.06,player.z);boat.rotation.y=player.heading;courier.group.position.set(player.x,.31,player.z);courier.group.rotation.y=player.heading;courier.update(t,0,true);
  hinge.rotation.x=fold.angle;received.visible=fold.connected;
@@ -39,5 +39,5 @@ export function makeBay(scene,{showCourier=true}={}){
  fish.position.set(Math.cos(localAngle)*radius,0,Math.sin(localAngle)*radius);fish.rotation.y=-localAngle;fishTail.rotation.y=Math.sin(t*(holding?2:8))*(holding?.07:.3);
  drops.forEach((d,i)=>d.position.y=.15+(1.7-(t*.7+i*.3)%1.7));ripple.scale.setScalar(.75+(t*.4)%1*.4);
  }
- return{root,boat,fish,courier,hinge,flap,receiver,received,sourceBeads,leakBeads,update};
+ return{root,boat,fish,bowl,bowlAssembly,courier,hinge,flap,receiver,received,sourceBeads,leakBeads,update};
 }

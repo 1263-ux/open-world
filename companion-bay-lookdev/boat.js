@@ -149,6 +149,7 @@ for (const end of [-1, 1]) {
   folded.castShadow = folded.receiveShadow = true;
   boat.add(folded);
 }
+const bowlAssembly=new T.Group();bowlAssembly.name='Companion_bowl_and_support';boat.add(bowlAssembly);
 const bowl = new T.Mesh(
   new T.SphereGeometry(
     0.26,
@@ -168,14 +169,14 @@ const bowl = new T.Mesh(
   }),
 );
 bowl.position.set(0.35, 0.46, -0.5);
-boat.add(bowl);
+bowlAssembly.add(bowl);
 const rim = new T.Mesh(
   new T.TorusGeometry(0.18, 0.012, 6, 24),
   world.mats.paper,
 );
 rim.rotation.x = Math.PI / 2;
 rim.position.set(0.35, 0.64, -0.5);
-boat.add(rim);
+bowlAssembly.add(rim);
 const bowlWater = new T.Mesh(
   new T.CircleGeometry(0.23, 28),
   new T.MeshStandardMaterial({
@@ -189,13 +190,13 @@ const bowlWater = new T.Mesh(
 );
 bowlWater.rotation.x = -Math.PI / 2;
 bowlWater.position.set(0.35, 0.58, -0.5);
-boat.add(bowlWater);
+bowlAssembly.add(bowlWater);
 const bowlTray = new T.Mesh(
   new T.CylinderGeometry(0.16, 0.18, 0.045, 20),
   world.mats.paper,
 );
 bowlTray.position.set(0.35, 0.18, -0.5);
-boat.add(bowlTray);
+bowlAssembly.add(bowlTray);
 for (let i = 0; i < 3; i++) {
   const a = (i * Math.PI * 2) / 3;
   const fold = new T.Mesh(
@@ -205,7 +206,7 @@ for (let i = 0; i < 3; i++) {
   fold.position.set(0.35 + Math.cos(a) * 0.11, 0.08, -0.5 + Math.sin(a) * 0.11);
   fold.rotation.y = -a;
   fold.castShadow = fold.receiveShadow = true;
-  boat.add(fold);
+  bowlAssembly.add(fold);
 }
 
 const fish = new T.Mesh(
@@ -225,4 +226,4 @@ const eye = new T.Mesh(
 eye.position.set(0.05, 0.02, 0.05);
 fish.add(eye);
 
-return {boat,fish,fishTail,bowl};}
+return {boat,fish,fishTail,bowl,bowlAssembly};}

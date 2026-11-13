@@ -16,8 +16,8 @@ export function applyBayArt(bay){
  for(const side of[-1,1]){line([[side*.46,.025,-1],[side*.59,.22,-.55],[side*.71,.224,0],[side*.59,.22,.55],[side*.46,.025,1]],.009,crease,bay.boat);for(const end of[-1,1]){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute([side*.7,.322,end,0,.602,end*1.65,side*.42,.21,end*1.24],3));g.computeVertexNormals();add(g,new T.MeshStandardMaterial({color:side*end>0?0xe8e1d1:0xc3beb0,side:T.DoubleSide,roughness:.9}),0,0,0,bay.boat);}}
  // Distinct lower waterline and glass side highlights retain the original bowl/support envelope.
  const glass=new T.MeshStandardMaterial({color:0xc7e0df,roughness:.16,transparent:true,opacity:.78});
- const ring=add(new T.TorusGeometry(.229,.008,8,40),glass,.35,.58,-.5,bay.boat);ring.rotation.x=Math.PI/2;
- for(const side of[-1,1])line([[.35+side*.13,.24,-.55],[.35+side*.23,.36,-.58],[.35+side*.22,.53,-.56],[.35+side*.18,.63,-.5]],.007,glass,bay.boat);
+ const ring=add(new T.TorusGeometry(.229,.008,8,40),glass,.35,.58,-.5,bay.bowlAssembly);ring.rotation.x=Math.PI/2;
+ for(const side of[-1,1])line([[.35+side*.13,.24,-.55],[.35+side*.23,.36,-.58],[.35+side*.22,.53,-.56],[.35+side*.18,.63,-.5]],.007,glass,bay.bowlAssembly);
  bay.fish.material.color.setHex(0xd69d52);bay.fish.scale.multiplyScalar(1.08);
  // Paper shores keep the same blocked footprint; no island collision contract is widened.
  const island=bay.root.children.find(o=>o.geometry?.type==='BoxGeometry'&&o.geometry.parameters.width===4.5&&o.geometry.parameters.depth===5.7);if(island)island.visible=false;
