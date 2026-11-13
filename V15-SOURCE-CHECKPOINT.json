@@ -1,0 +1,60 @@
+{
+  "scope": "v15 source only; no binary assets; not standalone runnable or gameplay acceptance",
+  "files": [
+    {
+      "path": "new-realigned-slice/playable/environment-ab/companion-study.js",
+      "sha": "f8f9bbd838dadee7d12d6ff085e6e6eee57da232",
+      "sha256": "4800eaf42c973f76e72e443c92ceab79220b935aa030cabce3bbd888db569315"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/companion-study.test.mjs",
+      "sha": "75165bbc52c9207b873cc55271be9f47579673bc",
+      "sha256": "1b863ac66371956c956555b8ad89d75de8dcf8127d132e889c01a9ead0431795"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/main.js",
+      "sha": "adc009d6b7e94910c4cfbbae01088e48b5c574b7",
+      "sha256": "7424e00cc5eadcf18dafe90fd18864a3d3ed5e34ae8d8291187d1235715d894d"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/index.html",
+      "sha": "58e28eb85eae8c8282920879f5fc495e5ce7f7bf",
+      "sha256": "10ac3416c2407170fb3bb06fbc195baefac3978e1ff58a4a94ab5dc626a1cb5c"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/README.md",
+      "sha": "eb79bdb783ac43d0dea15ba2242d3fc6dd45a64c",
+      "sha256": "624cb487df03cc610edecbc62fffd51d379bc41e39b438f52e058c83c3b4eb77"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/companion-composition/placement.js",
+      "sha": "a231f088046e536852772089538e1fab2cd7a1d0",
+      "sha256": "25561d934b27b9f746da5b49c57b873fe9225dfbb57d830dda95da8e91d25778"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/companion-composition/placement.test.mjs",
+      "sha": "5b3aef7f7e0cf29e81cffa39c13f78a438e89b38",
+      "sha256": "b267a703a7af5f381c7967e84040b26747a7d7ec461ff434f0b579bc10923d14"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/companion-composition/README.md",
+      "sha": "0dd369ae75a981965da8cdf6d35bcea65d7f857a",
+      "sha256": "bb07c164807d5fbacb606381c24fd95daf60ff70a82f09b0d216cd11d5419014"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/companion-composition/manifest.json",
+      "sha": "8428facd17697188656056051ce04817ae141d58",
+      "sha256": "feaf2d866453b6c7df10efcef3509bb609199af60d3c59afba77492070238841"
+    },
+    {
+      "path": "docs/project/current.md",
+      "sha": "dc05e3e58fde9e502132068ae5e5d8f6193f9ec9",
+      "sha256": "04bf6ec6c59b6dcaeaf45fe918ae05aa7ddaa049a89ab3718e9c4fe254eca671"
+    },
+    {
+      "path": "research-realignment/2026-11-13-boarding-motion-review.md",
+      "sha": "48ab2d0d20e1b1ce611ae3792c906ae357cb7dd8",
+      "sha256": "660b0774161f9e979ca736bd2f0596bea9c952faf067b89e9d8872ed0087e2a2"
+    }
+  ]
+}

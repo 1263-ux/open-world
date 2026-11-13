@@ -1,0 +1,42 @@
+{
+  "render.py": {
+    "bytes": 2539,
+    "sha256": "bbe4de3c265318a36035a115843123ac03ef4871c17ae14c5dc0eebf1d6d419e"
+  },
+  "render-original-camera.py": {
+    "bytes": 974,
+    "sha256": "05b5c33c8d9242cdf2beafbc9434419d5740bd5d04f89c1f5e4d5876349dbaae"
+  },
+  "README.md": {
+    "bytes": 5715,
+    "sha256": "bb07c164807d5fbacb606381c24fd95daf60ff70a82f09b0d216cd11d5419014"
+  },
+  "E2-forward-companion.png": {
+    "bytes": 1089873,
+    "sha256": "ed4563b71d50d276e43148dab50f6e6f977810ce20f609fc9fb539d51e07c7d6"
+  },
+  "F2-original-exploration-camera.png": {
+    "bytes": 1076063,
+    "sha256": "94e9eb69ca6ce6343ec0fa94f1bb054462e4e6ed31c56df7fc19cc227b23c10c"
+  },
+  "candidate.blend": {
+    "bytes": 7660044,
+    "sha256": "496e139754e9ce6aa691872cb25a06c4f73245a44b64225a174764545b158359"
+  },
+  "geometry-review.json": {
+    "bytes": 3128,
+    "sha256": "02d5729aeda6572cec610a8f423c12e3d62875dafedaf365c76b97f5c6de490c"
+  },
+  "fish-envelope.json": {
+    "bytes": 153,
+    "sha256": "2e7b70dadd90eb9176056bedf7efd6390fa0a2bc887fcf2719741bbc1f88c93e"
+  },
+  "placement.js": {
+    "bytes": 741,
+    "sha256": "25561d934b27b9f746da5b49c57b873fe9225dfbb57d830dda95da8e91d25778"
+  },
+  "placement.test.mjs": {
+    "bytes": 3003,
+    "sha256": "b267a703a7af5f381c7967e84040b26747a7d7ec461ff434f0b579bc10923d14"
+  }
+}
