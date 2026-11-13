@@ -1,9 +1,0 @@
-# Integration and adaptation record
-
-This is the 7199caebe6f5dbbe22e40c0bc0dbd85cdfb71cf1 upstream game, not the earlier 300-second or portrait adaptation. See `MODIFICATIONS.md` for exact integration changes, runtime evidence boundary and replacement-art rationale. The upstream uses 1280×720 and a 420-second game duration; Phaser FIT scales this canvas without changing its logical dimensions. Controls add arrow keys and preserve the upstream touch joystick. The host receives ready/error/return messages; pagehide tears down the game and audio. The canvas data attributes expose observations only for natural-input QA.
-
-Fifteen Terraria-identified upstream effects were replaced by original SVG/PNG art; 16 other upstream images remain byte-identical. `SOURCE_INVENTORY.json` records historical upstream hashes plus replacements; `ASSET_INVENTORY.json` records shipped image hashes; `MODERNIZED_INVENTORY.json` records the current executable source hashes. These files are not claims of an upstream all-encompassing open-source license.
-
-The current HUD and snapshot integration mirrors only active, visible, enabled upgrade-card backgrounds: their actual displayed name, level and wrapped description are exposed alongside their clickable coordinates for natural-input QA. The mirror does not choose a card, alter offered options, change game state or gameplay balance; a real player or test still selects a displayed card through normal input. Browser validation and any natural victory or Boss encounter remain separate evidence.
-
-The HUD text wrapper keeps displayed numeric values, decimal parts and common units together rather than breaking a number across lines, while preserving explicit line breaks. This is a presentation-only integration change; values and combat behavior are unchanged. Extremely narrow widths retain overwide numeric tokens rather than looping or changing the text. Screenshot verification remains separate from unit and build checks.

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>梦境邮局 · 恢复开发版</title
+  ><style>
+    * {
+      box-sizing: border-box;
+    }
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #222b40;
+      color: #eee9df;
+      font-family: system-ui, "Microsoft YaHei", sans-serif;
+    }
+    canvas {
+      opacity: 0;
+      transition: opacity 0.5s;
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    button {
+      font: inherit;
+      color: inherit;
+      background: #26384be0;
+      border: 1px solid #c6b58a80;
+      border-radius: 8px;
+      padding: 12px 20px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #4a5a6a;
+    }
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+    }
+    header {
+      position: absolute;
+      left: 32px;
+      top: 26px;
+    }
+    h1 {
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      font-size: 22px;
+      margin: 0 0 6px;
+    }
+    small {
+      opacity: 0.6;
+    }
+    #prompt {
+      position: absolute;
+      bottom: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      background: #172336b8;
+      padding: 12px 22px;
+      border-radius: 28px;
+      white-space: pre-line;
+    }
+    #save-warning {
+      position: absolute; top: 90px; right: 16px; max-width: min(360px, 90vw);
+      padding: 10px 14px; border: 1px solid #e1b17f; border-radius: 8px;
+      background: #443329f2; color: #ffe1b9; font-size: 13px;
+    }
+    #save-warning[hidden] { display: none; }
+    #status {
+      position: absolute;
+      bottom: 24px;
+      left: 30px;
+      max-width: 65%;
+      line-height: 1.7;
+      font-size: 13px;
+      color: #becbd5;
+    }
+    #menu {
+      position: absolute;
+      right: 24px;
+      top: 24px;
+      pointer-events: auto;
+    }
+    dialog {
+      border: 1px solid #b5a27870;
+      border-radius: 16px;
+      background: #273144f2;
+      color: #efe8da;
+      max-width: min(580px, 92vw);
+      padding: 36px;
+      line-height: 1.9;
+    }
+    dialog[data-kind="letter"] {
+      width: 350px;
+      margin: auto 4vw auto auto;
+      background: #e5ddc8f5;
+      color: #384450;
+      border: 1px solid #b7aa8c;
+      border-radius: 3px;
+      box-shadow: 0 16px 60px #10192555;
+    }
+    dialog[data-kind="letter"] h2 {
+      font-size: 18px;
+      font-weight: 500;
+    }
+    dialog[data-kind="letter"] button {
+      background: #d4c6a8;
+      color: #384450;
+    }
+    @media (max-width: 650px) {
+      dialog[data-kind="letter"] {
+        margin: auto;
+        max-width: 88vw;
+        padding: 24px;
+      }
+    }
+    dialog::backdrop {
+      background: #111b3070;
+    }
+    dialog p {
+      white-space: pre-line;
+    }
+    #touch {
+      position: absolute;
+      bottom: 40px;
+      left: 24px;
+      pointer-events: auto;
+      display: none;
+      grid-template-columns: repeat(3, 44px);
+      gap: 4px;
+    }
+    #touch button {
+      padding: 12px;
+    }
+    #use {
+      position: absolute;
+      right: 24px;
+      bottom: 65px;
+      pointer-events: auto;
+      display: none;
+    }
+    @media (pointer: coarse) {
+      #touch {
+        display: grid;
+      }
+      #use {
+        display: block;
+      }
+      #status {
+        bottom: 8px;
+        left: 12px;
+        font-size: 10px;
+      }
+      header {
+        left: 16px;
+        top: 14px;
+      }
+      h1 {
+        font-size: 16px;
+      }
+    }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js" } }
+  </script>
+  <canvas id="view"></canvas>
+  <div id="hud">
+    <header>
+      <h1>梦境邮局</h1>
+      <small>雾海来信 · 恢复开发版</small>
+    </header>
+    <div id="menu">
+      <button id="sound">开启声音</button> <button id="pause">暂停</button>
+    </div>
+    <div id="prompt">正在展开雾海…</div>
+    <div id="save-warning" role="status" aria-live="polite" hidden>本浏览器未能保存最新进度。请暂时不要关闭或刷新页面；恢复保存后此提示会消失。</div>
+    <div id="status">
+      WASD 移动 · 拖动视角 · E 互动 · Shift 快走 · R 返回安全处
+    </div>
+    <div id="touch">
+      <span></span><button data-key="w">↑</button><span></span
+      ><button data-key="a">←</button><button data-key="s">↓</button
+      ><button data-key="d">→</button>
+    </div>
+    <button id="use">互动</button>
+  </div>
+  <dialog id="panel">
+    <h2 id="title"></h2>
+    <p id="copy"></p>
+    <div id="choices"></div>
+  </dialog>
+  <script type="module" src="./main.js"></script>
+</html>

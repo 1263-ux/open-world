@@ -1,0 +1,195 @@
+{
+  "kind": "source-only backup; runtime assets omitted",
+  "files": [
+    {
+      "path": "REVIEW.md",
+      "bytes": 8050,
+      "sha256": "582bec9d01490717935e052f9745eca3f18caff5cd53c97f34d6071d3f6781b8"
+    },
+    {
+      "path": "docs/project/current.md",
+      "bytes": 12695,
+      "sha256": "594673aa5c80307c1cad3a385fec680d97d668c139505efa4615567f53e332c2"
+    },
+    {
+      "path": "docs/project/production-research.md",
+      "bytes": 6637,
+      "sha256": "c2b7c48dbfb7de1d10e0c0370048eadd0aba647bc2fb73c5e74709e2626b145c"
+    },
+    {
+      "path": "game/animated-courier.js",
+      "bytes": 1801,
+      "sha256": "8f06a40ddbaab58391e6cf4062e0ddbeb5ba4449014b6216a62c271bd475c165"
+    },
+    {
+      "path": "game/audio.js",
+      "bytes": 6668,
+      "sha256": "365ab27d56c032f4db407ed19d2a2575fb325520a023a8fb6e2a94874c113779"
+    },
+    {
+      "path": "game/audio.test.mjs",
+      "bytes": 3013,
+      "sha256": "e656ec01225ef1809b52d705c918ec52e59d5a53139f0340d02b98cd41cbb2cc"
+    },
+    {
+      "path": "game/boat-geometry.test.mjs",
+      "bytes": 2470,
+      "sha256": "ad13ead985b70a51e2c522ec7265c7f353e6c205f935729fb438d35575854d25"
+    },
+    {
+      "path": "game/boat-state.js",
+      "bytes": 314,
+      "sha256": "25fd96a4ea5efa6e623be816a26a2cdef3d9eb46ea12b1f95defb2cf153f0fd9"
+    },
+    {
+      "path": "game/boat-state.test.mjs",
+      "bytes": 700,
+      "sha256": "ea6834de5bcbcffb15a3b45ed4901aa0abb20807f346f37bf6955a92ba3dd927"
+    },
+    {
+      "path": "game/controller.js",
+      "bytes": 2996,
+      "sha256": "379c3ae3a70f06bfc7cf43d8defaf93cfd69d97b188efcf680f288a387c99788"
+    },
+    {
+      "path": "game/controller.test.mjs",
+      "bytes": 1652,
+      "sha256": "723662948b1ecbd0a35787efb5ad71f9bddf5abfa88c4a4189c6d1dba6cc4917"
+    },
+    {
+      "path": "game/direct-fold.js",
+      "bytes": 1817,
+      "sha256": "c5e4cabc6720a8661ce64fed603000bf79059f5e3cca5fcbd3dce0f1a5ddb2db"
+    },
+    {
+      "path": "game/direct-fold.test.mjs",
+      "bytes": 2434,
+      "sha256": "cca5371a25f4bc91f71d29010a6ce8aef9d5ade4218a4ea76798330cc3e42dc2"
+    },
+    {
+      "path": "game/frame-time.js",
+      "bytes": 242,
+      "sha256": "3d70291e99e4a5801725a6a5512a1228a4eeb3a8d55d225d07164ef0e15b35f9"
+    },
+    {
+      "path": "game/frame-time.test.mjs",
+      "bytes": 468,
+      "sha256": "9ea07fe74a5cfb22c14b5d13d4d5217401113f410b1f920c0b13536a7747b66e"
+    },
+    {
+      "path": "game/index.html",
+      "bytes": 4712,
+      "sha256": "1eef0f0bc4b52e676bf0cd8cb3a89b8c96d0a69002896ca03310be31916e845c"
+    },
+    {
+      "path": "game/journey.test.mjs",
+      "bytes": 3172,
+      "sha256": "c6f73eab74dacc8a5fc7e8e099a473ae505bb8610a887b75585b118b8197dd37"
+    },
+    {
+      "path": "game/main.js",
+      "bytes": 25443,
+      "sha256": "4d8740140c5c8b1182695e8bcc31620d56f73b51ea177dc71698f5db735af35c"
+    },
+    {
+      "path": "game/memory-art.js",
+      "bytes": 6869,
+      "sha256": "de6635188d2f961cc3e67cc15986d0c726472c382ad657c515d8e4faf599e66f"
+    },
+    {
+      "path": "game/memory-pose.js",
+      "bytes": 450,
+      "sha256": "b413f2ed98bb3ded4c659f75f68933d7f822be89cb9226a49a4f37ae732aaf07"
+    },
+    {
+      "path": "game/memory-pose.test.mjs",
+      "bytes": 886,
+      "sha256": "55cbefda72954ff2757103958d4e0e6d1244a62d8e375d63f85ee4f57f96dc1b"
+    },
+    {
+      "path": "game/narrative.js",
+      "bytes": 7826,
+      "sha256": "5def5cccc69486bbe8dc3265e37f286fc94d3d7580bd1e55d8826c462255cf43"
+    },
+    {
+      "path": "game/narrative.test.mjs",
+      "bytes": 3004,
+      "sha256": "438f092847a260457df550276e73d180a0a6328894fe92b997338844aff9333c"
+    },
+    {
+      "path": "game/occlusion.js",
+      "bytes": 1543,
+      "sha256": "42bed1df67fccdd6e25a1a176014ac2431dcf22457dd7dfc7293fa88160190d5"
+    },
+    {
+      "path": "game/occlusion.test.mjs",
+      "bytes": 749,
+      "sha256": "ddeb5f9db3ad5a0883f701e0a458758ade2d391fa8a78130b11763ec7ffbaf8f"
+    },
+    {
+      "path": "game/progress-save.js",
+      "bytes": 2169,
+      "sha256": "6a32dbbbcf08260f5725de85881507c4a4b1d710c3a28080d3a52f656121fa02"
+    },
+    {
+      "path": "game/progress-save.test.mjs",
+      "bytes": 5321,
+      "sha256": "74c5d2bf2821b09f2538b036296d3b7c571e4e3d0a1b91d4753822a2e526d4b5"
+    },
+    {
+      "path": "game/reality-scene.js",
+      "bytes": 2465,
+      "sha256": "c8bb8a3af89eb9ba78596c61cd9d435ce0aed6c3b85ce8fc4158295f7ccc38fd"
+    },
+    {
+      "path": "game/reality-scene.test.mjs",
+      "bytes": 903,
+      "sha256": "aaf8815dccb64261a63d59303865391db4e31f08336fbe6f3fd48ee4d1d1159c"
+    },
+    {
+      "path": "game/session.js",
+      "bytes": 1143,
+      "sha256": "3629bfa42745d80744b6d4b86f7749a8d8f80c8b096b49c1e674d770f3c2b30f"
+    },
+    {
+      "path": "game/session.test.mjs",
+      "bytes": 1096,
+      "sha256": "7dd2e866c96e52c52b09d2cb4dad9fcf28f695c507bea1ee48a638eae6d5feb3"
+    },
+    {
+      "path": "game/shot-environment.js",
+      "bytes": 243,
+      "sha256": "b95f0eae36d3a19ff2c7a4f6d32a1728cd6c6d4558338dfa83b42a72e544a615"
+    },
+    {
+      "path": "game/shot-environment.test.mjs",
+      "bytes": 546,
+      "sha256": "87104361225a6e857957aa2cc6645a64cd55dd9addc2b11573bc6497e94311f9"
+    },
+    {
+      "path": "game/sky.js",
+      "bytes": 1948,
+      "sha256": "de6ac482caa43a28fb9799bdcf793980923762613e8920d7710d466a92fd1b8f"
+    },
+    {
+      "path": "game/vendor/THREE-LICENSE",
+      "bytes": 1081,
+      "sha256": "8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc"
+    },
+    {
+      "path": "game/world.js",
+      "bytes": 9653,
+      "sha256": "cd8cf2eb2329112e5a6f650d8ef9367d407537eb2784297a497bb638f091f6a3"
+    },
+    {
+      "path": "game/world.test.mjs",
+      "bytes": 1604,
+      "sha256": "01d12369d99b2a0d6a23d0d99817e0afe26dd884d150e2f3b8ee0dda59716666"
+    },
+    {
+      "path": "package.json",
+      "bytes": 67,
+      "sha256": "c422401e7758b02cc989ca375ab90ba4ad2f33f51f46afcca01891b3520b93cf"
+    }
+  ]
+}
