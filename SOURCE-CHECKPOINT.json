@@ -1,0 +1,235 @@
+{
+  "snapshot_utc": "2026-11-13T16:18:36.274486+00:00",
+  "base_commit": "47be2232ee0fbe7169fb60e373cfa356def3eda3",
+  "scope": "source only; assets in verified Library",
+  "files": [
+    {
+      "path": "new-realigned-slice/playable/README.md",
+      "size": 3374,
+      "sha256": "d85d2a977945d3ea364baa74cf1af6143178e6fe6f33e263adba5ee78ed12d32",
+      "git_blob_sha": "ff34afc531793fd0a8aef69e9a034faba491895c"
+    },
+    {
+      "path": "new-realigned-slice/playable/RECOVERY.md",
+      "size": 2448,
+      "sha256": "ee75ee293116c1516085b9e5963bb06d99541c521902fc47cff11b39862ff38c",
+      "git_blob_sha": "60b2b395f0bdc8d591a36829f3cd82f64ba5594d"
+    },
+    {
+      "path": "new-realigned-slice/playable/THRESHOLD.md",
+      "size": 4558,
+      "sha256": "614ca4ecde42403cfcfe9311f98bc581fddfc5bc0e348bde07763778685212dd",
+      "git_blob_sha": "e76473882c321f70345a656d0a07746a04e1718d"
+    },
+    {
+      "path": "new-realigned-slice/playable/bay-art-v2/art.js",
+      "size": 6304,
+      "sha256": "f2bcb90139411501325c4f39d01a49218eb7e400c93aeec9e188a569093ac510",
+      "git_blob_sha": "7e262196643372f431212e5958c68c1beb852ff2"
+    },
+    {
+      "path": "new-realigned-slice/playable/bay-art-v2/fish-study.js",
+      "size": 893,
+      "sha256": "04a9f36b0140e6812f2144df900a7fd9e1ef689e3189952a11fe4980b5a35a06",
+      "git_blob_sha": "7e18763e67882f8dffe4aa988796468f43b6676d"
+    },
+    {
+      "path": "new-realigned-slice/playable/bay-art-v2/gunwale.test.mjs",
+      "size": 923,
+      "sha256": "e47d52547a0be6f3e41395928f441b1455c3224e171a3b1dbb1386a21c4793a5",
+      "git_blob_sha": "6d5f1cf284e1976a13f5e9a6789c6ca1783fa9ec"
+    },
+    {
+      "path": "new-realigned-slice/playable/bay-art-v2/navigation.js",
+      "size": 2940,
+      "sha256": "f5ef2c8efbfcea9f4654dc96b2c2a57571fc363a00ac56487a110f601ce324a4",
+      "git_blob_sha": "b48687a36673787001872bc12babde22ed73efb9"
+    },
+    {
+      "path": "new-realigned-slice/playable/bay-art-v2/navigation.test.mjs",
+      "size": 2286,
+      "sha256": "2336afac9c10246ffe49a159377e9bd8372155a7991efe112ecd4a6f827590e5",
+      "git_blob_sha": "5dc0d34fb4bfdfd8c9bf66414ed782c0cdc70806"
+    },
+    {
+      "path": "new-realigned-slice/playable/boarding-motion.js",
+      "size": 1255,
+      "sha256": "a13ca6ba8e65d8d38e514cd3f105bb487445a466f947802534589c35b25b3b5d",
+      "git_blob_sha": "44b42480254dd8bfb96163ba6d979f6f6914e8aa"
+    },
+    {
+      "path": "new-realigned-slice/playable/boarding-motion.test.mjs",
+      "size": 1063,
+      "sha256": "4f1b5acc482ad8b52c9f29f2ccd3d24042c7c44e53fc344a6c4a3feaf9860114",
+      "git_blob_sha": "948f4b5344f52e48076be13174a7ee22a392b6ba"
+    },
+    {
+      "path": "new-realigned-slice/playable/dream-threshold.js",
+      "size": 6975,
+      "sha256": "c159dc6dfe9149ffc19bf34a73ae7450a5f317d49532409d9b7765e1b46f2480",
+      "git_blob_sha": "23ad15bce813e77989b024b6a89506f80e8c7b94"
+    },
+    {
+      "path": "new-realigned-slice/playable/dream-threshold.test.mjs",
+      "size": 3218,
+      "sha256": "f90ea84b2db25ee7447bc00e8ca75a494d5a6a12c9926e4daa5ddf8a5231d703",
+      "git_blob_sha": "4b7395ff89dd6c003102f42a7f6a2d306c819b07"
+    },
+    {
+      "path": "new-realigned-slice/playable/export-fish-study.mjs",
+      "size": 989,
+      "sha256": "39ac5aba220704047f70ed259e91cfa466a2b7feb3ab45537ae5a114e8a8cac1",
+      "git_blob_sha": "5a1172e0c285650ee4d42dd9187796fddb9e6e76"
+    },
+    {
+      "path": "new-realigned-slice/playable/export-threshold.mjs",
+      "size": 907,
+      "sha256": "c1bcbe50a16338c17d1c2496e651a91c20484a0c15b34b89703c93297472188d",
+      "git_blob_sha": "e4c3956cfc2c05c592212d60f2ff4b10a3df07e7"
+    },
+    {
+      "path": "new-realigned-slice/playable/geometry-test.mjs",
+      "size": 2011,
+      "sha256": "df7c073da4ed1f38e6b787d8c1a475c1f9e9b77354adfb0f8fb6f29180435336",
+      "git_blob_sha": "f0b9bd00856fabf669bc7cf9bb152bbda12d86f9"
+    },
+    {
+      "path": "new-realigned-slice/playable/geometry.js",
+      "size": 1061,
+      "sha256": "c09031d3248ef1a7f8a6fc70db5ebd8602e597f7f86877f46d83de5baee8887a",
+      "git_blob_sha": "fcb84168e5c7664e9deaddf5f8e4beb7cecbef26"
+    },
+    {
+      "path": "new-realigned-slice/playable/gesture-view.js",
+      "size": 1684,
+      "sha256": "78f1b36a72847bd779fcae39aa85723011c93da7c97f8aeb003b82f52c42896b",
+      "git_blob_sha": "8531bca5d559b0477213f46100e6a52e44c8ab25"
+    },
+    {
+      "path": "new-realigned-slice/playable/gesture-view.test.mjs",
+      "size": 2392,
+      "sha256": "f54b4f2b37191118544af6513f767225a9d93072fcb0c0bc63faf23a39867bf7",
+      "git_blob_sha": "ad6eaa9c1fd429e2f43abe62f6ad34babbe2a684"
+    },
+    {
+      "path": "new-realigned-slice/playable/index.html",
+      "size": 2265,
+      "sha256": "5de70adab6fb4513d39c5b23c984633d21b4282b3adc8197b45808f147c9232e",
+      "git_blob_sha": "29580be9254f04c5d4529f7ce9de361ffeaa6926"
+    },
+    {
+      "path": "new-realigned-slice/playable/letter-action.js",
+      "size": 1130,
+      "sha256": "02a7d70ccd8fc2ef8058327e22bb46de377b5ce52660e20451cecf90c4424c5f",
+      "git_blob_sha": "4d7345a86a7e6284e92834d72611a43096bbf6e2"
+    },
+    {
+      "path": "new-realigned-slice/playable/letter-action.test.mjs",
+      "size": 1280,
+      "sha256": "f73ea40d8c39a1acb0ebe3173b55671d9df6143ab0365f5aff107ba62e4eb3c1",
+      "git_blob_sha": "56f9873332deff56cd44892061101d8283a9fe8f"
+    },
+    {
+      "path": "new-realigned-slice/playable/main.js",
+      "size": 10224,
+      "sha256": "2489319e9d1621594181b9f283fe88e1892dc78287dfe95584644d3d135e8967",
+      "git_blob_sha": "edf548acfe6b97720b00086810c9355f5ffa8f8b"
+    },
+    {
+      "path": "new-realigned-slice/playable/navigation.js",
+      "size": 586,
+      "sha256": "549b9a152b4c959447843b582c49059be68abc1b4c455b7ce77efbea1f630b74",
+      "git_blob_sha": "41de1d553208e0524197ca1a5eb22a6253b3cfa3"
+    },
+    {
+      "path": "new-realigned-slice/playable/render-fish-study.py",
+      "size": 1627,
+      "sha256": "189a4ecce6df46c8c843f04e4fcf8842492233e0e3ec4a21fa5b8e2124347cfc",
+      "git_blob_sha": "469fa4543449eb2138f34a96f895e10a5e158959"
+    },
+    {
+      "path": "new-realigned-slice/playable/render-threshold.py",
+      "size": 1630,
+      "sha256": "140c2bda147b882ed1bbdfdc4726aaf8a8ac41608e77655fb1ef029322be4eaf",
+      "git_blob_sha": "37882b023a1655b819ae6082e374874935f15675"
+    },
+    {
+      "path": "new-realigned-slice/playable/scene-config.js",
+      "size": 233,
+      "sha256": "2d587a297f65d527aa99e427a4ee24c2e59cd404b533fe406067110126e4cf48",
+      "git_blob_sha": "01aadd0ca215089eb73d949019c8425e77ca8314"
+    },
+    {
+      "path": "new-realigned-slice/playable/test.mjs",
+      "size": 821,
+      "sha256": "9fd0af9c2037209125be1b726fab6b13ecdc1826092078cba4c07035e4b493d5",
+      "git_blob_sha": "23fc546751b2b5518adb0a781761eb89f717e198"
+    },
+    {
+      "path": "new-realigned-slice/playable/threshold-join-test.mjs",
+      "size": 3066,
+      "sha256": "94805bea0ee26b3093e5d112bb363f1b57bebc9ac2eeed0d598af0e7af3c8f20",
+      "git_blob_sha": "a8fb4a28824e66978543495a88830623b67af1dd"
+    },
+    {
+      "path": "companion-bay-lookdev/README.md",
+      "size": 3630,
+      "sha256": "e95cad5b9819686d17c437776471e64a2ac347b69658262e4f13c2e2563350f6",
+      "git_blob_sha": "9354b229ba9e3c1e7b730ee618e93c093f0c4fdd"
+    },
+    {
+      "path": "companion-bay-lookdev/boat.js",
+      "size": 5344,
+      "sha256": "050a95ef1a5faa29fd93b783a6d3af85fbc0b80ec076d12a34fcd8e882438ddb",
+      "git_blob_sha": "2ddb135d481570863c41e9d9d1162f83696e3659"
+    },
+    {
+      "path": "companion-bay-lookdev/export.mjs",
+      "size": 1114,
+      "sha256": "e8daec25ae94fff1cf1e38f73dc33417014a774134dc03148ccd31d2e08e24f7",
+      "git_blob_sha": "fca8fac3fae558858231f2d728ec11a23e5de236"
+    },
+    {
+      "path": "companion-bay-lookdev/index.html",
+      "size": 1146,
+      "sha256": "aafea706f37bdc870c9de2bafa0d6cf780938d45136f03ad617fde102a65a454",
+      "git_blob_sha": "0d4992458198901863582561efa1279ab100366d"
+    },
+    {
+      "path": "companion-bay-lookdev/main.js",
+      "size": 3380,
+      "sha256": "2378c4990137707eb44a64e628ee6d87e66f9f60898f8e60516eceedeb5c4932",
+      "git_blob_sha": "ba7ad784cf07c7b0d1cb81d63bf742a5c291e47a"
+    },
+    {
+      "path": "companion-bay-lookdev/model.js",
+      "size": 1416,
+      "sha256": "96d590839af53a6c000da103906386d0d50e2c67e829c85705da96dfd1b06af0",
+      "git_blob_sha": "122f694762591326aae43cf84b577f0709447936"
+    },
+    {
+      "path": "companion-bay-lookdev/render-source.py",
+      "size": 1086,
+      "sha256": "df128952da42266fd44baa4c9312ee3652f13045ca7c4047c08be7d6286d4302",
+      "git_blob_sha": "09ede6a96b71df0d1afbe7c74d0d8bce4813bdf9"
+    },
+    {
+      "path": "companion-bay-lookdev/render.py",
+      "size": 1676,
+      "sha256": "795b8bfb1ccfd59d42147e800a534414710f8aaa1d6268a26fb57eb930cb426a",
+      "git_blob_sha": "708fae8b543af32082d93c9c0f9a0a0992fb2edf"
+    },
+    {
+      "path": "companion-bay-lookdev/scene.js",
+      "size": 4541,
+      "sha256": "054c68ee7e2cab33bcb09d0a1310b6dc1fe8115684404957b0f6b585f48c382e",
+      "git_blob_sha": "0336bbd60e438d645b5b2caeb2ccd4b3afec7ebf"
+    },
+    {
+      "path": "companion-bay-lookdev/test.mjs",
+      "size": 2580,
+      "sha256": "6d81e1a7bed8755165808e429e450f902a5bd8ae26f309421cb242c1331f0094",
+      "git_blob_sha": "97da6a1a83d53252cea3b45df0d4579381ddffe1"
+    }
+  ]
+}
