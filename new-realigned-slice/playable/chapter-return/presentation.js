@@ -1,0 +1,13 @@
+import {createFishShotCache} from './fish-shot.js';
+import {attachDrawing} from './attached-drawing.js';
+import * as T from '../../../game/vendor/three.module.js';
+import{createMemoryProps}from'../../../game/memory-art.js';
+export function createReturnPresentation({scene,world=null,doc=document}){
+ const fishShot=createFishShotCache();
+ const root=doc.createElement('section');root.id='chapter-return-ui';root.innerHTML='<button data-return hidden>回到邮局</button><div data-veil hidden aria-hidden="true"></div><section data-echo hidden><small data-label>回信 · 无配音原稿节选</small><p data-caption></p><button data-skip>收好回信</button></section><p data-office-note hidden>已回到邮局。可以重读来信；本预览暂不再次出航。</p><button data-replay hidden>看看留下的天空画 · 重播回信</button>';doc.body.append(root);
+ const get=s=>root.querySelector(s),back=get('[data-return]'),veil=get('[data-veil]'),echo=get('[data-echo]'),caption=get('[data-caption]'),label=get('[data-label]'),skip=get('[data-skip]'),replay=get('[data-replay]'),officeNote=get('[data-office-note]');
+ const props=createMemoryProps(T),attachment=attachDrawing(world??scene,props.drawingTexture),frame=attachment.group;frame.visible=false;scene.add(frame);
+ return{frame,bind(host){back.onclick=()=>host.requestReturn();skip.onclick=()=>host.skip();replay.onclick=()=>host.replay()},update(host,p,{reading=false}={}){const s=host.snapshot(),cue=host.getCue();fishShot.sync(s.owner,cue);back.hidden=!(s.owner==='dream'&&p.boating);veil.hidden=s.owner!=='return';veil.style.opacity=String(s.veil);echo.hidden=s.owner!=='echo';const nextCaption=cue?.text??'';if(caption.textContent!==nextCaption)caption.textContent=nextCaption;const nextLabel=cue?.captionMode==='original-incoming-letter'?'来信重读 · 未配音':'回信 · 无配音原稿节选';if(label.textContent!==nextLabel)label.textContent=nextLabel;const nextSkip=cue?.captionMode==='original-incoming-letter'?'收好来信':'收好回信';if(skip.textContent!==nextSkip)skip.textContent=nextSkip;frame.visible=s.closure.collected;replay.hidden=!(s.owner==='office'&&s.closure.collected&&!reading);officeNote.hidden=!(s.owner==='office'&&s.returned&&!reading);},elements:{back,veil,echo,caption,label,skip,replay,officeNote},
+ echoView(host,threshold){const cue=host.getCue(),fish=fishShot.sample(host.snapshot().owner,cue,threshold.bay);if(fish)return fish;if(!cue)return null;if(cue.shot==='actual-fold')return{position:[6,2.2,-22],target:[2,.5,-23],fov:48};return{position:[-1.4,1.65,-1.8],target:[-2.78,1,-3.64],fov:32}},
+ dispose(){fishShot.clear();root.remove();frame.removeFromParent();attachment.dispose();props.letterTexture.dispose();props.drawingTexture.dispose()}};
+}

@@ -1,11 +1,1 @@
-{
-  "standingThree": [
-    -2.4000000953674316,
-    0.0,
-    -3.700000047683716
-  ],
-  "actorScale": 0.78,
-  "yawThree": -1.414194546469095,
-  "clipName": "Animation",
-  "paperNode": "ReadLetter_Paper"
-}
+{"actorScale":0.78,"standingThree":[-2.4000000953674316,0.0,-3.700000047683716],"yawThree":-1.414194546469095,"clipName":"Animation","paperNode":"ReadLetter_Paper"}

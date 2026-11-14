@@ -12,3 +12,5 @@ https://polyhaven.com/a/industrial_sunset_puresky
 https://creativecommons.org/publicdomain/zero/1.0/
 
 Sky texture and procedural geometry/audio were authored for this project. Cloud-bank image generated for this project with OpenAI; no third-party CC0 claim is made for that image. Project-specific integration code and animation edits are not represented as third-party licensed assets.
+
+Fitted courier hair: Quaternius Universal Base Characters Kit Standard, CC0 1.0; local head/hair fitting. Package license and original KayKit license included beside the runtime variants.
