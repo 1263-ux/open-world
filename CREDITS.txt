@@ -1,0 +1,14 @@
+梦境邮局 · 浏览器原型
+
+Three.js — MIT. Copyright and license: game/vendor/THREE-LICENSE.
+
+Courier base derived from KayKit's CC0 Rogue character, with project-specific body, clothing, contact-pose and animation modifications. FullBoarding, repaired seated hold and letter gesture use this derived rig; they are not unmodified upstream animations. CC0 notice: character-recovery/LICENSE-KayKit-CC0.txt.
+
+Selected stone arch/column components derived from Quaternius Ultimate Modular Ruins (CC0 1.0), adapted in scale/material. https://quaternius.com/packs/ultimatemodularruins.html
+License: third-party/selected-ruins/License.txt; new-realigned-slice/Quaternius-CC0.txt.
+
+Environment preview derived from “Industrial Sunset (Pure Sky)” by Jarod Guest and Sergej Majboroda, Poly Haven, CC0 1.0.
+https://polyhaven.com/a/industrial_sunset_puresky
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Sky texture and procedural geometry/audio were authored for this project. Cloud-bank image generated for this project with OpenAI; no third-party CC0 claim is made for that image. Project-specific integration code and animation edits are not represented as third-party licensed assets.
