@@ -1,0 +1,8 @@
+// Exact first wet river quad projected from the current authored mesh (XZ).
+export const mouth=[[-0.9800000190734863,-5.300000190734863],[0.9800000190734863,-5.300000190734863],[0.8765386343002319,-5.661730766296387],[-0.8765386343002319,-6.538269519805908]];
+export function inside(p,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if(((a[1]>p[1])!==(b[1]>p[1]))&&(p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0]))c=!c;}return c;}
+export function pointSegment(p,a,b){const d=[b[0]-a[0],b[1]-a[1]],q=d[0]*d[0]+d[1]*d[1],t=q?Math.max(0,Math.min(1,((p[0]-a[0])*d[0]+(p[1]-a[1])*d[1])/q)):0;return Math.hypot(p[0]-a[0]-t*d[0],p[1]-a[1]-t*d[1]);}
+export function boundaryDistance(p,poly){return Math.min(...poly.map((a,i)=>pointSegment(p,a,poly[(i+1)%poly.length])));}
+export function mouthConnection(tip,{halfWidth=.16,minMargin=.04}={}){const endpoints=[[-halfWidth,0],[halfWidth,0]].map(([x,z])=>[tip[0]+x,tip[2]+z]);const d=Math.min(...endpoints.map(p=>inside(p,mouth)?boundaryDistance(p,mouth):-boundaryDistance(p,mouth)));return{endpoints,edgeMargin:d,contained:d>=minMargin,downhill:tip[1]>.18,connected:d>=minMargin&&tip[1]>.18};}
+export const rect=(x,z,w,d)=>[[x-w/2,z-d/2],[x+w/2,z-d/2],[x+w/2,z+d/2],[x-w/2,z+d/2]];
+export function polygonGap(a,b){let separated=false;for(const p of[a,b])for(let i=0;i<p.length;i++){const v=p[i],w=p[(i+1)%p.length],n=[-(w[1]-v[1]),w[0]-v[0]],aa=a.map(q=>q[0]*n[0]+q[1]*n[1]),bb=b.map(q=>q[0]*n[0]+q[1]*n[1]);if(Math.max(...aa)<Math.min(...bb)||Math.max(...bb)<Math.min(...aa))separated=true;}if(!separated)return 0;return Math.min(...a.map(p=>boundaryDistance(p,b)),...b.map(p=>boundaryDistance(p,a)));}
