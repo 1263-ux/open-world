@@ -1,5 +1,6 @@
 import {nextStep,projectObjective,letterHint} from './guidance/next-step.js';
 import {setupVisualEnvironment} from './visual-treatment/setup-environment.js';
+import {setupCloudShores} from './cloud-shores/setup.js';
 import {createObservationInput,cameraMovementYaw} from './water-feedback/observation-input.js';
 import {paperWaterFocus,waterFocusAvailable} from './water-feedback/focus-camera.js';
 import {createDreamThreshold} from './dream-threshold.js';
@@ -26,6 +27,9 @@ try{
  const loader=new GLTFLoader();const world=await loader.loadAsync(SCENE_ASSET);scene.add(world.scene);world.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
  const courier=await loader.loadAsync('../../character-lookdev/b2/courier-b2-candidate.glb');courier.scene.scale.setScalar(.78);scene.add(courier.scene);const mixer=new T.AnimationMixer(courier.scene);const actions=Object.fromEntries(courier.animations.map(c=>[c.name,mixer.clipAction(c)]));let active=null;
  const visualEnvironment=await setupVisualEnvironment(scene);
+ // Optional shores load after environment setup; failures never abort gameplay.
+ const cloudShores=setupCloudShores(scene);
+ addEventListener('pagehide',e=>{if(!e.persisted)cloudShores.dispose();});
  const gestureContract=await fetch('../../character-lookdev/read-letter/contract.json').then(r=>r.json());
  const gesture=createGestureView(await loader.loadAsync('../../character-lookdev/read-letter/courier-read-letter-candidate.glb'),gestureContract);scene.add(gesture.root);hideReplacedLetter(world.scene);
  const letterAction=createLetterAction({gripTime:.6,holdTime:1.5,releaseTime:2.4,duration:3});let gestureState=letterAction.snapshot(),approach=null,shown=false;
