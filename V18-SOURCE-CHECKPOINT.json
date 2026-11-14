@@ -1,0 +1,55 @@
+{
+  "scope": "10 frozen source/doc files only; paper-water v3 images/GLB and boarding studies excluded; not a standalone runtime or acceptance",
+  "files": [
+    {
+      "path": "new-realigned-slice/playable/environment-ab/main.js",
+      "sha": "e501a6d2825b0eda228a64f6addc996f4536f22d",
+      "sha256": "a3f7864f0b3fe3b128ca215538aeeb8938e387e1f85c775459b10ba699c29a80"
+    },
+    {
+      "path": "new-realigned-slice/playable/environment-ab/index.html",
+      "sha": "6c41c4649f5c0e3b34aa79a4abb460de908690e2",
+      "sha256": "34371a350fd8b276aa79a1acd17b5d160f582bcc3ae1f02ad657d531d6247a52"
+    },
+    {
+      "path": "docs/project/current.md",
+      "sha": "a4e0190a34da99dabb52a3b52234ab0c7a9c5dd0",
+      "sha256": "ad2bd47dbffb7c9b8e1d3df116e092e26a983070b4155f0d82e52b20a1776f52"
+    },
+    {
+      "path": "paper-water-readability-v3/README.md",
+      "sha": "1963a51171b3c0e251cd692d771f1cedda1fa9ec",
+      "sha256": "bb03fb56c661555f1a95e70ea067a113b4c41e248dac9d43e42bf287ad38286d"
+    },
+    {
+      "path": "paper-water-readability-v3/export-interaction.mjs",
+      "sha": "cb07a6374f0008f5eaa71dc1a18b2b85d5c9e342",
+      "sha256": "8c8ed6558f14e353778bcf50c0e83e5a87b39898db8a95b1f4e99c5fc6357e06"
+    },
+    {
+      "path": "paper-water-readability-v3/focus-camera.js",
+      "sha": "55028345bf5ce2974b5abfd7f0dcd8c5665b4adc",
+      "sha256": "7dfed99d4add06d3da00fef348033177ec4504f1abe147fddd965665f0f9c7e9"
+    },
+    {
+      "path": "paper-water-readability-v3/focus-camera.test.mjs",
+      "sha": "5cfcb25c3cd362e3e2335628e99dcf904f6bc077",
+      "sha256": "e957b69887820bef687f54ca857e3f17f7d2b4478e6929d13d33179f53cbee42"
+    },
+    {
+      "path": "paper-water-readability-v3/readable-fold.js",
+      "sha": "743a99f67b0eb0703dcbbfd35e06d13f8bd8c093",
+      "sha256": "560d64200fc6fc36773e77f33553bd2fbcd743925451d071086e11b253cbb9a9"
+    },
+    {
+      "path": "paper-water-readability-v3/readable-fold.test.mjs",
+      "sha": "f0e6dfdb904b1adddecae33caafae9c4566298ec",
+      "sha256": "aed88f9df9c91056d5a4d2cf12ea7722330ba4f1e7ad2274426c675e19d3186f"
+    },
+    {
+      "path": "paper-water-readability-v3/render-interaction.py",
+      "sha": "1c6b49f217fa7bf77f4016d8c5d0027cf56bb673",
+      "sha256": "f8048d57560a216a1d941b09947ca7f0485d334fbdab92e258598691f5010235"
+    }
+  ]
+}

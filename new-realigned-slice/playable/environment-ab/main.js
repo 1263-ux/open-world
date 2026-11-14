@@ -20,5 +20,6 @@ try{
  const companionStudy=createCompanionStudy(threshold.bay);function selectCompanion(forward){companionStudy.select(forward);selectView(true);document.querySelector('#companion-status').textContent=forward?'前侧候选：同尺寸鱼缸与纸托，鱼朝邮差的静态姿态研究；非运行行为':'后侧基线：恢复原缸位置与鱼朝向';}document.querySelector('#back-bowl').onclick=()=>selectCompanion(false);document.querySelector('#front-bowl').onclick=()=>selectCompanion(true);
 
 
+ document.querySelectorAll("button").forEach(button=>{button.disabled=false;});
  function frame(t){requestAnimationFrame(frame);if(mode==='B')water.update(t/1000);renderer.render(scene,camera);}requestAnimationFrame(frame);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
-}catch(e){document.querySelector('#error').textContent='比对页未启动：'+e.message+'。未获得实机画面，不表示作品已验收。';}
+}catch(e){document.querySelector('#status').textContent='比对尚未启动';document.querySelectorAll('button').forEach(button=>{button.disabled=true;});document.querySelector('#error').textContent='比对页未启动：'+e.message+'。未获得实机画面，不表示作品已验收。';}
