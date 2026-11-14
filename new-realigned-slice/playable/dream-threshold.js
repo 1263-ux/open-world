@@ -1,4 +1,8 @@
+import {addBoatWaterline} from './boat-waterline.js';
+import {applyPaperHull} from '../../paper-boat-silhouette/shape.js';
 import {hullClear,stepWholeBoat,reachablePullTab} from './bay-art-v2/navigation.js';
+import {applyReadableFold} from './water-feedback/readable-fold.js';
+import {createCompanionPlacement} from './environment-ab/companion-composition/placement.js';
 import {applyBayArt} from './bay-art-v2/art.js';
 import * as T from '../../game/vendor/three.module.js';
 import {makeBay} from '../../companion-bay-lookdev/scene.js';
@@ -15,7 +19,7 @@ export const toBay=(p)=>({...p,x:p.x-BAY_OFFSET.x,z:p.z-BAY_OFFSET.z});
 export const fromBay=(p)=>({...p,x:p.x+BAY_OFFSET.x,z:p.z+BAY_OFFSET.z});
 export const bayNavigableWorld=(x,z)=>navigable(x-BAY_OFFSET.x,z-BAY_OFFSET.z);
 
-export function createDreamThreshold(scene){
+export function createDreamThreshold(scene,{companionForward=true}={}){
  const root=new T.Group();root.name='DreamThreshold_after_letter';scene.add(root);
  const bay=makeBay(root,{showCourier:false});bay.root.position.set(BAY_OFFSET.x,0,BAY_OFFSET.z);bay.root.visible=false;
  // Opening-specific shore treatment: retain tested playable footprint, remove exhibition plinth styling.
@@ -26,6 +30,11 @@ export function createDreamThreshold(scene){
  const waterGeometry=new T.BufferGeometry();waterGeometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));waterGeometry.setAttribute('color',new T.Float32BufferAttribute(colors,4));waterGeometry.setIndex(indices);waterGeometry.computeVertexNormals();
  const quietWater=new T.Mesh(waterGeometry,new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,transparent:true,opacity:1,depthWrite:false,roughness:.67,side:T.DoubleSide}));quietWater.name='Shallow_water_fading_edge_not_plinth';bay.root.add(quietWater);
  const art=applyBayArt(bay);
+ // Same tested navigation envelope; actual folded skin replaces the box prow.
+ const paperHull=applyPaperHull(bay.boat);addBoatWaterline(bay.boat);
+ // The fish belongs in the traveller's field of view, with the complete support.
+ const companionPlacement=createCompanionPlacement(bay);companionPlacement.setEnabled(companionForward);
+ const readableWater=applyReadableFold(bay);
  const landingMesh=new T.Mesh(new T.BoxGeometry(.8,.08,.7),new T.MeshStandardMaterial({color:0xb4b6ae,roughness:.9}));landingMesh.name='Actual_boarding_step';landingMesh.position.set(2,-.12,-11.95);root.add(landingMesh);
  const companion=createCompanion(),paper=createPaperFold();
  const guide=new T.Group();guide.name='One_quiet_ink_trail';root.add(guide);guide.visible=false;
@@ -46,9 +55,9 @@ export function createDreamThreshold(scene){
   if(phase==='revealing'){elapsed=Math.min(REVEAL_DURATION,elapsed+dt);const f=elapsed/REVEAL_DURATION;opacity(Math.min(1,f*1.6));drops.forEach((d,i)=>{const a=T.MathUtils.clamp(f*1.15-i*.08,0,1);d.position.copy(curve.getPoint(a));d.material.opacity=Math.sin(Math.PI*a)*.65;});if(f===1){phase='ready';elapsed=0;guide.visible=false;opacity(1);}}
   if(phase==='boarding'){elapsed=Math.min(BOARD_DURATION,elapsed+dt);const f=elapsed/BOARD_DURATION,k=f*f*(3-2*f),target=fromBay(DOCK_LOCAL);boardPose={x:T.MathUtils.lerp(boardFrom.x,target.x,k),z:T.MathUtils.lerp(boardFrom.z,target.z,k),y:T.MathUtils.lerp(boardFrom.y,.04065,k)+Math.sin(Math.PI*f)*.12,heading:boardFrom.heading+Math.atan2(Math.sin(DOCK_LOCAL.heading-boardFrom.heading),Math.cos(DOCK_LOCAL.heading-boardFrom.heading))*k};if(f===1){phase='boating';arrivalPending=true;}}
   const local=phase==='boating'&&!arrivalPending&&player?toBay(player):DOCK_LOCAL;
-  const state=companion.update(dt,local),fold=paper.update(dt);bay.update(t,local,state,fold);return snapshot();
+  const state=companion.update(dt,local),fold=paper.update(dt);bay.update(t,local,state,fold);readableWater.update(t,fold.connected);return snapshot();
  }
  // The preview contains only the reused paper boat/fish, never a duplicate proxy courier.
- bay.update(0,DOCK_LOCAL,companion.snapshot(),paper.snapshot());
- return{root,bay,guide,occluders:art.environment,landingMesh,boardingStand:BOARD_STAND,approachWalkable:(x,z)=>Math.abs(x-2)<=.18&&z>=-12.05&&z<=-11.6,wholeHullClear:(p)=>hullClear(p.x-BAY_OFFSET.x,p.z-BAY_OFFSET.z,p.heading,DOCK_OBSTACLES),stepBoat:(p,dt,input,yaw)=>stepWholeBoat(p,dt,input,yaw,BAY_OFFSET,DOCK_OBSTACLES),reveal,canBoard,canFold,startBoard,takeArrival,update,snapshot,getBoardPose:()=>boardPose&&({...boardPose}),foldAt(p){if(!canFold(p))return false;return paper.begin();},navigable:bayNavigableWorld,toLocal:toBay,toWorld:fromBay};
+ bay.update(0,DOCK_LOCAL,companion.snapshot(),paper.snapshot());readableWater.update(0,false);
+ return{root,bay,guide,readableWater,paperHull,occluders:art.environment,landingMesh,boardingStand:BOARD_STAND,approachWalkable:(x,z)=>Math.abs(x-2)<=.18&&z>=-12.05&&z<=-11.6,wholeHullClear:(p)=>hullClear(p.x-BAY_OFFSET.x,p.z-BAY_OFFSET.z,p.heading,DOCK_OBSTACLES),stepBoat:(p,dt,input,yaw)=>stepWholeBoat(p,dt,input,yaw,BAY_OFFSET,DOCK_OBSTACLES),reveal,canBoard,canFold,startBoard,takeArrival,update,snapshot,getBoardPose:()=>boardPose&&({...boardPose}),foldAt(p){if(!canFold(p))return false;return paper.begin();},navigable:bayNavigableWorld,toLocal:toBay,toWorld:fromBay};
 }
